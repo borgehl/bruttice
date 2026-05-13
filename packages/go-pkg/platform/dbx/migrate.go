@@ -1,0 +1,81 @@
+package dbx
+
+import (
+	"github.com/borgehl/bruttice/packages/go-pkg/configs"
+	"github.com/borgehl/bruttice/packages/go-pkg/models"
+)
+
+func (d *DatabaseClient) Migrate() {
+	tx := d.DB.Begin()
+	defer tx.Commit()
+
+	tx.AutoMigrate(
+		&models.Age{},
+		&models.CalendarFilter{},
+		&models.CookieModel{},
+		&models.Event{},
+		&models.EventAdminJudgement{},
+		&models.MigrationFlag{},
+		&models.Region{},
+		&models.Tag{},
+		&models.User{},
+		&models.Venue{},
+		&models.VisitorLog{},
+		&models.VisitorLocation{},
+		&models.UntrackedHit{},
+	)
+
+	var err error
+
+	_, err = d.GetSaveUser(configs.RootUser, tx)
+	if err != nil {
+		panic(err)
+	}
+
+	for age, value := range configs.AgeGroups {
+		_, err = d.GetSaveAge(models.Age{Name: age, Value: value}, tx)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	for region := range configs.Regions {
+		_, err = d.GetSaveRegion(models.Region{Name: region}, tx)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	for _, venue := range configs.Venues {
+		venue.InternalUpdate()
+		venue, err := d.GetSaveVenueByName(venue, tx)
+		if err != nil {
+			panic(err)
+		}
+		d.Logger.Infof("saved initial venue: %+v", venue)
+	}
+
+	for _, tagStr := range configs.Tags {
+		tag, err := d.SaveTag(models.Tag{Name: tagStr}, tx)
+		if err != nil {
+			panic(err)
+		}
+		d.Logger.Infof("saved initial tag: %s", tag.Name)
+	}
+
+	err = d.MigrateViews(
+		[]ViewModel{
+			&models.Visitors{},
+			&models.VisitorsDaily{},
+			&models.VisitorsMonthly{},
+		},
+		tx,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	if err = d.MigrateTimestamps(tx); err != nil {
+		panic(err)
+	}
+}

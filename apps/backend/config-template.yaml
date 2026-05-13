@@ -1,0 +1,11 @@
+admin-accounts:
+  # email;password
+  - admin@example.com;change-me
+
+timezone: "America/Chicago"
+
+# semi-random; changing between deployments will invalidate existing cookies
+cookie-salt: "change-me"
+
+# shared secret for POST /internal/ingest — must match the scraper service
+ingest-key: "change-me"
