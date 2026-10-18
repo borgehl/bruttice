@@ -46,12 +46,7 @@ func (e *Event) UpdateGuid(id *string) {
 		// do not overwrite
 		return
 	}
-	if id != nil && *id != "" {
-		// manually set
-		e.Guid = fmt.Sprintf("%s-%s", e.Venue.Name, *id)
-		return
-	}
-	e.Guid = util.Base64EncodeString(e.Title + e.StartAt.String() + e.Venue.Name)
+	e.Guid = util.EventGuid(e.Venue.Name, e.Title, e.StartAt, id)
 }
 
 // creates a new base64 encoded uuid4

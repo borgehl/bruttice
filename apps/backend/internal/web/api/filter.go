@@ -1,7 +1,7 @@
 package api
 
 import (
-	"encoding/json"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"net/http"
 )
@@ -16,9 +16,9 @@ func (h *APIHandler) handleGetFilterOptions(w http.ResponseWriter, r *http.Reque
 		h.writeError(w, http.StatusInternalServerError, "Failed to get tags")
 		return
 	}
-	tags := make([]TagResponse, 0, len(tagNames))
+	tags := make([]dto.TagResponse, 0, len(tagNames))
 	for i, name := range tagNames {
-		tags = append(tags, TagResponse{ID: int64(i + 1), Name: name})
+		tags = append(tags, dto.TagResponse{ID: int64(i + 1), Name: name})
 	}
 
 	// Get venues
@@ -28,9 +28,9 @@ func (h *APIHandler) handleGetFilterOptions(w http.ResponseWriter, r *http.Reque
 		h.writeError(w, http.StatusInternalServerError, "Failed to get venues")
 		return
 	}
-	venues := make([]VenueResponse, 0, len(venueModels))
+	venues := make([]dto.VenueResponse, 0, len(venueModels))
 	for _, v := range venueModels {
-		venues = append(venues, VenueResponse{Name: v.Name, Slug: v.Slug, Link: v.Link})
+		venues = append(venues, dto.VenueResponse{Name: v.Name, Slug: v.Slug, Link: v.Link})
 	}
 
 	// Get ages
@@ -40,13 +40,13 @@ func (h *APIHandler) handleGetFilterOptions(w http.ResponseWriter, r *http.Reque
 		h.writeError(w, http.StatusInternalServerError, "Failed to get ages")
 		return
 	}
-	ages := make([]AgeResponse, 0, len(ageModels))
+	ages := make([]dto.AgeResponse, 0, len(ageModels))
 	for _, age := range ageModels {
 		if age.Value > 100 {
 			// skip unknown ages for filters/event creation
 			continue
 		}
-		ages = append(ages, AgeResponse{ID: int64(age.ID), Name: age.Name, Value: age.Value})
+		ages = append(ages, dto.AgeResponse{ID: int64(age.ID), Name: age.Name, Value: age.Value})
 	}
 
 	// Get regions
@@ -56,12 +56,12 @@ func (h *APIHandler) handleGetFilterOptions(w http.ResponseWriter, r *http.Reque
 		h.writeError(w, http.StatusInternalServerError, "Failed to get regions")
 		return
 	}
-	regions := make([]RegionResponse, 0, len(regionNames))
+	regions := make([]dto.RegionResponse, 0, len(regionNames))
 	for i, name := range regionNames {
-		regions = append(regions, RegionResponse{ID: int64(i + 1), Name: name})
+		regions = append(regions, dto.RegionResponse{ID: int64(i + 1), Name: name})
 	}
 
-	h.writeJSON(w, http.StatusOK, FilterOptionsResponse{
+	h.writeJSON(w, http.StatusOK, dto.FilterOptionsResponse{
 		Tags: tags, Venues: venues, Ages: ages, Regions: regions,
 	})
 }
@@ -69,7 +69,7 @@ func (h *APIHandler) handleGetFilterOptions(w http.ResponseWriter, r *http.Reque
 func (h *APIHandler) handleGetFilter(w http.ResponseWriter, r *http.Request) {
 	filterKey := r.URL.Query().Get("filterKey")
 	if filterKey == "" {
-		h.writeJSON(w, http.StatusOK, GetFilterResponse{})
+		h.writeJSON(w, http.StatusOK, dto.GetFilterResponse{})
 		return
 	}
 
@@ -83,12 +83,12 @@ func (h *APIHandler) handleGetFilter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if filterModel.ID == 0 {
-		h.writeJSON(w, http.StatusOK, GetFilterResponse{})
+		h.writeJSON(w, http.StatusOK, dto.GetFilterResponse{})
 		return
 	}
 
 	filter := filterModel.GetBackendFilter()
-	h.writeJSON(w, http.StatusOK, GetFilterResponse{
+	h.writeJSON(w, http.StatusOK, dto.GetFilterResponse{
 		Tags:          filter.Tags,
 		TagsInclude:   filter.TagsInclude,
 		Age:           filter.Age,
@@ -99,10 +99,8 @@ func (h *APIHandler) handleGetFilter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *APIHandler) handleCreateFilter(w http.ResponseWriter, r *http.Request) {
-	var req CreateFilterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Errorf("failed to decode request body: %v", err)
-		h.writeError(w, http.StatusBadRequest, "Invalid request body")
+	var req dto.CreateFilterRequest
+	if !h.decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -138,5 +136,5 @@ func (h *APIHandler) handleCreateFilter(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, CreateFilterResponse{FilterKey: filterRecord.HashKey})
+	h.writeJSON(w, http.StatusOK, dto.CreateFilterResponse{FilterKey: filterRecord.HashKey})
 }

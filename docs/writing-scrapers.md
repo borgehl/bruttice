@@ -54,6 +54,7 @@ One payload per venue (or per source, if a scraper covers several venues):
     "name": "The Venue Name",           // required, the venue's unique key
     "link": "https://venue.example.com",
     "is_auto_ingest": true,             // see "Auto ingest" below
+    "require_approval": false,          // true: events wait in the moderation queue
     "default_region": "tulsa",          // region name, applied to the venue
     "skip_venue_save": false            // true: label the payload but don't create a venue
   },
@@ -62,33 +63,32 @@ One payload per venue (or per source, if a scraper covers several venues):
 }
 ```
 
-An event, as it appears on the wire. Fields are the Go field names, with no JSON tags, and are case-sensitive:
+An event:
 
 ```jsonc
 {
-  "Guid": "The Venue Name-1001",              // see "Identity"
-  "Title": "Open Mic Night",
-  "Link": "https://venue.example.com/events/1001",
-  "StartAt": "2030-01-10T19:00:00-06:00",     // RFC 3339, with an offset
-  "DoorsAt": null,                            // optional
-  "CoverCost": "free",                        // free text: "$10", "$5-$15", "free"
-  "Venue":  { "Name": "The Venue Name" },
-  "Region": { "Name": "tulsa" },
-  "Age":    { "Name": "all-ages" },
-  "Tags":   [{ "Name": "music" }],
-  "VerifiedAt": 1792295165,                   // unix seconds, see "Auto ingest"
-  "ApprovedAt": 1792295165
+  "guid": "The Venue Name-1001",              // optional, see "Identity"
+  "title": "Open Mic Night",
+  "link": "https://venue.example.com/events/1001",
+  "start_at": "2030-01-10T19:00:00-06:00",    // RFC 3339, with an offset
+  "doors_at": null,                           // optional
+  "cover_cost": "free",                       // free text: "$10", "$5-$15", "free"
+  "venue": "The Venue Name",                  // optional, defaults to venue_info.name
+  "region": "tulsa",                          // optional, defaults to venue_info.default_region
+  "age": "all-ages",
+  "tags": ["music"],
+  "cancelled": false                          // optional, a new cancelled event is stored as deleted
 }
 ```
 
-Other fields (`ID`, `CreatedAt`, `AgeID`, ...) are ignored. Go scrapers don't write any of this by hand: marshal an `ingest.IngestionOutput` and it comes out right.
+The server refuses a payload with a field it doesn't know, so a typo or an out-of-date format is a `400` that names the field instead of an event that quietly loses data. Go scrapers don't write any of this by hand: marshal an `ingest.IngestionOutput` and it comes out right.
 
 Responses:
 
 | Status | Meaning |
 |---|---|
 | `200 {"saved": N, "errors": [...]}` | `errors` is the payload's own `errors` followed by one string for each event that failed to save. The rest were still saved |
-| `400` | body is not valid JSON |
+| `400` | body is not valid JSON, or has a field the server doesn't know. The message says which |
 | `401` | missing or wrong key |
 | `500 {"saved": 0, "errors": [...]}` | the venue could not be saved. Nothing was ingested |
 
@@ -101,19 +101,19 @@ Responses:
 
 Details that matter:
 
-- **Identity.** Posting the same event again updates it. The identity is the `Guid`. If you leave it empty, the server sets it to a hash of title, start time and venue, so a changed title or time makes a *new* event and orphans the old one. If the source has a stable id, use it: in Go, `event.UpdateGuid(&id)` produces `"<Venue>-<id>"`.
+- **Identity.** Posting the same event again updates it. The identity is the `guid`. If you leave it empty, the server sets it to a hash of title, start time and venue, so a changed title or time makes a *new* event and orphans the old one. If the source has a stable id, use it: in Go, `event.UpdateGuid(&id)` produces `"<Venue>-<id>"`.
 - **Deleted events stay deleted.** If an admin deleted an event, re-ingesting its guid is ignored.
 - **Skipped events.** Titles containing "private party" or "private event" are dropped.
 - **Free events** (a zero or "free" cover cost) get the `free` tag automatically.
-- **Region.** For a normal venue, the venue's `default_region` wins over the event's `Region`. Only for the reserved venue `Unlisted (see link)` is the event's own region used.
+- **Region.** For a normal venue, the venue's `default_region` wins over the event's `region`. Only for the reserved venue `Unlisted (see link)` is the event's own region used.
 - **Titles** are HTML-unescaped.
 
-### Auto ingest
+### Auto ingest and approval
 
-`is_auto_ingest` and the event's approval fields must be set together:
+These are independent:
 
-- `is_auto_ingest: true` marks the venue as scraped. The server **rejects** an event whose venue's scraped flag differs from the payload's `is_auto_ingest`, so one venue can't be fed by both scrapers and humans.
-- The server does **not** approve scraped events for you. Set both `VerifiedAt` and `ApprovedAt` to publish immediately. Set only `VerifiedAt` to send the event to the admin moderation queue. An event with neither set never appears anywhere.
+- `is_auto_ingest: true` marks the venue as scraped. The server **rejects** an event whose venue's scraped flag differs from the payload's `is_auto_ingest`, so one venue can't be fed by both scrapers and humans. A scraper that posts events for venues people manage, such as a shared calendar, sends `false`.
+- Events are published on arrival. Set `require_approval: true` on the payload to send its events to the admin moderation queue instead.
 
 ### Reporting failures
 
@@ -132,7 +132,7 @@ Partial results are safe to send because ingestion is idempotent. Events are mat
 ## Scraper checklist
 
 - **Timezones.** Venues publish wall-clock times. Parse them in the venue's zone (`time.ParseInLocation`), not UTC, and send an RFC 3339 time with an offset. This is the most common mistake. `venue_info.timezone` is not used by the server.
-- **Stable ids** for the `Guid`, see above.
+- **Stable ids** for the `guid`, see above.
 - **Keep past events out of your output** unless you want them kept. The server doesn't delete events that vanish from a feed.
 - **Timeouts.** Give every fetch a timeout. One hung venue shouldn't stall the run.
 - **Be polite.** Set a User-Agent, don't hammer sites, and prefer a public API or calendar feed over scraping HTML.
@@ -162,10 +162,9 @@ curl -s -X POST -H "$H" -H 'Content-Type: application/json' $URL/internal/ingest
   "run_id": '$RUN',
   "venue_info": {"name": "Example Venue", "is_auto_ingest": true, "default_region": "tulsa"},
   "events": [{
-    "Title": "Open Mic Night", "Link": "https://venue.example.com/events/1001",
-    "StartAt": "2030-01-10T19:00:00-06:00", "CoverCost": "free",
-    "Venue": {"Name": "Example Venue"}, "Region": {"Name": "tulsa"}, "Age": {"Name": "all-ages"},
-    "Guid": "Example Venue-1001", "VerifiedAt": 1, "ApprovedAt": 1
+    "title": "Open Mic Night", "link": "https://venue.example.com/events/1001",
+    "start_at": "2030-01-10T19:00:00-06:00", "cover_cost": "free",
+    "age": "all-ages", "guid": "Example Venue-1001"
   }],
   "errors": []
 }'

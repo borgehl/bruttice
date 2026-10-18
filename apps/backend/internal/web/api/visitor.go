@@ -1,7 +1,7 @@
 package api
 
 import (
-	"encoding/json"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
 	"net/http"
@@ -11,19 +11,12 @@ import (
 	"github.com/google/uuid"
 )
 
-type visitorConsentRequest struct {
-	Path  string `json:"path"`
-	Query string `json:"query"`
-}
-
 // handleVisitorConsent generates a visitor UUID, performs a one-time geo lookup,
 // saves the VisitorLocation and an initial VisitorLog for the page the user was on,
 // and sets the visitor-id cookie.
 func (h *APIHandler) handleVisitorConsent(w http.ResponseWriter, r *http.Request) {
-	var req visitorConsentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Errorf("visitor consent: failed to decode request body: %v", err)
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+	var req dto.VisitorConsentRequest
+	if !h.decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -70,5 +63,5 @@ func (h *APIHandler) handleVisitorConsent(w http.ResponseWriter, r *http.Request
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	h.writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	h.writeJSON(w, http.StatusOK, dto.StatusResponse{Status: "ok"})
 }

@@ -1,4 +1,9 @@
-package api
+// Package dto holds the request and response bodies of the HTTP API.
+//
+// Handlers decode requests into these types and encode responses from them, and never
+// expose a database model. Public endpoints are in public.go, the admin dashboard in
+// admin.go, and the internal ingest API in ingest.go and common.go.
+package dto
 
 type EventResponse struct {
 	Guid      string   `json:"guid"`
@@ -92,4 +97,9 @@ type AddEventResponse struct {
 type VerifyEventResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
+}
+
+type VisitorConsentRequest struct {
+	Path  string `json:"path"`
+	Query string `json:"query"`
 }

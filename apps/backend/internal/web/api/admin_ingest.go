@@ -1,36 +1,12 @@
 package api
 
 import (
+	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"net/http"
 	"strconv"
 )
 
 const adminIngestRunsPageSize = 15
-
-type IngestSourceResponse struct {
-	Source       string   `json:"source"`
-	Status       string   `json:"status"`
-	ScrapedCount int      `json:"scrapedCount"`
-	SavedCount   int      `json:"savedCount"`
-	FailedCount  int      `json:"failedCount"`
-	Errors       []string `json:"errors"`
-}
-
-type IngestRunsResponse struct {
-	Runs    []IngestRunResponse `json:"runs"`
-	HasMore bool                `json:"hasMore"`
-}
-
-type IngestRunResponse struct {
-	ID          int64                  `json:"id"`
-	StartedAt   int64                  `json:"startedAt"`
-	FinishedAt  int64                  `json:"finishedAt"`
-	DedupeError string                 `json:"dedupeError,omitempty"`
-	Scraped     int                    `json:"scraped"`
-	Saved       int                    `json:"saved"`
-	Failed      int                    `json:"failed"`
-	Sources     []IngestSourceResponse `json:"sources"`
-}
 
 func (h *APIHandler) handleAdminIngestRuns(w http.ResponseWriter, r *http.Request) {
 	h.logger.Debugf("GET /api/admin/ingest-runs called")
@@ -64,14 +40,14 @@ func (h *APIHandler) handleAdminIngestRuns(w http.ResponseWriter, r *http.Reques
 		runs = runs[:adminIngestRunsPageSize]
 	}
 
-	ret := make([]IngestRunResponse, 0, len(runs))
+	ret := make([]dto.IngestRunResponse, 0, len(runs))
 	for _, run := range runs {
-		resp := IngestRunResponse{
+		resp := dto.IngestRunResponse{
 			ID:          run.ID,
 			StartedAt:   run.StartedAt,
 			FinishedAt:  run.FinishedAt,
 			DedupeError: run.DedupeError,
-			Sources:     make([]IngestSourceResponse, 0, len(run.Sources)),
+			Sources:     make([]dto.IngestSourceResponse, 0, len(run.Sources)),
 		}
 		for _, s := range run.Sources {
 			resp.Scraped += s.ScrapedCount
@@ -81,7 +57,7 @@ func (h *APIHandler) handleAdminIngestRuns(w http.ResponseWriter, r *http.Reques
 			if errs == nil {
 				errs = []string{}
 			}
-			resp.Sources = append(resp.Sources, IngestSourceResponse{
+			resp.Sources = append(resp.Sources, dto.IngestSourceResponse{
 				Source:       s.Source,
 				Status:       s.Status,
 				ScrapedCount: s.ScrapedCount,
@@ -93,12 +69,7 @@ func (h *APIHandler) handleAdminIngestRuns(w http.ResponseWriter, r *http.Reques
 		ret = append(ret, resp)
 	}
 
-	h.writeJSON(w, http.StatusOK, IngestRunsResponse{Runs: ret, HasMore: hasMore})
-}
-
-type StartIngestResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
+	h.writeJSON(w, http.StatusOK, dto.IngestRunsResponse{Runs: ret, HasMore: hasMore})
 }
 
 // handleAdminStartIngest asks the scraper service to start a run.
@@ -128,5 +99,5 @@ func (h *APIHandler) handleAdminStartIngest(w http.ResponseWriter, r *http.Reque
 	}
 
 	h.logger.Infof("ingestion started by %s", user.Email)
-	h.writeJSON(w, http.StatusAccepted, StartIngestResponse{Success: true})
+	h.writeJSON(w, http.StatusAccepted, dto.StartIngestResponse{Success: true})
 }

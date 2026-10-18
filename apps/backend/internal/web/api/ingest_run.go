@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"net/http"
 	"strings"
 	"time"
@@ -22,7 +23,7 @@ func (h *APIHandler) handleStartIngestRun(w http.ResponseWriter, r *http.Request
 		h.writeError(w, http.StatusInternalServerError, "failed to create run")
 		return
 	}
-	h.writeJSON(w, http.StatusCreated, map[string]any{"id": run.ID})
+	h.writeJSON(w, http.StatusCreated, dto.IngestRunCreatedResponse{ID: run.ID})
 }
 
 // handleFinishIngestRun marks a run as finished once the scraper service has posted all its payloads.

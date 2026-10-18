@@ -1,8 +1,8 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/passwordsx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
@@ -10,101 +10,9 @@ import (
 	"time"
 )
 
-// Admin login request/response types
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type LoginResponse struct {
-	Success bool   `json:"success"`
-	Email   string `json:"email,omitempty"`
-	Message string `json:"message,omitempty"`
-}
-
-// Admin event with score info for dashboard
-type AdminEventResponse struct {
-	Guid      string   `json:"guid"`
-	Title     string   `json:"title"`
-	Link      string   `json:"link"`
-	Venue     string   `json:"venue"`
-	VenueLink string   `json:"venueLink"`
-	Age       string   `json:"age"`
-	Region    string   `json:"region"`
-	Date      string   `json:"date"`
-	Time      string   `json:"time"`
-	StartTime string   `json:"startTime"`
-	DoorsTime string   `json:"doorsTime,omitempty"`
-	CoverCost string   `json:"coverCost"`
-	Tags      []string `json:"tags"`
-	Email     string   `json:"email"`
-	Score     int      `json:"score"`
-}
-
-type AdminEventDayResponse struct {
-	Day    string               `json:"day"`
-	Events []AdminEventResponse `json:"events"`
-}
-
-type AdminDashboardResponse struct {
-	Email            string                  `json:"email"`
-	AwaitingApproval []AdminEventDayResponse `json:"awaitingApproval"`
-	Upcoming         []AdminEventDayResponse `json:"upcoming"`
-}
-
-type VoteRequest struct {
-	Guid string `json:"guid"`
-	Vote string `json:"vote"`
-}
-
-type VoteResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
-}
-
-// Admin add event request (same fields but no email verification needed)
-type AdminAddEventRequest struct {
-	Title     string   `json:"title"`
-	Link      string   `json:"link"`
-	Venue     string   `json:"venue"`
-	Region    string   `json:"region"`
-	Age       string   `json:"age"`
-	Date      string   `json:"date"`
-	StartTime string   `json:"startTime"`
-	DoorsTime string   `json:"doorsTime"`
-	CoverCost string   `json:"coverCost"`
-	Tags      []string `json:"tags"`
-}
-
-type AdminAddEventResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
-}
-
-// Admin update event request - all fields optional except guid
-type AdminUpdateEventRequest struct {
-	Guid      string   `json:"guid"`
-	Title     *string  `json:"title,omitempty"`
-	Link      *string  `json:"link,omitempty"`
-	CoverCost *string  `json:"coverCost,omitempty"`
-	Venue     *string  `json:"venue,omitempty"`
-	Region    *string  `json:"region,omitempty"`
-	Age       *string  `json:"age,omitempty"`
-	Date      *string  `json:"date,omitempty"`
-	StartTime *string  `json:"startTime,omitempty"`
-	DoorsTime *string  `json:"doorsTime,omitempty"`
-	Tags      []string `json:"tags,omitempty"`
-}
-
-type AdminUpdateEventResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
-}
-
 func (h *APIHandler) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
-	var req LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "Invalid request body")
+	var req dto.LoginRequest
+	if !h.decodeJSON(w, r, &req) {
 		return
 	}
 	if req.Email == "" || req.Password == "" {
@@ -133,7 +41,7 @@ func (h *APIHandler) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, cookie)
-	h.writeJSON(w, http.StatusOK, LoginResponse{Success: true, Email: user.Email})
+	h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: true, Email: user.Email})
 }
 
 func (h *APIHandler) handleAdminLogout(w http.ResponseWriter, r *http.Request) {
@@ -144,7 +52,7 @@ func (h *APIHandler) handleAdminLogout(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   -1,
 		HttpOnly: true,
 	})
-	h.writeJSON(w, http.StatusOK, map[string]bool{"success": true})
+	h.writeJSON(w, http.StatusOK, dto.SuccessResponse{Success: true})
 }
 
 func (h *APIHandler) handleAdminDashboard(w http.ResponseWriter, r *http.Request) {
@@ -175,7 +83,7 @@ func (h *APIHandler) handleAdminDashboard(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, AdminDashboardResponse{
+	h.writeJSON(w, http.StatusOK, dto.AdminDashboardResponse{
 		Email:            user.Email,
 		AwaitingApproval: convertToAdminEventDays(awaitingApprovalEvents),
 		Upcoming:         convertToAdminEventDays(upcomingEvents),
@@ -189,9 +97,8 @@ func (h *APIHandler) handleAdminVote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req VoteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "Invalid request body")
+	var req dto.VoteRequest
+	if !h.decodeJSON(w, r, &req) {
 		return
 	}
 	if req.Guid == "" || req.Vote == "" {
@@ -213,16 +120,16 @@ func (h *APIHandler) handleAdminVote(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, http.StatusInternalServerError, "Failed to process vote")
 		return
 	}
-	h.writeJSON(w, http.StatusOK, VoteResponse{Success: true})
+	h.writeJSON(w, http.StatusOK, dto.VoteResponse{Success: true})
 }
 
 func (h *APIHandler) handleAdminCheckSession(w http.ResponseWriter, r *http.Request) {
 	user := h.getAuthenticatedUser(r)
 	if user == nil {
-		h.writeJSON(w, http.StatusOK, LoginResponse{Success: false})
+		h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: false})
 		return
 	}
-	h.writeJSON(w, http.StatusOK, LoginResponse{Success: true, Email: user.Email})
+	h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: true, Email: user.Email})
 }
 
 // Helper to get authenticated user from request
@@ -237,20 +144,20 @@ func (h *APIHandler) getAuthenticatedUser(r *http.Request) *models.User {
 }
 
 // Convert events to admin event day format grouped by date
-func convertToAdminEventDays(events []models.Event) []AdminEventDayResponse {
+func convertToAdminEventDays(events []models.Event) []dto.AdminEventDayResponse {
 	if len(events) == 0 {
-		return []AdminEventDayResponse{}
+		return []dto.AdminEventDayResponse{}
 	}
-	dayMap := make(map[string]*AdminEventDayResponse)
+	dayMap := make(map[string]*dto.AdminEventDayResponse)
 	var days []string
 
 	for _, event := range events {
 		dayStr := event.StartAt.In(util.TZLocation).Format("Monday, January 2, 2006")
 		if _, exists := dayMap[dayStr]; !exists {
-			dayMap[dayStr] = &AdminEventDayResponse{Day: dayStr, Events: []AdminEventResponse{}}
+			dayMap[dayStr] = &dto.AdminEventDayResponse{Day: dayStr, Events: []dto.AdminEventResponse{}}
 			days = append(days, dayStr)
 		}
-		adminEvent := AdminEventResponse{
+		adminEvent := dto.AdminEventResponse{
 			Guid:      event.Guid,
 			Title:     event.Title,
 			Link:      event.Link,
@@ -274,7 +181,7 @@ func convertToAdminEventDays(events []models.Event) []AdminEventDayResponse {
 		dayMap[dayStr].Events = append(dayMap[dayStr].Events, adminEvent)
 	}
 
-	result := make([]AdminEventDayResponse, 0, len(days))
+	result := make([]dto.AdminEventDayResponse, 0, len(days))
 	for _, day := range days {
 		result = append(result, *dayMap[day])
 	}
@@ -315,9 +222,8 @@ func (h *APIHandler) handleAdminAddEvent(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var req AdminAddEventRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "Invalid request body")
+	var req dto.AdminAddEventRequest
+	if !h.decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -398,7 +304,7 @@ func (h *APIHandler) handleAdminAddEvent(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, AdminAddEventResponse{Success: true, Message: "Event created successfully."})
+	h.writeJSON(w, http.StatusOK, dto.AdminAddEventResponse{Success: true, Message: "Event created successfully."})
 }
 
 func (h *APIHandler) handleAdminGetAges(w http.ResponseWriter, r *http.Request) {
@@ -419,9 +325,9 @@ func (h *APIHandler) handleAdminGetAges(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ages := make([]AgeResponse, 0, len(ageModels))
+	ages := make([]dto.AgeResponse, 0, len(ageModels))
 	for _, age := range ageModels {
-		ages = append(ages, AgeResponse{ID: int64(age.ID), Name: age.Name, Value: age.Value})
+		ages = append(ages, dto.AgeResponse{ID: int64(age.ID), Name: age.Name, Value: age.Value})
 	}
 	h.writeJSON(w, http.StatusOK, ages)
 }
@@ -433,9 +339,8 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var req AdminUpdateEventRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "Invalid request body")
+	var req dto.AdminUpdateEventRequest
+	if !h.decodeJSON(w, r, &req) {
 		return
 	}
 	if req.Guid == "" {
@@ -567,7 +472,7 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 	}
 
 	if !updated {
-		h.writeJSON(w, http.StatusOK, AdminUpdateEventResponse{Success: true, Message: "No changes detected."})
+		h.writeJSON(w, http.StatusOK, dto.AdminUpdateEventResponse{Success: true, Message: "No changes detected."})
 		return
 	}
 
@@ -578,5 +483,5 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, AdminUpdateEventResponse{Success: true, Message: "Event updated successfully."})
+	h.writeJSON(w, http.StatusOK, dto.AdminUpdateEventResponse{Success: true, Message: "Event updated successfully."})
 }

@@ -13,7 +13,6 @@ import (
 	_ "time/tzdata"
 
 	"github.com/borgehl/bruttice/packages/go-pkg/ingest"
-	"github.com/borgehl/bruttice/packages/go-pkg/models"
 )
 
 const zone = "America/Chicago"
@@ -35,7 +34,7 @@ type listing struct {
 type venue struct {
 	name string
 	link string
-	// pending venues are not scraped, their events wait in the moderation queue
+	// pending venues are not scraped, and their events wait in the moderation queue
 	pending  bool
 	listings []listing
 }
@@ -149,31 +148,25 @@ func startRun(ctx context.Context, client *ingest.Client) (int64, error) {
 func payload(v venue, loc *time.Location, now time.Time) ingest.IngestionOutput {
 	out := ingest.IngestionOutput{
 		VenueInfo: ingest.VenueInfo{
-			Name:          v.name,
-			Link:          v.link,
-			IsAutoIngest:  !v.pending,
-			DefaultRegion: region,
+			Name:            v.name,
+			Link:            v.link,
+			IsAutoIngest:    !v.pending,
+			RequireApproval: v.pending,
+			DefaultRegion:   region,
 		},
 	}
 
-	verified := now.Unix()
 	for _, l := range v.listings {
 		day := now.In(loc).AddDate(0, 0, l.daysAhead)
-		event := models.Event{
-			Title:      l.title,
-			Link:       fmt.Sprintf("%s/events/%s", v.link, l.id),
-			StartAt:    time.Date(day.Year(), day.Month(), day.Day(), l.hour, 0, 0, 0, loc),
-			CoverCost:  l.cost,
-			Venue:      models.Venue{Name: v.name},
-			Region:     models.Region{Name: region},
-			Age:        models.Age{Name: l.age},
-			VerifiedAt: &verified,
-		}
-		if !v.pending {
-			event.ApprovedAt = &verified
-		}
-		for _, tag := range l.tags {
-			event.AddTagStr(tag)
+		event := ingest.Event{
+			Title:     l.title,
+			Link:      fmt.Sprintf("%s/events/%s", v.link, l.id),
+			StartAt:   time.Date(day.Year(), day.Month(), day.Day(), l.hour, 0, 0, 0, loc),
+			CoverCost: l.cost,
+			Venue:     v.name,
+			Region:    region,
+			Age:       l.age,
+			Tags:      l.tags,
 		}
 		event.UpdateGuid(&l.id)
 		out.Events = append(out.Events, event)

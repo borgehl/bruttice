@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"net/http"
 	"time"
@@ -24,7 +25,7 @@ func (h *APIHandler) handleGetCalendar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses := make([]EventResponse, 0, len(events))
+	responses := make([]dto.EventResponse, 0, len(events))
 	for _, event := range events {
 		responses = append(responses, h.eventToResponse(event))
 	}
@@ -48,8 +49,8 @@ func (h *APIHandler) getFilter(r *http.Request) (models.CalendarFilterBackend, e
 	return filter, nil
 }
 
-func (h *APIHandler) eventToResponse(event models.Event) EventResponse {
-	resp := EventResponse{
+func (h *APIHandler) eventToResponse(event models.Event) dto.EventResponse {
+	resp := dto.EventResponse{
 		Guid:      event.Guid,
 		Title:     event.Title,
 		Link:      event.Link,

@@ -23,9 +23,6 @@ func TestPayloads(t *testing.T) {
 			if !e.StartAt.After(now) {
 				t.Errorf("%s starts in the past", e.Title)
 			}
-			if e.VerifiedAt == nil || (e.ApprovedAt == nil) != v.pending {
-				t.Errorf("%s: wrong approval for venue pending=%t", e.Title, v.pending)
-			}
 		}
 	}
 }

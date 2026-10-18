@@ -1,6 +1,10 @@
 package api
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
+)
 
 func (h *APIHandler) handleGetVenues(w http.ResponseWriter, r *http.Request) {
 	tx := h.database.DB.Begin()
@@ -14,9 +18,9 @@ func (h *APIHandler) handleGetVenues(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	venues := make([]VenueResponse, 0, len(venueModels))
+	venues := make([]dto.VenueResponse, 0, len(venueModels))
 	for _, v := range venueModels {
-		venues = append(venues, VenueResponse{Name: v.Name, Slug: v.Slug, Link: v.Link})
+		venues = append(venues, dto.VenueResponse{Name: v.Name, Slug: v.Slug, Link: v.Link})
 	}
 	h.writeJSON(w, http.StatusOK, venues)
 }
@@ -32,9 +36,9 @@ func (h *APIHandler) handleGetSubmissionVenues(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	venues := make([]VenueResponse, 0, len(venueModels))
+	venues := make([]dto.VenueResponse, 0, len(venueModels))
 	for _, v := range venueModels {
-		venues = append(venues, VenueResponse{Name: v.Name, Slug: v.Slug, Link: v.Link})
+		venues = append(venues, dto.VenueResponse{Name: v.Name, Slug: v.Slug, Link: v.Link})
 	}
 	h.writeJSON(w, http.StatusOK, venues)
 }

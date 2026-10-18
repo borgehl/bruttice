@@ -2,7 +2,7 @@ package api
 
 import (
 	"crypto/subtle"
-	"encoding/json"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/ingest"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
@@ -10,9 +10,13 @@ import (
 	"html"
 	"net/http"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
+
+// maxIngestBody is the largest ingest payload accepted.
+const maxIngestBody = 16 << 20
 
 // handleIngest saves one scraper's output for one venue.
 //
@@ -25,8 +29,8 @@ func (h *APIHandler) handleIngest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload ingest.IngestionOutput
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+	// strict, so a payload in an older format is refused instead of ingested with fields missing
+	if !h.decodeStrictJSON(w, r, &payload, maxIngestBody) {
 		return
 	}
 
@@ -64,7 +68,7 @@ func (h *APIHandler) handleIngest(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusInternalServerError
 	}
 	h.logger.Infof("ingest from %s: saved %d of %d events, %d errors", payload.VenueInfo.Name, source.SavedCount, source.ScrapedCount, len(source.Errors))
-	h.writeJSON(w, status, map[string]any{"saved": source.SavedCount, "errors": source.Errors})
+	h.writeJSON(w, status, dto.IngestResultResponse{Saved: source.SavedCount, Errors: source.Errors})
 }
 
 // ingestPayload saves the venue and events of a payload, then deduplicates that
@@ -96,7 +100,9 @@ func (h *APIHandler) ingestPayload(payload ingest.IngestionOutput) (models.Inges
 		source.Status = models.IngestSourceStatusErrors
 	}
 
-	for _, event := range payload.Events {
+	now := time.Now()
+	for _, scraped := range payload.Events {
+		event := ingestEventToModel(scraped, payload.VenueInfo, now)
 		// each event gets a savepoint so one bad event does not abort the rest
 		err := tx.Transaction(func(eventTx *gorm.DB) error {
 			return h.saveIngestedEvent(event, payload.VenueInfo.IsAutoIngest, eventTx)
@@ -149,8 +155,8 @@ func (h *APIHandler) ingestedVenueIDs(payload ingest.IngestionOutput, tx *gorm.D
 		names[payload.VenueInfo.Name] = struct{}{}
 	}
 	for _, event := range payload.Events {
-		if event.Venue.Name != "" {
-			names[event.Venue.Name] = struct{}{}
+		if event.Venue != "" {
+			names[event.Venue] = struct{}{}
 		}
 	}
 

@@ -14,9 +14,6 @@ func TestScrape(t *testing.T) {
 	if e.Guid != "Example Venue-1001" {
 		t.Errorf("guid = %q", e.Guid)
 	}
-	if e.VerifiedAt == nil || e.ApprovedAt == nil {
-		t.Error("events must be verified and approved to be shown")
-	}
 	if got := e.StartAt.UTC().Format("15:04"); got != "01:00" { // 7pm CST is 01:00 UTC next day
 		t.Errorf("start = %s UTC, want 01:00", got)
 	}

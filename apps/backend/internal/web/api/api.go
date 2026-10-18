@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/controlcookie"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/middleware"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/dbx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
@@ -78,5 +79,32 @@ func (h *APIHandler) writeJSON(w http.ResponseWriter, status int, data any) {
 }
 
 func (h *APIHandler) writeError(w http.ResponseWriter, status int, message string) {
-	h.writeJSON(w, status, map[string]string{"error": message})
+	h.writeJSON(w, status, dto.ErrorResponse{Error: message})
+}
+
+// maxRequestBody limits the body of a request. Ingest payloads set their own limit.
+const maxRequestBody = 1 << 20
+
+// decodeJSON reads the request body into v. If it can't, it writes a 400 and returns false.
+func (h *APIHandler) decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
+	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
+		h.logger.Errorf("%s %s: failed to decode request body: %v", r.Method, r.URL.Path, err)
+		h.writeError(w, http.StatusBadRequest, "Invalid request body")
+		return false
+	}
+	return true
+}
+
+// decodeStrictJSON is decodeJSON for clients that are written against a contract, which
+// refuses fields it doesn't know and says which one. limit is the largest body in bytes.
+func (h *APIHandler) decodeStrictJSON(w http.ResponseWriter, r *http.Request, v any, limit int64) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(v); err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return false
+	}
+	return true
 }

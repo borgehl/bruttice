@@ -1,8 +1,8 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
 	"net/http"
@@ -30,10 +30,8 @@ func normalizeURL(url string) string {
 }
 
 func (h *APIHandler) handleAddEvent(w http.ResponseWriter, r *http.Request) {
-	var req AddEventRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Errorf("failed to decode request body: %v", err)
-		h.writeError(w, http.StatusBadRequest, "Invalid request body")
+	var req dto.AddEventRequest
+	if !h.decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -122,7 +120,7 @@ func (h *APIHandler) handleAddEvent(w http.ResponseWriter, r *http.Request) {
 	msg := h.email.GetVerifyEventEmail(event.Title, req.Email, *event.VerificationKey)
 	go h.email.SendEmail(req.Email, msg)
 
-	h.writeJSON(w, http.StatusOK, AddEventResponse{
+	h.writeJSON(w, http.StatusOK, dto.AddEventResponse{
 		Success: true,
 		Message: "Event submitted successfully. Please check your email to verify the submission.",
 	})
@@ -153,7 +151,7 @@ func (h *APIHandler) handleVerifyEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, VerifyEventResponse{
+	h.writeJSON(w, http.StatusOK, dto.VerifyEventResponse{
 		Success: true,
 		Message: "Email verified successfully. Your event will be reviewed by an admin.",
 	})

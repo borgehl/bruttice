@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/borgehl/bruttice/packages/go-pkg/ingest"
-	"github.com/borgehl/bruttice/packages/go-pkg/models"
 )
 
 const (
@@ -85,7 +84,6 @@ func scrape() ingest.IngestionOutput {
 		{"1002", "The Examples", venueLink + "/events/1002", "2030-01-11 8:30pm", "$10"},
 	}
 
-	now := time.Now().Unix()
 	for _, l := range listings {
 		// ParseInLocation reads the wall-clock time in the venue's zone.
 		// time.Parse would read it as UTC and shift every event.
@@ -96,19 +94,14 @@ func scrape() ingest.IngestionOutput {
 			continue
 		}
 
-		event := models.Event{
+		event := ingest.Event{
 			Title:     l.title,
 			Link:      l.link,
 			StartAt:   start,
 			CoverCost: l.cost,
-			Venue:     models.Venue{Name: venueName},
-			Region:    models.Region{Name: region},
-			Age:       models.Age{Name: age},
-
-			// the server does not set these. An event with neither is never shown,
-			// and one with only VerifiedAt waits in the moderation queue.
-			VerifiedAt: &now,
-			ApprovedAt: &now,
+			Venue:     venueName,
+			Region:    region,
+			Age:       age,
 		}
 		// A stable id from the venue's site makes the event keep its identity when
 		// its title or time changes. Without one the guid hashes title, time and venue.
