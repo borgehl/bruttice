@@ -3,9 +3,10 @@ package dbx
 import (
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
+	"github.com/borgehl/bruttice/packages/go-pkg/platform/configx"
 )
 
-func (d *DatabaseClient) Migrate() {
+func (d *DatabaseClient) Migrate(cfg configx.Config) {
 	tx := d.DB.Begin()
 	defer tx.Commit()
 
@@ -32,30 +33,35 @@ func (d *DatabaseClient) Migrate() {
 		panic(err)
 	}
 
-	for age, value := range configs.AgeGroups {
-		_, err = d.GetSaveAge(models.Age{Name: age, Value: value}, tx)
+	for _, ag := range cfg.InitialData.AgeGroups {
+		_, err = d.GetSaveAge(models.Age{Name: ag.Name, Value: ag.Value}, tx)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	for region := range configs.Regions {
-		_, err = d.GetSaveRegion(models.Region{Name: region}, tx)
+	for _, region := range cfg.InitialData.Regions {
+		_, err = d.GetSaveRegion(models.Region{Name: region.Name}, tx)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	for _, venue := range configs.Venues {
+	for _, v := range cfg.InitialData.Venues {
+		venue := models.Venue{
+			Name:          v.Name,
+			Link:          v.Link,
+			DefaultRegion: v.Region,
+		}
 		venue.InternalUpdate()
-		venue, err := d.GetSaveVenueByName(venue, tx)
+		venue, err = d.GetSaveVenueByName(venue, tx)
 		if err != nil {
 			panic(err)
 		}
 		d.Logger.Infof("saved initial venue: %+v", venue)
 	}
 
-	for _, tagStr := range configs.Tags {
+	for _, tagStr := range cfg.InitialData.Tags {
 		tag, err := d.SaveTag(models.Tag{Name: tagStr}, tx)
 		if err != nil {
 			panic(err)

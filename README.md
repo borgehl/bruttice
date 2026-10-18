@@ -52,20 +52,26 @@ Key values to set:
 | `MAIL_SERVER` / `MAIL_EMAIL` / `MAIL_PASSWORD` / `MAIL_PORT` | SMTP for outbound email (leave blank to disable) |
 | `IP_GEOLOCATION_IO_API_KEY` | Optional — enables geo lookup for analytics |
 
-Create `apps/backend/config.yaml`:
+Create `apps/backend/config.yaml` from the example:
 
-```yaml
-timezone: America/Chicago   # any tz database name
-
-cookie-salt: "a-random-secret-string"
-
-ingest-key: "a-secret-key-for-your-ingestors"
-
-admin-accounts:
-  - "admin@example.com;yourpassword"
+```bash
+cp apps/backend/config.yaml.example apps/backend/config.yaml
 ```
 
-`admin-accounts` entries are in `email;password` format. The first entry becomes the root admin.
+Key fields:
+
+| Key | Description |
+|---|---|
+| `timezone` | Server timezone (any tz database name, e.g. `America/Chicago`) |
+| `cookie-salt` | Random secret used to sign session cookies |
+| `ingest-key` | Secret shared with ingestors posting events |
+| `admin-accounts` | `email;password` pairs — first entry is the root admin |
+| `tags` | Tags seeded into the database on first run |
+| `age-groups` | Age restriction tiers (`name` + numeric `value`; 1 = all-ages, 255 = unknown) |
+| `regions` | Geographic regions available for events |
+| `venues` | Venues seeded on first run — include `"Unlisted (see link)"` to enable that feature |
+
+All seed data (`tags`, `age-groups`, `regions`, `venues`) is upserted on every startup, so adding new entries to the config takes effect on the next restart without manual database changes.
 
 ### 3. Start
 

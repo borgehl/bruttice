@@ -53,7 +53,7 @@ func (h *APIHandler) handleIngest(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	dedupTx := h.database.DB.Begin()
-	if err := h.database.DeduplicateEvents(dedupTx); err != nil {
+	if err := h.database.DeduplicateEvents(h.ingestedVenueIDs(payload, dedupTx), dedupTx); err != nil {
 		h.logger.Errorf("deduplication failed: %s", err)
 		dedupTx.Rollback()
 	} else {
@@ -62,6 +62,33 @@ func (h *APIHandler) handleIngest(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Infof("ingest from %s: saved %d events, %d errors", payload.VenueInfo.Name, saved, len(errs))
 	h.writeJSON(w, http.StatusOK, map[string]any{"saved": saved, "errors": errs})
+}
+
+// ingestedVenueIDs returns the IDs of the venues touched by a payload: the
+// payload's own venue plus any venue named on its events.
+func (h *APIHandler) ingestedVenueIDs(payload ingest.IngestionOutput, tx *gorm.DB) []int64 {
+	names := map[string]struct{}{}
+	if payload.VenueInfo.Name != "" {
+		names[payload.VenueInfo.Name] = struct{}{}
+	}
+	for _, event := range payload.Events {
+		if event.Venue.Name != "" {
+			names[event.Venue.Name] = struct{}{}
+		}
+	}
+
+	ids := make([]int64, 0, len(names))
+	for name := range names {
+		venue, err := h.database.GetVenueByName(name, tx)
+		if err != nil {
+			h.logger.Errorf("failed to look up venue %s for dedup: %s", name, err)
+			continue
+		}
+		if venue.ID != 0 {
+			ids = append(ids, int64(venue.ID))
+		}
+	}
+	return ids
 }
 
 func (h *APIHandler) saveVenueInfo(venueInfo ingest.VenueInfo, tx *gorm.DB) error {

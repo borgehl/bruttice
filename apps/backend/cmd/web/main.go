@@ -74,7 +74,7 @@ func main() {
 	}
 
 	server.Database = dbx.NewDatabaseClient(server.Logger)
-	server.Database.Migrate()
+	server.Database.Migrate(cfg)
 
 	server.HandleConfigs(cfg)
 

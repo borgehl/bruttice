@@ -1,17 +1,12 @@
 package dbx
 
 import (
-	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
-	"slices"
 
 	"gorm.io/gorm"
 )
 
 func (d *DatabaseClient) SaveTag(tag models.Tag, tx *gorm.DB) (models.Tag, error) {
-	if !slices.Contains(configs.Tags, tag.Name) {
-		return models.Tag{}, nil
-	}
 	existingTag, err := d.GetTagByName(tag.Name, tx)
 	if err != nil {
 		return tag, err
