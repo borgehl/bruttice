@@ -10,6 +10,8 @@ type Visitors struct {
 	Country   string
 }
 
+// drop and create, because replace requires
+// the same columns
 func (a *Visitors) CreateView() string {
 	viewSql := `
 		select

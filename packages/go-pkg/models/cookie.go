@@ -17,6 +17,7 @@ type SessionCookie struct {
 	http.Cookie
 }
 
+// update the cookie model with the new cookie data
 func (c *CookieModel) UpdateCookie(cookie SessionCookie) error {
 	body, err := json.Marshal(cookie)
 	if err != nil {
@@ -26,6 +27,7 @@ func (c *CookieModel) UpdateCookie(cookie SessionCookie) error {
 	return nil
 }
 
+// unmarshal the stored cookie in the model body
 func (c *CookieModel) GetCookie() (SessionCookie, error) {
 	ret := SessionCookie{}
 	err := json.Unmarshal(c.CookieBody, &ret)

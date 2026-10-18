@@ -1,9 +1,9 @@
 package api
 
 import (
+	"encoding/json"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"time"
@@ -16,6 +16,9 @@ type visitorConsentRequest struct {
 	Query string `json:"query"`
 }
 
+// handleVisitorConsent generates a visitor UUID, performs a one-time geo lookup,
+// saves the VisitorLocation and an initial VisitorLog for the page the user was on,
+// and sets the visitor-id cookie.
 func (h *APIHandler) handleVisitorConsent(w http.ResponseWriter, r *http.Request) {
 	var req visitorConsentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -30,6 +33,7 @@ func (h *APIHandler) handleVisitorConsent(w http.ResponseWriter, r *http.Request
 	location, err := h.geoClient.GetLocation(visitorIP)
 	if err != nil {
 		h.logger.Errorf("visitor consent: geo lookup on %s failed: %v", visitorIP, err)
+		// Proceed anyway — we can still set the cookie with an empty location.
 	}
 
 	loc := models.VisitorLocation{

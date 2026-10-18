@@ -1,10 +1,10 @@
 package api
 
 import (
-	"github.com/borgehl/bruttice/packages/go-pkg/models"
-	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
 	"encoding/json"
 	"fmt"
+	"github.com/borgehl/bruttice/packages/go-pkg/models"
+	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
 	"net/http"
 	"regexp"
 	"strings"
@@ -15,14 +15,17 @@ const formDTFormat = "2006-01-02 15:04"
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
+// normalizeURL adds https:// prefix if no protocol is present
 func normalizeURL(url string) string {
 	url = strings.TrimSpace(url)
 	if url == "" {
 		return url
 	}
+	// Check if URL already has a protocol
 	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
 		return url
 	}
+	// Add https:// prefix
 	return "https://" + url
 }
 
@@ -34,10 +37,12 @@ func (h *APIHandler) handleAddEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate email
 	if !emailRegex.MatchString(req.Email) {
 		h.writeError(w, http.StatusBadRequest, "Invalid email address")
 		return
 	}
+	// Validate required fields
 	if req.Title == "" {
 		h.writeError(w, http.StatusBadRequest, "Title is required")
 		return
@@ -76,6 +81,7 @@ func (h *APIHandler) handleAddEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	event.StartAt = startAt
 
+	// Parse doors time if provided
 	if req.DoorsTime != "" {
 		doorsAt, err := time.ParseInLocation(formDTFormat, fmt.Sprintf("%s %s", req.Date, req.DoorsTime), util.TZLocation)
 		if err != nil {
@@ -85,6 +91,7 @@ func (h *APIHandler) handleAddEvent(w http.ResponseWriter, r *http.Request) {
 		event.DoorsAt = &doorsAt
 	}
 
+	// Add tags
 	for _, tag := range req.Tags {
 		event.Tags = append(event.Tags, models.Tag{Name: tag})
 	}
@@ -111,6 +118,7 @@ func (h *APIHandler) handleAddEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Send verification email asynchronously
 	msg := h.email.GetVerifyEventEmail(event.Title, req.Email, *event.VerificationKey)
 	go h.email.SendEmail(req.Email, msg)
 
@@ -130,6 +138,7 @@ func (h *APIHandler) handleVerifyEvent(w http.ResponseWriter, r *http.Request) {
 	tx := h.database.DB.Begin()
 	defer tx.Commit()
 
+	// Update the event with the matching verification key
 	result := tx.Model(&models.Event{}).
 		Where("verification_key = ?", verifyKey).
 		Update("verified_at", time.Now().Unix())

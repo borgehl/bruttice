@@ -26,14 +26,15 @@ type ConfigRawRegion struct {
 }
 
 type ConfigRaw struct {
-	AdminAccounts []string           `yaml:"admin-accounts"`
-	Timezone      string             `yaml:"timezone"`
-	CookieSalt    string             `yaml:"cookie-salt"`
-	IngestKey     string             `yaml:"ingest-key"`
-	Tags          []string           `yaml:"tags"`
-	AgeGroups     []ConfigRawAgeGroup `yaml:"age-groups"`
-	Regions       []ConfigRawRegion  `yaml:"regions"`
-	Venues        []ConfigRawVenue   `yaml:"venues"`
+	AdminAccounts    []string            `yaml:"admin-accounts"`
+	Timezone         string              `yaml:"timezone"`
+	CookieSalt       string              `yaml:"cookie-salt"`
+	IngestKey        string              `yaml:"ingest-key"`
+	IngestTriggerURL string              `yaml:"ingest-trigger-url"`
+	Tags             []string            `yaml:"tags"`
+	AgeGroups        []ConfigRawAgeGroup `yaml:"age-groups"`
+	Regions          []ConfigRawRegion   `yaml:"regions"`
+	Venues           []ConfigRawVenue    `yaml:"venues"`
 }
 
 type AdminAccount struct {
@@ -53,7 +54,9 @@ type Config struct {
 	TZLocation    *time.Location
 	CookieSalt    string
 	IngestKey     string
-	InitialData   InitialData
+	// IngestTriggerURL is the scraper service endpoint that starts a run, empty if there is none
+	IngestTriggerURL string
+	InitialData      InitialData
 }
 
 func ParseConfig(configFilename *string) Config {
@@ -72,9 +75,10 @@ func ParseConfig(configFilename *string) Config {
 	}
 
 	ret := Config{
-		AdminAccounts: make([]AdminAccount, 0, len(raw.AdminAccounts)),
-		CookieSalt:    raw.CookieSalt,
-		IngestKey:     raw.IngestKey,
+		AdminAccounts:    make([]AdminAccount, 0, len(raw.AdminAccounts)),
+		CookieSalt:       raw.CookieSalt,
+		IngestKey:        raw.IngestKey,
+		IngestTriggerURL: raw.IngestTriggerURL,
 		InitialData: InitialData{
 			Tags:      raw.Tags,
 			AgeGroups: raw.AgeGroups,

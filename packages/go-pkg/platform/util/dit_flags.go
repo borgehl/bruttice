@@ -17,6 +17,7 @@ var tagRegexp = regexp.MustCompile(`(dit-tags[:|\w]+)[:\s]?`)
 
 func parseValues(s string, prefix string, reg *regexp.Regexp) []string {
 	return strings.Split(
+		// remove prefix from the flag line
 		strings.ReplaceAll(reg.FindString(s), prefix, ""),
 		":",
 	)

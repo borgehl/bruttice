@@ -1,9 +1,9 @@
 package api
 
 import (
+	"fmt"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
-	"fmt"
 	"net/http"
 	"os"
 	"strconv"

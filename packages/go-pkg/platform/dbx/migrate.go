@@ -7,15 +7,14 @@ import (
 )
 
 func (d *DatabaseClient) Migrate(cfg configx.Config) {
-	tx := d.DB.Begin()
-	defer tx.Commit()
-
-	tx.AutoMigrate(
+	d.DB.AutoMigrate(
 		&models.Age{},
 		&models.CalendarFilter{},
 		&models.CookieModel{},
 		&models.Event{},
 		&models.EventAdminJudgement{},
+		&models.IngestRun{},
+		&models.IngestRunSource{},
 		&models.MigrationFlag{},
 		&models.Region{},
 		&models.Tag{},
@@ -26,6 +25,8 @@ func (d *DatabaseClient) Migrate(cfg configx.Config) {
 		&models.UntrackedHit{},
 	)
 
+	tx := d.DB.Begin()
+	defer tx.Commit()
 	var err error
 
 	_, err = d.GetSaveUser(configs.RootUser, tx)

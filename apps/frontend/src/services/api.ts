@@ -1,4 +1,4 @@
-import type { Age, Event, FilterOptions, Venue, AdminDashboard } from '../types/event';
+import type { Age, Event, FilterOptions, Venue, AdminDashboard, IngestRunsPage } from '../types/event';
 
 const API_BASE = '/api';
 
@@ -215,6 +215,40 @@ export async function fetchAdminDashboard(): Promise<AdminDashboard> {
   }
 
   return response.json();
+}
+
+// beforeId: only return runs older than this id
+export async function fetchIngestRuns(beforeId?: number): Promise<IngestRunsPage> {
+  const query = beforeId ? `?before=${beforeId}` : '';
+  const response = await fetch(`${API_BASE}/admin/ingest-runs${query}`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Authentication required');
+    }
+    throw new Error('Failed to fetch ingest runs');
+  }
+
+  return response.json();
+}
+
+export async function startIngest(): Promise<void> {
+  const response = await fetch(`${API_BASE}/admin/ingest-run`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Authentication required');
+    }
+    if (response.status === 409) {
+      throw new Error('An ingestion is already running');
+    }
+    throw new Error('Failed to start ingestion');
+  }
 }
 
 export interface VoteData {

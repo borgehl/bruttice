@@ -7,12 +7,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Logger wraps logrus.Logger so that it can Logger messages sharing a common set of fields.
 type Logger struct {
 	Logger *logrus.Logger
 	entry  *logrus.Entry
 	fields logrus.Fields
 }
 
+// NewLogger creates a Logger object with the specified logrus.Logger and the fields that should be added to every message.
 func NewLogger(fields logrus.Fields, hooks []logrus.Hook) *Logger {
 	logrusLogger := logrus.New()
 

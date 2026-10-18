@@ -1,42 +1,16 @@
 package geoipx
 
 import (
-	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
 	"context"
-	"fmt"
-	"os"
 
 	ipgeolocation "github.com/IPGeolocation/ip-geolocation-go-sdk/sdk"
 )
 
-var ErrClientLocked = fmt.Errorf("client locked")
-
-type GeoLocation struct {
-	IpAddr    string
-	StateCode string
-	City      string
-	Country   string
-}
-
-type SdkInterface interface {
-	GetLocation(string) (GeoLocation, error)
-	IsLocked() bool
-}
-
-type GeoIpConfig struct {
-	IpGeolocationIoApiKey string
-}
-
-func NewGeoIpConfig() GeoIpConfig {
-	return GeoIpConfig{
-		IpGeolocationIoApiKey: os.Getenv("IP_GEOLOCATION_IO_API_KEY"),
-	}
-}
-
 const (
-	includeFields   = "location.state_code, location.city, location.country_code2"
-	language        = "en"
-	output          = "json"
+	includeFields = "location.state_code, location.city, location.country_code2"
+	language      = "en"
+	output        = "json"
+	// hit the 1k limit for the day, when does it reset?
 	tooManyRequests = 429
 )
 
@@ -74,30 +48,5 @@ func (c *IpGeolocationIoClient) GetLocation(ipAddr string) (ret GeoLocation, err
 	ret.Country = *resp.Location.CountryCode2
 	ret.StateCode = *resp.Location.StateCode
 	ret.City = *resp.Location.City
-	return
-}
-
-type GeoIpClient struct {
-	clients []SdkInterface
-}
-
-func NewGeoIpClient(log *logx.Logger) *GeoIpClient {
-	config := NewGeoIpConfig()
-	log.Infof("Config: %+v\n", config)
-	ret := GeoIpClient{}
-	ret.clients = append(ret.clients, NewIPGeolocationIoClient(config))
-	return &ret
-}
-
-func (c *GeoIpClient) GetLocation(ipAddr string) (ret GeoLocation, err error) {
-	for _, client := range c.clients {
-		if client.IsLocked() {
-			continue
-		}
-		ret, err = client.GetLocation(ipAddr)
-		if err == nil {
-			break
-		}
-	}
 	return
 }

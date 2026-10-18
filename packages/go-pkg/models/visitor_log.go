@@ -10,6 +10,7 @@ type VisitorLog struct {
 	PathName  string
 	FilterKey string
 
+	// raw query string
 	QueryParams string
 
 	VisitorLocationID int64

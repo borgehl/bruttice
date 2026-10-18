@@ -15,6 +15,7 @@ func (d *DatabaseClient) GetSaveAge(age models.Age, tx *gorm.DB) (models.Age, er
 	return d.SaveAge(ret, tx)
 }
 
+// only gets by the name
 func (d *DatabaseClient) GetAge(age models.Age, tx *gorm.DB) (models.Age, error) {
 	err := tx.Where(&age).First(&age).Error
 	if isErrorNotFoundOK(err) {

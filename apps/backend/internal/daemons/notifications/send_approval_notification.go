@@ -1,14 +1,15 @@
 package notifications
 
 import (
+	"fmt"
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/dbx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
-	"fmt"
 	"time"
 )
 
+// sencd approval notes every hour
 func GoRunSendApprovalNotifications() {
 	for {
 		SendApprovalNotification()

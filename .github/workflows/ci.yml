@@ -27,6 +27,32 @@ jobs:
         run: go vet ./...
         working-directory: apps/backend
 
+      - name: Test
+        run: go test ./...
+        working-directory: apps/backend
+
+  test-go-pkg:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: packages/go-pkg/go.sum
+
+      - name: Build
+        run: go build ./...
+        working-directory: packages/go-pkg
+
+      - name: Vet
+        run: go vet ./...
+        working-directory: packages/go-pkg
+
+      - name: Test
+        run: go test ./...
+        working-directory: packages/go-pkg
+
   test-frontend:
     runs-on: ubuntu-latest
     steps:
@@ -51,7 +77,7 @@ jobs:
         working-directory: apps/frontend
 
   publish-backend:
-    needs: test-backend
+    needs: [test-backend, test-go-pkg]
     if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:

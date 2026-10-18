@@ -1,8 +1,8 @@
 package api
 
 import (
-	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"encoding/json"
+	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"net/http"
 )
 
@@ -21,6 +21,7 @@ func (h *APIHandler) handleGetFilterOptions(w http.ResponseWriter, r *http.Reque
 		tags = append(tags, TagResponse{ID: int64(i + 1), Name: name})
 	}
 
+	// Get venues
 	venueModels, err := h.database.GetVenues(tx)
 	if err != nil {
 		h.logger.Errorf("failed to get venues: %v", err)
@@ -32,6 +33,7 @@ func (h *APIHandler) handleGetFilterOptions(w http.ResponseWriter, r *http.Reque
 		venues = append(venues, VenueResponse{Name: v.Name, Slug: v.Slug, Link: v.Link})
 	}
 
+	// Get ages
 	ageModels, err := h.database.GetAges(tx)
 	if err != nil {
 		h.logger.Errorf("failed to get ages: %v", err)
@@ -41,11 +43,13 @@ func (h *APIHandler) handleGetFilterOptions(w http.ResponseWriter, r *http.Reque
 	ages := make([]AgeResponse, 0, len(ageModels))
 	for _, age := range ageModels {
 		if age.Value > 100 {
+			// skip unknown ages for filters/event creation
 			continue
 		}
 		ages = append(ages, AgeResponse{ID: int64(age.ID), Name: age.Name, Value: age.Value})
 	}
 
+	// Get regions
 	regionNames, err := h.database.GetRegionNames(tx)
 	if err != nil {
 		h.logger.Errorf("failed to get regions: %v", err)
@@ -102,6 +106,7 @@ func (h *APIHandler) handleCreateFilter(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Find the minimum age value from the selected ages
 	var ageValue uint8
 	if len(req.Ages) > 0 {
 		ageValue = req.Ages[0]

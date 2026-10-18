@@ -1,8 +1,8 @@
 package api
 
 import (
-	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"fmt"
+	"github.com/borgehl/bruttice/packages/go-pkg/models"
 
 	"gorm.io/gorm"
 )
@@ -42,6 +42,7 @@ func (h *APIHandler) processVote(vote string, guid string, user models.User, tx 
 		return err
 	}
 
+	// Check if we should approve or delete the event based on score
 	event, err = h.database.GetEventByGuid(guid, tx)
 	if err != nil {
 		return err

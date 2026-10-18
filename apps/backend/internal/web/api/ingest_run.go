@@ -1,0 +1,78 @@
+package api
+
+import (
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/borgehl/bruttice/packages/go-pkg/configs"
+)
+
+// handleStartIngestRun opens a run that a scraper service can attach its payloads to.
+func (h *APIHandler) handleStartIngestRun(w http.ResponseWriter, r *http.Request) {
+	if !h.ingestAuthorized(r) {
+		h.writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	run, err := h.database.CreateIngestRun()
+	if err != nil {
+		h.logger.Errorf("failed to create ingest run record: %s", err)
+		h.writeError(w, http.StatusInternalServerError, "failed to create run")
+		return
+	}
+	h.writeJSON(w, http.StatusCreated, map[string]any{"id": run.ID})
+}
+
+// handleFinishIngestRun marks a run as finished once the scraper service has posted all its payloads.
+func (h *APIHandler) handleFinishIngestRun(w http.ResponseWriter, r *http.Request) {
+	if !h.ingestAuthorized(r) {
+		h.writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var runID int64
+	if _, err := fmt.Sscanf(r.PathValue("id"), "%d", &runID); err != nil || runID <= 0 {
+		h.writeError(w, http.StatusBadRequest, "invalid run id")
+		return
+	}
+
+	if err := h.database.FinishIngestRun(runID, nil); err != nil {
+		h.logger.Errorf("failed to finish ingest run record: %s", err)
+		h.writeError(w, http.StatusInternalServerError, "failed to finish run")
+		return
+	}
+	h.emailRunErrors(runID, true)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// emailRunErrors emails the root admin the errors a run recorded.
+//
+// With weeklyCheck, a run with no errors is still reported on Mondays, so a
+// silent inbox means ingestion is broken rather than healthy.
+func (h *APIHandler) emailRunErrors(runID int64, weeklyCheck bool) {
+	run, err := h.database.GetIngestRun(runID)
+	if err != nil {
+		h.logger.Errorf("failed to load ingest run %d for its error email: %s", runID, err)
+		return
+	}
+
+	errs := make([]error, 0)
+	for _, source := range run.Sources {
+		for _, msg := range source.Errors {
+			if !strings.HasPrefix(msg, source.Source) {
+				msg = fmt.Sprintf("%s: %s", source.Source, msg)
+			}
+			errs = append(errs, fmt.Errorf("%s", msg))
+		}
+	}
+
+	if len(errs) == 0 && !(weeklyCheck && time.Now().Weekday() == time.Monday) {
+		h.logger.Infof("no email: no errors in ingest run %d", runID)
+		return
+	}
+
+	h.email.SendEmail(configs.RootUser.Email, h.email.GetErrorsEmail(errs))
+	h.logger.Infof("sent email with %d errors from ingest run %d", len(errs), runID)
+}

@@ -9,6 +9,7 @@ import (
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
 
+// Returns snake case of v
 func StructToSnakeCase(v any) string {
 	vType := reflect.TypeOf(v)
 	for vType.Kind() == reflect.Ptr {

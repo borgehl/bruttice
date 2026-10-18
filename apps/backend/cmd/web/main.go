@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/borgehl/bruttice/apps/backend/internal/daemons/notifications"
 	"github.com/borgehl/bruttice/apps/backend/internal/web"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/api"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/ingesttrigger"
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/configx"
@@ -33,7 +35,12 @@ func (s Server) Run() {
 }
 
 func (s Server) HandleConfigs(cfg configx.Config) {
-	s.Logger.Infof("config loaded: %+v", cfg)
+	// cfg holds the ingest key, cookie salt and admin passwords, so only log what is safe to
+	s.Logger.Infof(
+		"config loaded: timezone %s, %d admin accounts, %d tags, %d age groups, %d regions, %d venues",
+		cfg.TZLocation, len(cfg.AdminAccounts),
+		len(cfg.InitialData.Tags), len(cfg.InitialData.AgeGroups), len(cfg.InitialData.Regions), len(cfg.InitialData.Venues),
+	)
 
 	var err error
 	tx := s.Database.DB.Begin()
@@ -47,7 +54,10 @@ func (s Server) HandleConfigs(cfg configx.Config) {
 			tx.Rollback()
 			panic(err)
 		}
-		if user.ID != 0 {
+		// the root user is created without a password by Migrate, so an existing
+		// user only counts as saved once it has one
+		if user.ID != 0 && len(user.PasswordHash) > 0 {
+			// already saved
 			continue
 		}
 		user.PasswordHash, err = passwordsx.GetPasswordHash(account.Password)
@@ -78,7 +88,13 @@ func main() {
 
 	server.HandleConfigs(cfg)
 
-	server.Web = web.NewController(server.Logger, server.Database, server.Mux, cfg.IngestKey, cfg.CookieSalt)
+	// a nil interface (not a nil *HTTPTrigger) tells the API there is no scraper service
+	var ingestTrigger api.IngestTrigger
+	if cfg.IngestTriggerURL != "" {
+		ingestTrigger = ingesttrigger.NewHTTPTrigger(cfg.IngestTriggerURL, cfg.IngestKey)
+	}
+
+	server.Web = web.NewController(server.Logger, server.Database, server.Mux, cfg.IngestKey, ingestTrigger, cfg.CookieSalt)
 
 	go notifications.GoRunSendApprovalNotifications()
 

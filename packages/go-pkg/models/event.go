@@ -1,8 +1,8 @@
 package models
 
 import (
-	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
 	"fmt"
+	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,12 +20,14 @@ type Event struct {
 	CoverCost string
 	Tags      []Tag `gorm:"many2many:event_tags"`
 
+	// verification
 	VerificationKey      *string
 	VerifiedAt           *int64 `gorm:"index"`
 	VerificationEmail    *string
 	ApprovedAt           *int64 `gorm:"index"`
 	EventAdminJudgements []EventAdminJudgement
 
+	// foreign relations
 	AgeID int64
 	Age   Age
 
@@ -41,15 +43,19 @@ type Event struct {
 // Otherwise hashes Title+StartAt+VenueName.
 func (e *Event) UpdateGuid(id *string) {
 	if e.Guid != "" {
+		// do not overwrite
 		return
 	}
 	if id != nil && *id != "" {
+		// manually set
 		e.Guid = fmt.Sprintf("%s-%s", e.Venue.Name, *id)
 		return
 	}
 	e.Guid = util.Base64EncodeString(e.Title + e.StartAt.String() + e.Venue.Name)
 }
 
+// creates a new base64 encoded uuid4
+// sets it to VerificationKey and returns that string
 func (e *Event) CreateVerificationKey() string {
 	key := util.Base64EncodeString(uuid.NewString())
 	e.VerificationKey = &key

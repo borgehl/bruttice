@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AdminDashboardDaySection from '../components/features/AdminDashboardDaySection';
+import AdminIngestRuns from '../components/features/AdminIngestRuns';
 import { useAuthStore } from '../store/auth';
 import { fetchAdminDashboard, submitVote } from '../services/api';
 import type { AdminDashboard } from '../types/event';
@@ -10,6 +11,7 @@ export default function AdminDashboardPage() {
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<'events' | 'ingestion'>('events');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -108,6 +110,27 @@ export default function AdminDashboardPage() {
         </p>
       </div>
 
+      <div className="flex gap-2 mb-6 border-b border-border">
+        {([
+          ['events', 'Events'],
+          ['ingestion', 'Ingestion'],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`px-4 py-2 text-sm -mb-px border-b-2 ${
+              tab === key ? 'border-primary text-text font-medium' : 'border-transparent text-text-muted hover:text-text'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'ingestion' ? (
+        <AdminIngestRuns />
+      ) : (
+        <>
       <section className="mb-12">
         <h2 className="text-xl font-bold text-text mb-4">Events Awaiting Approval</h2>
         <div className="max-h-[500px] overflow-y-auto border border-border rounded-lg p-4 bg-surface">
@@ -133,6 +156,8 @@ export default function AdminDashboardPage() {
           )}
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 }

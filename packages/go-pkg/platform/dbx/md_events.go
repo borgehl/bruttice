@@ -1,9 +1,9 @@
 package dbx
 
 import (
+	"fmt"
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
-	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -18,6 +18,9 @@ var eventPreloads = []string{
 	"Tags",
 }
 
+// checks for guid and overwrites if found
+// if age/region/venue are not found,ids will be zero and
+// error will be returned
 func (d *DatabaseClient) SaveEvent(event models.Event, isScraper bool, tx *gorm.DB) (models.Event, error) {
 	existingEvent, err := d.GetEventByGuid(event.Guid, tx.Unscoped())
 	if err != nil {
@@ -46,6 +49,7 @@ func (d *DatabaseClient) SaveEvent(event models.Event, isScraper bool, tx *gorm.
 		return event, fmt.Errorf("venue auto flag is %t, but calling function auto flag is %t", event.Venue.IsScraped, isScraper)
 	}
 
+	// overwrite region with venue region if the default is known (non-unlisted venue)
 	if event.Venue.Name != configs.UnlistedName && event.Venue.DefaultRegion != event.Region.Name {
 		event.Region, err = d.GetRegion(models.Region{Name: event.Venue.DefaultRegion}, tx)
 		if err != nil {
@@ -69,6 +73,9 @@ func (d *DatabaseClient) SaveEvent(event models.Event, isScraper bool, tx *gorm.
 	return event, nil
 }
 
+// UpdateEvent saves an already-loaded event with modified fields.
+// Replaces the tag association via ReplaceEventTags.
+// Clears judgements as well
 func (d *DatabaseClient) UpdateEvent(event models.Event, tx *gorm.DB) (models.Event, error) {
 	if err := d.ReplaceEventJudgements(event, nil, tx); err != nil {
 		d.Logger.Errorf("failed to clear judgements for event: %v", err)
@@ -101,6 +108,7 @@ func (d *DatabaseClient) ApproveEvent(event models.Event, tx *gorm.DB) error {
 	return tx.Model(&event).Update("approved_at", time.Now().Unix()).Error
 }
 
+// Used for checking if a record was previously deleted
 func (d *DatabaseClient) GetEventByGuidUnscoped(guid string, tx *gorm.DB) (models.Event, error) {
 	ret := models.Event{Guid: guid}
 	err := tx.Unscoped().Where(&ret).First(&ret).Error
@@ -116,6 +124,7 @@ func (d *DatabaseClient) GetEventByVerifyKey(verifyKey string, tx *gorm.DB) (mod
 	return ret, err
 }
 
+// gets events including today and 1 month forward
 func (d *DatabaseClient) GetIndexEvents(filter models.CalendarFilterBackend, tx *gorm.DB) ([]models.Event, error) {
 	ret := make([]models.Event, 0)
 	var err error
@@ -126,6 +135,9 @@ func (d *DatabaseClient) GetIndexEvents(filter models.CalendarFilterBackend, tx 
 	for _, preload := range eventPreloads {
 		tx = tx.Preload(preload)
 	}
+	// There shouldn't be a case when this isn't set properly,
+	// but leaving this note here in case bugs show up later.
+	// filter.UpdateDates()
 	err = tx.Where(
 		"? <= start_at and start_at <= ? and approved_at is not null",
 		filter.FromDate, filter.ToDate,
@@ -136,6 +148,7 @@ func (d *DatabaseClient) GetIndexEvents(filter models.CalendarFilterBackend, tx 
 	return ret, nil
 }
 
+// gets events including today and 1 month forward
 func (d *DatabaseClient) GetAwaitingApprovalEvents(tx *gorm.DB) ([]models.Event, error) {
 	ret := make([]models.Event, 0)
 	for _, preload := range eventPreloads {

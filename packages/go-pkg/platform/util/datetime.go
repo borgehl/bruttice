@@ -21,6 +21,8 @@ func SetTZLocation(loc *time.Location) {
 	TZLocation = loc
 }
 
+// get the date in utc without any time info, all zeros
+// use config timezone to handle DST correctly
 func NowDate() time.Time {
 	now := time.Now().In(TZLocation)
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, TZLocation).UTC()
@@ -47,6 +49,8 @@ func MultipleDatetimeParsingTries(datetimeStr string, formats []string, today ti
 	return time.Time{}, fmt.Errorf("failed to parse %s from formats %+v", datetimeStr, formats)
 }
 
+// Monday Jan. 2, 2006
+// and handle May/April/etc. without a period
 func DisplayDateFormat(dt time.Time) string {
 	period := ""
 	if dt.Format("Jan") != dt.Format("January") {
@@ -55,6 +59,8 @@ func DisplayDateFormat(dt time.Time) string {
 	return dt.Format(fmt.Sprintf("Monday Jan%s 2, 2006", period))
 }
 
+// Replaces the timezone associated with the time.Time, as it is assumed
+// to be incorrect/naive.
 func ReplaceTimezone(t time.Time, loc *time.Location) time.Time {
 	return time.Date(
 		t.Year(), t.Month(), t.Day(),

@@ -1,15 +1,16 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/passwordsx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 )
 
+// Admin login request/response types
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -21,6 +22,7 @@ type LoginResponse struct {
 	Message string `json:"message,omitempty"`
 }
 
+// Admin event with score info for dashboard
 type AdminEventResponse struct {
 	Guid      string   `json:"guid"`
 	Title     string   `json:"title"`
@@ -60,6 +62,7 @@ type VoteResponse struct {
 	Message string `json:"message,omitempty"`
 }
 
+// Admin add event request (same fields but no email verification needed)
 type AdminAddEventRequest struct {
 	Title     string   `json:"title"`
 	Link      string   `json:"link"`
@@ -78,6 +81,7 @@ type AdminAddEventResponse struct {
 	Message string `json:"message,omitempty"`
 }
 
+// Admin update event request - all fields optional except guid
 type AdminUpdateEventRequest struct {
 	Guid      string   `json:"guid"`
 	Title     *string  `json:"title,omitempty"`
@@ -121,6 +125,7 @@ func (h *APIHandler) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set session cookie
 	cookie := h.cookieSessions.CreateSessionCookie(user, tx)
 	if cookie == nil {
 		h.logger.Errorf("failed to create session cookie for user: %s", req.Email)
@@ -152,6 +157,7 @@ func (h *APIHandler) handleAdminDashboard(w http.ResponseWriter, r *http.Request
 	tx := h.database.DB.Begin()
 	defer tx.Commit()
 
+	// Get events awaiting approval
 	awaitingApprovalEvents, err := h.database.GetAwaitingApprovalEvents(tx)
 	if err != nil {
 		h.logger.Errorf("failed to get awaiting approval events: %v", err)
@@ -159,6 +165,7 @@ func (h *APIHandler) handleAdminDashboard(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Get upcoming approved events
 	upcomingFilter := models.CalendarFilterBackend{}
 	upcomingFilter.UpdateDates()
 	upcomingEvents, err := h.database.GetIndexEvents(upcomingFilter, tx)
@@ -218,6 +225,7 @@ func (h *APIHandler) handleAdminCheckSession(w http.ResponseWriter, r *http.Requ
 	h.writeJSON(w, http.StatusOK, LoginResponse{Success: true, Email: user.Email})
 }
 
+// Helper to get authenticated user from request
 func (h *APIHandler) getAuthenticatedUser(r *http.Request) *models.User {
 	tx := h.database.DB.Begin()
 	defer tx.Commit()
@@ -228,6 +236,7 @@ func (h *APIHandler) getAuthenticatedUser(r *http.Request) *models.User {
 	return h.cookieSessions.GetUserFromRequest(r)
 }
 
+// Convert events to admin event day format grouped by date
 func convertToAdminEventDays(events []models.Event) []AdminEventDayResponse {
 	if len(events) == 0 {
 		return []AdminEventDayResponse{}
@@ -312,6 +321,7 @@ func (h *APIHandler) handleAdminAddEvent(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Validate required fields
 	if req.Title == "" {
 		h.writeError(w, http.StatusBadRequest, "Title is required")
 		return
@@ -348,6 +358,7 @@ func (h *APIHandler) handleAdminAddEvent(w http.ResponseWriter, r *http.Request)
 	}
 	event.StartAt = startAt
 
+	// Parse doors time if provided
 	if req.DoorsTime != "" {
 		doorsAt, err := time.ParseInLocation(formDTFormat, fmt.Sprintf("%s %s", req.Date, req.DoorsTime), util.TZLocation)
 		if err != nil {
@@ -357,10 +368,12 @@ func (h *APIHandler) handleAdminAddEvent(w http.ResponseWriter, r *http.Request)
 		event.DoorsAt = &doorsAt
 	}
 
+	// Add tags
 	for _, tag := range req.Tags {
 		event.Tags = append(event.Tags, models.Tag{Name: tag})
 	}
 
+	// Set verified and approved timestamps for admin-created events
 	now := time.Now().Unix()
 	event.VerifiedAt = &now
 	event.ApprovedAt = &now
@@ -398,6 +411,7 @@ func (h *APIHandler) handleAdminGetAges(w http.ResponseWriter, r *http.Request) 
 	tx := h.database.DB.Begin()
 	defer tx.Commit()
 
+	// Get ages
 	ageModels, err := h.database.GetAges(tx)
 	if err != nil {
 		h.logger.Errorf("failed to get ages: %v", err)
@@ -452,6 +466,7 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Update fields if provided
 	updated := false
 	if req.Title != nil && *req.Title != event.Title {
 		event.Title = *req.Title
@@ -556,6 +571,7 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Save the updated event (resolves tags by name and replaces associations)
 	if _, err := h.database.UpdateEvent(event, tx); err != nil {
 		h.logger.Errorf("failed to save updated event: %v", err)
 		h.writeError(w, http.StatusInternalServerError, "Failed to update event")

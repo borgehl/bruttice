@@ -52,3 +52,7 @@ venues:
   - name: "Community Arts Space"
     link: "https://example.com/venue-two"
     region: central
+
+# Optional. URL of the scraper service endpoint that starts a run, used by the admin
+# dashboard's "run ingestion" button. Leave unset if you have no scraper service.
+# ingest-trigger-url: "http://scrapers:8081/run"

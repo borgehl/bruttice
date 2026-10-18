@@ -15,7 +15,7 @@ COPY . .
 FROM base AS test
 RUN pnpm test
 
-# Runtime stage
+# Runtime stage (dev/local — builds at container start based on $ENV)
 FROM base AS runtime
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
@@ -23,3 +23,11 @@ RUN chmod +x /docker-entrypoint.sh
 EXPOSE 80
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# Production stage — pre-built for k8s; no runtime build step
+FROM base AS prod
+RUN pnpm build
+
+EXPOSE 80
+
+CMD ["pnpm", "preview", "--host", "0.0.0.0", "--port", "80"]

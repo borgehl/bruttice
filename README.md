@@ -13,7 +13,7 @@ Bruttice runs four Docker services:
 | `bruttice-db` | PostgreSQL |
 | `bruttice-nginx` | Reverse proxy (public entry point) |
 
-Nginx exposes `/api/` and `/` to the public. The `/internal/` path — used by ingestors — is blocked at nginx and only reachable from within the Docker network.
+Nginx exposes `/api/` and `/` to the public. The `/internal/` path — used by scrapers — is blocked at nginx and only reachable from within the Docker network.
 
 ## Quick start
 
@@ -64,7 +64,8 @@ Key fields:
 |---|---|
 | `timezone` | Server timezone (any tz database name, e.g. `America/Chicago`) |
 | `cookie-salt` | Random secret used to sign session cookies |
-| `ingest-key` | Secret shared with ingestors posting events |
+| `ingest-key` | Secret shared with scrapers posting events (see [docs/writing-scrapers.md](docs/writing-scrapers.md)) |
+| `ingest-trigger-url` | Optional. Endpoint of your scraper service that starts a run, used by the admin dashboard's "run ingestion" button (see [Triggering a run](#triggering-a-run-from-the-admin-dashboard)) |
 | `admin-accounts` | `email;password` pairs — first entry is the root admin |
 | `tags` | Tags seeded into the database on first run |
 | `age-groups` | Age restriction tiers (`name` + numeric `value`; 1 = all-ages, 255 = unknown) |
@@ -100,127 +101,11 @@ docker compose up -d
 
 The site is available at `http://localhost:${PORT}`.
 
-## Writing an ingestor
+## Writing scrapers
 
-An ingestor is any process that scrapes or fetches event data and POSTs it to the backend. Because `/internal/ingest` is blocked at nginx, ingestors must run inside the same Docker network (`bruttice`) or on the same host.
+Bruttice has no scrapers built in. Anything that can POST JSON to `/internal/ingest` can feed it, in any language, and the admin dashboard's "run ingestion" button can start yours through `ingest-trigger-url`.
 
-### Endpoint
-
-```
-POST http://bruttice-backend:8080/internal/ingest
-Authorization: Bearer <ingest-key>
-Content-Type: application/json
-```
-
-The `ingest-key` must match the `ingest-key` value in `config.yaml`.
-
-### Payload
-
-```jsonc
-{
-  "venue_info": {
-    "name": "The Venue Name",        // required — used as a unique key
-    "link": "https://venue.example.com",
-    "is_auto_ingest": true,          // if true, events skip the moderation queue
-    "default_region": "downtown",    // optional region tag applied to all events
-    "skip_venue_save": false,        // set true to omit creating a Venue record
-    "timezone": "America/Chicago"    // timezone of the raw event times
-  },
-  "events": [
-    {
-      "Title": "Event Name",
-      "Link": "https://tickets.example.com/event/123",
-      "StartAt": "2025-09-15T20:00:00Z",   // RFC3339 UTC
-      "DoorsAt": "2025-09-15T19:00:00Z",   // optional
-      "CoverCost": "$10",                  // free-text, e.g. "$5–$15" or "free"
-      "Venue": { "Name": "The Venue Name" },
-      "Age":   { "Name": "18+" },
-      "Tags":  [{ "Name": "rock" }, { "Name": "live-music" }]
-    }
-  ],
-  "errors": []   // non-fatal scraper errors logged server-side
-}
-```
-
-Events with `is_auto_ingest: true` are published immediately. Events from venues without this flag enter a moderation queue visible in the admin dashboard.
-
-Duplicate detection runs after each ingest. An event is considered a duplicate if its GUID — derived from `<VenueName>-<title>-<start_time>` — already exists in the database.
-
-### Example: minimal Go ingestor
-
-The `packages/go-pkg/ingest` package provides the shared types so you don't have to write them by hand.
-
-```go
-import (
-    "bytes"
-    "encoding/json"
-    "net/http"
-    "time"
-
-    "github.com/borgehl/bruttice/packages/go-pkg/ingest"
-    "github.com/borgehl/bruttice/packages/go-pkg/models"
-)
-
-func submit(key string, output ingest.IngestionOutput) error {
-    body, _ := json.Marshal(output)
-    req, _ := http.NewRequest("POST", "http://bruttice-backend:8080/internal/ingest", bytes.NewReader(body))
-    req.Header.Set("Authorization", "Bearer "+key)
-    req.Header.Set("Content-Type", "application/json")
-    resp, err := http.DefaultClient.Do(req)
-    if err != nil {
-        return err
-    }
-    defer resp.Body.Close()
-    return nil
-}
-
-func main() {
-    start, _ := time.Parse(time.RFC3339, "2025-09-15T20:00:00Z")
-
-    output := ingest.IngestionOutput{
-        VenueInfo: ingest.VenueInfo{
-            Name:         "The Venue Name",
-            Link:         "https://venue.example.com",
-            IsAutoIngest: true,
-        },
-        Events: []models.Event{
-            {
-                Title:     "My Event",
-                Link:      "https://tickets.example.com/123",
-                StartAt:   start,
-                CoverCost: "$10",
-                Venue:     models.Venue{Name: "The Venue Name"},
-                Age:       models.Age{Name: "18+"},
-            },
-        },
-    }
-
-    if err := submit("your-ingest-key", output); err != nil {
-        panic(err)
-    }
-}
-```
-
-### Running an ingestor alongside the stack
-
-Add your ingestor as a service in `docker-compose.yaml` on the same network:
-
-```yaml
-services:
-  my-ingestor:
-    image: my-ingestor:latest
-    environment:
-      INGEST_KEY: "your-ingest-key"
-      BACKEND_URL: "http://bruttice-backend:8080"
-    networks:
-      - bruttice
-    depends_on:
-      - bruttice-backend
-
-networks:
-  bruttice:
-    external: true   # if composing separately; omit if in the same file
-```
+See **[docs/writing-scrapers.md](docs/writing-scrapers.md)** for the API, the payload format and what the server does with it. For Go, [`packages/go-pkg/ingest`](packages/go-pkg/ingest) has the payload types and a reference client, and [`packages/go-pkg/examples/scraper`](packages/go-pkg/examples/scraper/main.go) is a complete working scraper to copy.
 
 ## Admin dashboard
 

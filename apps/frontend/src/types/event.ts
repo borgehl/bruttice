@@ -86,3 +86,28 @@ export interface AdminDashboard {
   awaitingApproval: AdminEventDay[];
   upcoming: AdminEventDay[];
 }
+
+export interface IngestSource {
+  source: string;
+  status: 'ok' | 'errors' | 'failed';
+  scrapedCount: number;
+  savedCount: number;
+  failedCount: number;
+  errors: string[];
+}
+
+export interface IngestRun {
+  id: number;
+  startedAt: number;
+  finishedAt: number;
+  dedupeError?: string;
+  scraped: number;
+  saved: number;
+  failed: number;
+  sources: IngestSource[];
+}
+
+export interface IngestRunsPage {
+  runs: IngestRun[];
+  hasMore: boolean;
+}

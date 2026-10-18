@@ -6,6 +6,7 @@ func (h *APIHandler) handleGetVenues(w http.ResponseWriter, r *http.Request) {
 	tx := h.database.DB.Begin()
 	defer tx.Commit()
 
+	// Get venues
 	venueModels, err := h.database.GetVenues(tx)
 	if err != nil {
 		h.logger.Errorf("failed to get venues: %v", err)

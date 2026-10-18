@@ -1,8 +1,8 @@
 package ingest
 
 import (
-	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"fmt"
+	"github.com/borgehl/bruttice/packages/go-pkg/models"
 )
 
 type VenueInfo struct {
@@ -15,6 +15,8 @@ type VenueInfo struct {
 }
 
 type IngestionOutput struct {
+	// RunID groups payloads into one run, 0 if the payload is not part of a run
+	RunID     int64          `json:"run_id,omitempty"`
 	VenueInfo VenueInfo      `json:"venue_info"`
 	Events    []models.Event `json:"events"`
 	Errors    []string       `json:"errors"`
@@ -26,6 +28,9 @@ func (io *IngestionOutput) AppendErrors(errs []error) {
 	}
 }
 
+// append error to io
+//
+// return immediately if err is nil
 func (io *IngestionOutput) AppendError(err error) {
 	if err == nil {
 		return

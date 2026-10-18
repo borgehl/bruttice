@@ -9,3 +9,6 @@ cookie-salt: "change-me"
 
 # shared secret for POST /internal/ingest — must match the scraper service
 ingest-key: "change-me"
+
+# optional: scraper service endpoint that starts a run (admin dashboard button)
+# ingest-trigger-url: "http://scrapers:8081/run"

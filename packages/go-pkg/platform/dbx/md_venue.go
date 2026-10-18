@@ -20,6 +20,7 @@ func (d *DatabaseClient) GetSaveVenue(venue models.Venue, tx *gorm.DB) (models.V
 	return d.SaveVenue(venue, tx)
 }
 
+// Finds venue by name, and overwrites existing data with supplied data
 func (d *DatabaseClient) GetSaveVenueByName(venue models.Venue, tx *gorm.DB) (ret models.Venue, err error) {
 	getVenue := models.Venue{Name: venue.Name}
 	getVenue, err = d.GetVenue(getVenue, tx)

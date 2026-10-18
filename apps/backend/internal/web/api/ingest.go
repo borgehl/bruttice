@@ -1,11 +1,12 @@
 package api
 
 import (
+	"crypto/subtle"
+	"encoding/json"
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/ingest"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
-	"encoding/json"
 	"html"
 	"net/http"
 	"strings"
@@ -13,9 +14,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// handleIngest saves one scraper's output for one venue.
+//
+// Payloads that carry a run_id are recorded under that run (see handleStartIngestRun).
+// Payloads without one are recorded as a run of their own.
 func (h *APIHandler) handleIngest(w http.ResponseWriter, r *http.Request) {
-	auth := r.Header.Get("Authorization")
-	if !strings.HasPrefix(auth, "Bearer ") || strings.TrimPrefix(auth, "Bearer ") != h.ingestKey {
+	if !h.ingestAuthorized(r) {
 		h.writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
@@ -30,38 +34,112 @@ func (h *APIHandler) handleIngest(w http.ResponseWriter, r *http.Request) {
 		h.logger.Errorf("scraper error from %s: %s", payload.VenueInfo.Name, e)
 	}
 
+	runID := payload.RunID
+	standalone := runID == 0
+	if standalone {
+		run, err := h.database.CreateIngestRun()
+		if err != nil {
+			h.logger.Errorf("failed to create ingest run record: %s", err)
+		}
+		runID = run.ID
+	}
+
+	source, dedupeErr := h.ingestPayload(payload)
+	h.recordIngestSource(runID, source)
+
+	if dedupeErr != nil && runID != 0 {
+		if err := h.database.SetIngestRunDedupeError(runID, dedupeErr); err != nil {
+			h.logger.Errorf("failed to record dedupe error: %s", err)
+		}
+	}
+	if standalone && runID != 0 {
+		if err := h.database.FinishIngestRun(runID, dedupeErr); err != nil {
+			h.logger.Errorf("failed to finish ingest run record: %s", err)
+		}
+		h.emailRunErrors(runID, false)
+	}
+
+	status := http.StatusOK
+	if source.Status == models.IngestSourceStatusFailed {
+		status = http.StatusInternalServerError
+	}
+	h.logger.Infof("ingest from %s: saved %d of %d events, %d errors", payload.VenueInfo.Name, source.SavedCount, source.ScrapedCount, len(source.Errors))
+	h.writeJSON(w, status, map[string]any{"saved": source.SavedCount, "errors": source.Errors})
+}
+
+// ingestPayload saves the venue and events of a payload, then deduplicates that
+// venue's events. The returned error is a deduplication failure, which does not
+// affect the saved events.
+func (h *APIHandler) ingestPayload(payload ingest.IngestionOutput) (models.IngestRunSource, error) {
+	source := models.IngestRunSource{
+		Source:       payload.VenueInfo.Name,
+		Status:       models.IngestSourceStatusOk,
+		ScrapedCount: len(payload.Events),
+		Errors:       []string{},
+	}
+
 	tx := h.database.DB.Begin()
 
 	if err := h.saveVenueInfo(payload.VenueInfo, tx); err != nil {
 		tx.Rollback()
 		h.logger.Errorf("failed to save venue %s: %s", payload.VenueInfo.Name, err)
-		h.writeError(w, http.StatusInternalServerError, "failed to save venue")
-		return
+		source.Status = models.IngestSourceStatusFailed
+		source.Errors = []string{err.Error()}
+		return source, nil
 	}
 
-	saved := 0
-	var errs []string
+	// a scraper that reported errors may have returned partial data, so skip the
+	// events but keep the venue listed
+	if len(payload.Errors) > 0 {
+		tx.Commit()
+		source.Status = models.IngestSourceStatusErrors
+		source.Errors = payload.Errors
+		return source, nil
+	}
+
 	for _, event := range payload.Events {
-		if err := h.saveIngestedEvent(event, payload.VenueInfo.IsAutoIngest, tx); err != nil {
+		// each event gets a savepoint so one bad event does not abort the rest
+		err := tx.Transaction(func(eventTx *gorm.DB) error {
+			return h.saveIngestedEvent(event, payload.VenueInfo.IsAutoIngest, eventTx)
+		})
+		if err != nil {
 			h.logger.Errorf("failed to save event %s: %s", event.Title, err)
-			errs = append(errs, err.Error())
-		} else {
-			saved++
+			source.FailedCount++
+			source.Errors = append(source.Errors, err.Error())
+			continue
 		}
+		source.SavedCount++
 	}
-
 	tx.Commit()
+
+	if source.FailedCount > 0 {
+		source.Status = models.IngestSourceStatusErrors
+	}
 
 	dedupTx := h.database.DB.Begin()
 	if err := h.database.DeduplicateEvents(h.ingestedVenueIDs(payload, dedupTx), dedupTx); err != nil {
 		h.logger.Errorf("deduplication failed: %s", err)
 		dedupTx.Rollback()
-	} else {
-		dedupTx.Commit()
+		return source, err
 	}
+	dedupTx.Commit()
+	return source, nil
+}
 
-	h.logger.Infof("ingest from %s: saved %d events, %d errors", payload.VenueInfo.Name, saved, len(errs))
-	h.writeJSON(w, http.StatusOK, map[string]any{"saved": saved, "errors": errs})
+func (h *APIHandler) recordIngestSource(runID int64, source models.IngestRunSource) {
+	if runID == 0 {
+		return
+	}
+	source.IngestRunID = runID
+	if err := h.database.SaveIngestRunSource(source); err != nil {
+		h.logger.Errorf("failed to save ingest run source %s: %s", source.Source, err)
+	}
+}
+
+func (h *APIHandler) ingestAuthorized(r *http.Request) bool {
+	auth := r.Header.Get("Authorization")
+	key := strings.TrimPrefix(auth, "Bearer ")
+	return h.ingestKey != "" && strings.HasPrefix(auth, "Bearer ") && subtle.ConstantTimeCompare([]byte(key), []byte(h.ingestKey)) == 1
 }
 
 // ingestedVenueIDs returns the IDs of the venues touched by a payload: the
@@ -119,7 +197,7 @@ func (h *APIHandler) saveIngestedEvent(event models.Event, venueIsAutoIngest boo
 
 	eventUnscoped, err := h.database.GetEventByGuidUnscoped(event.Guid, tx)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if eventUnscoped.ID != 0 && eventUnscoped.DeletedAt.Valid {
 		return nil

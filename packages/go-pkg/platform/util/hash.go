@@ -16,6 +16,7 @@ func Sha256Base64Bytes(data []byte) string {
 	return Base64Encode(h[:])
 }
 
+// Base 64 encode
 func Base64Encode(data []byte) string {
 	ret := base64.StdEncoding.EncodeToString(data)
 	ret = strings.ReplaceAll(ret, "/", "-")
@@ -24,6 +25,7 @@ func Base64Encode(data []byte) string {
 	return ret
 }
 
+// base 64 encode for string
 func Base64EncodeString(data string) string {
 	return Base64Encode([]byte(data))
 }

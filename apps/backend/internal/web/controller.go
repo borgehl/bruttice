@@ -18,7 +18,7 @@ type Controller struct {
 	cookieSessions *controlcookie.CookieStore
 }
 
-func NewController(logger *logx.Logger, database *dbx.DatabaseClient, mux *http.ServeMux, ingestKey string, cookieSalt string) *Controller {
+func NewController(logger *logx.Logger, database *dbx.DatabaseClient, mux *http.ServeMux, ingestKey string, ingestTrigger api.IngestTrigger, cookieSalt string) *Controller {
 	ret := &Controller{
 		mux:            mux,
 		logger:         logger,
@@ -27,7 +27,7 @@ func NewController(logger *logx.Logger, database *dbx.DatabaseClient, mux *http.
 		cookieSessions: controlcookie.NewCookieStore(database, cookieSalt),
 	}
 
-	apiHandler := api.NewAPIHandler(logger, database, ret.cookieSessions, ingestKey)
+	apiHandler := api.NewAPIHandler(logger, database, ret.cookieSessions, ingestKey, ingestTrigger)
 	apiHandler.RegisterRoutes(ret.mux)
 
 	return ret
