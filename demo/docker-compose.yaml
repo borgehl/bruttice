@@ -1,0 +1,33 @@
+# Overrides docker-compose.yaml for `make up-demo`, see the Makefile.
+#
+# Its own env file and config, so a local .env and apps/backend/config.yaml are
+# neither read nor changed. The database is a volume of the bruttice-demo
+# project, so `make clean` removes it.
+services:
+  bruttice-backend:
+    volumes: !override
+      - ./demo/config.yaml:/app/config.yaml:ro
+    env_file: !override
+      - demo/env
+
+  bruttice-frontend:
+    env_file: !override
+      - demo/env
+
+  bruttice-db:
+    env_file: !override
+      - demo/env
+
+  # Loads example data through the ingest API, then exits. Safe to run again.
+  demo-seed:
+    build:
+      context: .
+      dockerfile: demo/seed.Dockerfile
+    depends_on:
+      - bruttice-backend
+    environment:
+      INGEST_URL: http://bruttice-backend:8080
+      INGEST_KEY: demo-ingest-key
+      TZ: America/Chicago
+    networks:
+      - bruttice

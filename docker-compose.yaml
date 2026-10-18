@@ -38,7 +38,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ${PG_DATA_PATH}:${PG_DATA}:rw
+      - bruttice-db-data:${PG_DATA}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -q -d postgres -U postgres"]
       timeout: 30s
@@ -66,3 +66,6 @@ services:
 
 networks:
   bruttice:
+
+volumes:
+  bruttice-db-data:

@@ -1,0 +1,41 @@
+# Backend config for `make up-demo`. Local development only, none of these are secrets.
+timezone: America/Chicago
+
+cookie-salt: "demo-cookie-salt"
+
+ingest-key: "demo-ingest-key"
+
+admin-accounts:
+  - "admin@example.com;demo-password"
+
+tags:
+  - comedy
+  - community
+  - diy
+  - free
+  - literature
+  - music
+  - recurring
+  - theater
+
+age-groups:
+  - name: "21+"
+    value: 21
+  - name: "18+"
+    value: 18
+  - name: "16+"
+    value: 16
+  - name: "all-ages"
+    value: 1
+  - name: "unknown age limit"
+    value: 255
+
+regions:
+  - name: central
+    timezone: America/Chicago
+  - name: eastern
+    timezone: America/New_York
+
+# The demo venues are created by the seeder, through the ingest API.
+venues:
+  - name: "Unlisted (see link)"

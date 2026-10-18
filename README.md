@@ -101,6 +101,20 @@ docker compose up -d
 
 The site is available at `http://localhost:${PORT}`.
 
+## Development
+
+| Command | What it does |
+|---|---|
+| `make up-demo` | Builds and starts the stack with example venues and events at http://localhost:8080. Admin: `admin@example.com` / `demo-password`. Uses `demo/env` and `demo/config.yaml`, so your own `.env` and `config.yaml` are not read |
+| `make up` | Builds and starts the stack from your own `.env` and `apps/backend/config.yaml` |
+| `make down-demo` | Stops the demo and keeps its data |
+| `make clean` | Removes the containers and database volumes of the demo and of `make up`. Nothing else in Docker is touched |
+| `make test-backend` | Go tests for `apps/backend` and `packages/go-pkg`. No database needed |
+| `make test-frontend` | Typecheck and tests for `apps/frontend` |
+| `make test` | Both |
+
+The example data is loaded through the ingest API by `packages/go-pkg/examples/demo`, so it also shows what a scraper's payload looks like. It includes a venue whose events wait in the admin moderation queue. Container names are fixed, so stop one stack before starting the other.
+
 ## Writing scrapers
 
 Bruttice has no scrapers built in. Anything that can POST JSON to `/internal/ingest` can feed it, in any language, and the admin dashboard's "run ingestion" button can start yours through `ingest-trigger-url`.

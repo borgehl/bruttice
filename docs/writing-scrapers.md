@@ -58,7 +58,7 @@ One payload per venue (or per source, if a scraper covers several venues):
     "skip_venue_save": false            // true: label the payload but don't create a venue
   },
   "events": [ /* see below */ ],
-  "errors": []                          // see "Reporting failures"
+  "errors": []                          // optional, see "Reporting failures"
 }
 ```
 
@@ -87,7 +87,7 @@ Responses:
 
 | Status | Meaning |
 |---|---|
-| `200 {"saved": N, "errors": [...]}` | `errors` lists events that failed to save, one string each. The rest were still saved |
+| `200 {"saved": N, "errors": [...]}` | `errors` is the payload's own `errors` followed by one string for each event that failed to save. The rest were still saved |
 | `400` | body is not valid JSON |
 | `401` | missing or wrong key |
 | `500 {"saved": 0, "errors": [...]}` | the venue could not be saved. Nothing was ingested |
@@ -95,8 +95,8 @@ Responses:
 ## What the server does with a payload
 
 1. Saves the venue (unless `skip_venue_save`).
-2. If `errors` is non-empty, **stops: the venue is kept, the events are skipped.** A scraper that hit errors may have returned partial data, and saving it could look like the missing events were cancelled.
-3. Saves each event in its own savepoint, so one bad event doesn't lose the rest.
+2. Records the payload's `errors` against the run, marking the venue's entry as having errors. They do not stop the events from being saved.
+3. Saves each event in its own savepoint, so one bad event doesn't lose the rest. A partial payload is safe to save: the guid makes a re-sent event an update, and nothing is removed because it is missing from a payload.
 4. Deduplicates the venues it touched. Two events at the same venue on the same day are duplicates if one title contains the other or they start within an hour of each other, and the older one is removed. Dedup is scoped to the venues named in the payload, so a scraper can't remove events from venues it didn't post.
 
 Details that matter:
@@ -123,9 +123,11 @@ Don't crash, and don't exit quietly. Put the failure in `errors` and send the pa
 out.AppendError(fmt.Errorf("fetching calendar: %w", err))
 ```
 
-The server logs it, records it under the run, and emails it. In Go, `AppendError` prefixes the venue name. A scraper that dies without sending anything shows up as nothing, which is the one failure nobody is told about.
+The server logs it, records it under the run, and emails it when the run finishes. In Go, `AppendError` prefixes the venue name. A scraper that dies without sending anything shows up as nothing, which is the one failure nobody is told about.
 
-Any entry in `errors` suppresses **all** of the payload's events, including the good ones. That is deliberate, see step 2 above, but it means a single unparseable row hides the venue's whole listing until it's fixed. The example does this, because a loud failure is better than a quietly incomplete calendar. If you would rather publish the good rows, log the bad one yourself and leave it out of `errors`.
+`errors` and `events` are independent. A scraper that parsed 40 of 41 rows sends the 40 events and an error for the 41st, and the 40 are saved. A scraper that failed outright sends no events and one error.
+
+Partial results are safe to send because ingestion is idempotent. Events are matched by guid, so a re-sent event updates in place, and deduplication is scoped to the venue. A partial run never removes anything. The next complete run fills in what was missing.
 
 ## Scraper checklist
 

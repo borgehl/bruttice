@@ -91,7 +91,7 @@ func scrape() ingest.IngestionOutput {
 		// time.Parse would read it as UTC and shift every event.
 		start, err := time.ParseInLocation(ingest.DateFormat, l.start, loc)
 		if err != nil {
-			// skip the event, and report why
+			// leave the event out and report why; the others are still saved
 			out.AppendError(fmt.Errorf("event %q: %w", l.title, err))
 			continue
 		}

@@ -88,13 +88,12 @@ func (h *APIHandler) ingestPayload(payload ingest.IngestionOutput) (models.Inges
 		return source, nil
 	}
 
-	// a scraper that reported errors may have returned partial data, so skip the
-	// events but keep the venue listed
+	// a scraper that reported errors may have returned partial data. Saving it is
+	// safe: guids and deduplication make ingestion idempotent, and events missing
+	// from a partial payload are not removed
+	source.Errors = append(source.Errors, payload.Errors...)
 	if len(payload.Errors) > 0 {
-		tx.Commit()
 		source.Status = models.IngestSourceStatusErrors
-		source.Errors = payload.Errors
-		return source, nil
 	}
 
 	for _, event := range payload.Events {
