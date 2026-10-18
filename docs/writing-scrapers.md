@@ -81,6 +81,8 @@ An event:
 }
 ```
 
+`title`, `start_at` and `age` are required, and so is a venue (the event's own or the payload's). An event missing any of them is refused and counted as failed, with the reason in the response's `errors`, and the other events are still saved. The server can't guess these: an empty age or a zero time would otherwise resolve to whichever row the database finds first.
+
 The server refuses a payload with a field it doesn't know, so a typo or an out-of-date format is a `400` that names the field instead of an event that quietly loses data. Go scrapers don't write any of this by hand: marshal an `ingest.IngestionOutput` and it comes out right.
 
 Responses:

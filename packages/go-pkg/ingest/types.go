@@ -2,6 +2,7 @@ package ingest
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
@@ -53,6 +54,28 @@ type IngestionOutput struct {
 	VenueInfo VenueInfo `json:"venue_info"`
 	Events    []Event   `json:"events"`
 	Errors    []string  `json:"errors"`
+}
+
+// Validate reports what is missing from an event that the server can't guess. Venue
+// defaults to the payload's venue, so it is checked after that default is applied.
+func (e Event) Validate(payloadVenue string) error {
+	var missing []string
+	if strings.TrimSpace(e.Title) == "" {
+		missing = append(missing, "title")
+	}
+	if e.StartAt.IsZero() {
+		missing = append(missing, "start_at")
+	}
+	if e.Age == "" {
+		missing = append(missing, "age")
+	}
+	if e.Venue == "" && payloadVenue == "" {
+		missing = append(missing, "venue")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("missing %s", strings.Join(missing, ", "))
+	}
+	return nil
 }
 
 // UpdateGuid sets Guid unless it is already set. With a non-empty source id the guid is

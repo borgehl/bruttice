@@ -2,6 +2,7 @@ package api
 
 import (
 	"crypto/subtle"
+	"fmt"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/mapper"
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
@@ -102,7 +103,15 @@ func (h *APIHandler) ingestPayload(payload ingest.IngestionOutput) (models.Inges
 	}
 
 	now := time.Now()
-	for _, scraped := range payload.Events {
+	for i, scraped := range payload.Events {
+		// without these the database would resolve an empty age or a zero time to
+		// whichever row it finds first, so refuse the event
+		if err := scraped.Validate(payload.VenueInfo.Name); err != nil {
+			h.logger.Errorf("invalid event %d (%q) from %s: %s", i, scraped.Title, payload.VenueInfo.Name, err)
+			source.FailedCount++
+			source.Errors = append(source.Errors, fmt.Sprintf("event %d (%q): %s", i, scraped.Title, err))
+			continue
+		}
 		event := mapper.IngestEvent(scraped, payload.VenueInfo, now)
 		// each event gets a savepoint so one bad event does not abort the rest
 		err := tx.Transaction(func(eventTx *gorm.DB) error {

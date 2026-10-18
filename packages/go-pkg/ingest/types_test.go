@@ -51,3 +51,36 @@ func TestSetTimezoneCentralKeepsWallClock(t *testing.T) {
 		t.Errorf("doors = %s", got)
 	}
 }
+
+func TestValidate(t *testing.T) {
+	start := time.Date(2030, 1, 10, 19, 0, 0, 0, time.UTC)
+	valid := ingest.Event{Title: "Show", StartAt: start, Age: "21+"}
+
+	if err := valid.Validate("V"); err != nil {
+		t.Errorf("a complete event: %v", err)
+	}
+	if err := valid.Validate(""); err == nil {
+		t.Error("no venue on the event or the payload should fail")
+	}
+	own := valid
+	own.Venue = "Other"
+	if err := own.Validate(""); err != nil {
+		t.Errorf("the event's own venue is enough: %v", err)
+	}
+
+	for name, e := range map[string]ingest.Event{
+		"title":    {StartAt: start, Age: "21+"},
+		"blank":    {Title: "  ", StartAt: start, Age: "21+"},
+		"start_at": {Title: "Show", Age: "21+"},
+		"age":      {Title: "Show", StartAt: start},
+	} {
+		if err := e.Validate("V"); err == nil {
+			t.Errorf("missing %s was accepted", name)
+		}
+	}
+
+	err := ingest.Event{}.Validate("V")
+	if err == nil || err.Error() != "missing title, start_at, age" {
+		t.Errorf("err = %v", err)
+	}
+}
