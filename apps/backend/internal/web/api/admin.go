@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/mapper"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/passwordsx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
@@ -85,8 +86,8 @@ func (h *APIHandler) handleAdminDashboard(w http.ResponseWriter, r *http.Request
 
 	h.writeJSON(w, http.StatusOK, dto.AdminDashboardResponse{
 		Email:            user.Email,
-		AwaitingApproval: convertToAdminEventDays(awaitingApprovalEvents),
-		Upcoming:         convertToAdminEventDays(upcomingEvents),
+		AwaitingApproval: mapper.AdminEventDayResponses(awaitingApprovalEvents),
+		Upcoming:         mapper.AdminEventDayResponses(upcomingEvents),
 	})
 }
 
@@ -143,78 +144,6 @@ func (h *APIHandler) getAuthenticatedUser(r *http.Request) *models.User {
 	return h.cookieSessions.GetUserFromRequest(r)
 }
 
-// Convert events to admin event day format grouped by date
-func convertToAdminEventDays(events []models.Event) []dto.AdminEventDayResponse {
-	if len(events) == 0 {
-		return []dto.AdminEventDayResponse{}
-	}
-	dayMap := make(map[string]*dto.AdminEventDayResponse)
-	var days []string
-
-	for _, event := range events {
-		dayStr := event.StartAt.In(util.TZLocation).Format("Monday, January 2, 2006")
-		if _, exists := dayMap[dayStr]; !exists {
-			dayMap[dayStr] = &dto.AdminEventDayResponse{Day: dayStr, Events: []dto.AdminEventResponse{}}
-			days = append(days, dayStr)
-		}
-		adminEvent := dto.AdminEventResponse{
-			Guid:      event.Guid,
-			Title:     event.Title,
-			Link:      event.Link,
-			Venue:     event.Venue.Name,
-			VenueLink: event.Venue.Link,
-			Age:       event.Age.Name,
-			Region:    event.Region.Name,
-			Date:      event.StartAt.In(util.TZLocation).Format("2006-01-02"),
-			Time:      formatEventTime(event),
-			StartTime: event.StartAt.In(util.TZLocation).Format("15:04"),
-			CoverCost: event.CoverCost,
-			Tags:      getEventTags(event),
-			Score:     getScore(event),
-		}
-		if event.DoorsAt != nil {
-			adminEvent.DoorsTime = event.DoorsAt.In(util.TZLocation).Format("15:04")
-		}
-		if event.VerificationEmail != nil {
-			adminEvent.Email = *event.VerificationEmail
-		}
-		dayMap[dayStr].Events = append(dayMap[dayStr].Events, adminEvent)
-	}
-
-	result := make([]dto.AdminEventDayResponse, 0, len(days))
-	for _, day := range days {
-		result = append(result, *dayMap[day])
-	}
-	return result
-}
-
-func getScore(event models.Event) int {
-	ret := 0
-	for _, j := range event.EventAdminJudgements {
-		if j.IsApproval {
-			ret++
-		} else {
-			ret--
-		}
-	}
-	return ret
-}
-
-func formatEventTime(event models.Event) string {
-	if event.DoorsAt != nil && *event.DoorsAt != event.StartAt {
-		return "Doors " + event.DoorsAt.In(util.TZLocation).Format("3:04pm") + ", Start " + event.StartAt.In(util.TZLocation).Format("3:04pm")
-	}
-	return event.StartAt.In(util.TZLocation).Format("3:04pm")
-}
-
-func getEventTags(event models.Event) []string {
-	tags := make([]string, 0, len(event.Tags))
-	for _, tag := range event.Tags {
-		tags = append(tags, tag.Name)
-	}
-	return tags
-}
-
 func (h *APIHandler) handleAdminAddEvent(w http.ResponseWriter, r *http.Request) {
 	user := h.getAuthenticatedUser(r)
 	if user == nil {
@@ -249,41 +178,11 @@ func (h *APIHandler) handleAdminAddEvent(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var event models.Event
-	event.Title = req.Title
-	event.Link = normalizeURL(req.Link)
-	event.CoverCost = req.CoverCost
-	event.Venue.Name = req.Venue
-	event.Region.Name = req.Region
-	event.Age.Name = req.Age
-
-	startAt, err := time.ParseInLocation(formDTFormat, fmt.Sprintf("%s %s", req.Date, req.StartTime), util.TZLocation)
+	event, err := mapper.AdminAddEventRequest(req, time.Now())
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, "Invalid date or start time format")
+		h.writeError(w, http.StatusBadRequest, eventFormErrorMessage(err))
 		return
 	}
-	event.StartAt = startAt
-
-	// Parse doors time if provided
-	if req.DoorsTime != "" {
-		doorsAt, err := time.ParseInLocation(formDTFormat, fmt.Sprintf("%s %s", req.Date, req.DoorsTime), util.TZLocation)
-		if err != nil {
-			h.writeError(w, http.StatusBadRequest, "Invalid doors time format")
-			return
-		}
-		event.DoorsAt = &doorsAt
-	}
-
-	// Add tags
-	for _, tag := range req.Tags {
-		event.Tags = append(event.Tags, models.Tag{Name: tag})
-	}
-
-	// Set verified and approved timestamps for admin-created events
-	now := time.Now().Unix()
-	event.VerifiedAt = &now
-	event.ApprovedAt = &now
-	event.UpdateGuid(nil)
 
 	tx := h.database.DB.Begin()
 	if tx.Error != nil {
@@ -325,11 +224,7 @@ func (h *APIHandler) handleAdminGetAges(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ages := make([]dto.AgeResponse, 0, len(ageModels))
-	for _, age := range ageModels {
-		ages = append(ages, dto.AgeResponse{ID: int64(age.ID), Name: age.Name, Value: age.Value})
-	}
-	h.writeJSON(w, http.StatusOK, ages)
+	h.writeJSON(w, http.StatusOK, mapper.AgeResponses(ageModels))
 }
 
 func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Request) {
@@ -378,7 +273,7 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 		updated = true
 	}
 	if req.Link != nil && *req.Link != event.Link {
-		event.Link = normalizeURL(*req.Link)
+		event.Link = mapper.NormalizeURL(*req.Link)
 		updated = true
 	}
 	if req.CoverCost != nil && *req.CoverCost != event.CoverCost {
@@ -417,7 +312,7 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 	}
 	if req.Date != nil {
 		timeStr := event.StartAt.In(util.TZLocation).Format("15:04")
-		newStart, err := time.ParseInLocation(formDTFormat, fmt.Sprintf("%s %s", *req.Date, timeStr), util.TZLocation)
+		newStart, err := time.ParseInLocation(mapper.FormDateTimeFormat, fmt.Sprintf("%s %s", *req.Date, timeStr), util.TZLocation)
 		if err != nil {
 			h.writeError(w, http.StatusBadRequest, "Invalid date format")
 			return
@@ -425,7 +320,7 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 		if !newStart.Equal(event.StartAt) {
 			if event.DoorsAt != nil {
 				doorsTimeStr := event.DoorsAt.In(util.TZLocation).Format("15:04")
-				if newDoors, err := time.ParseInLocation(formDTFormat, fmt.Sprintf("%s %s", *req.Date, doorsTimeStr), util.TZLocation); err == nil {
+				if newDoors, err := time.ParseInLocation(mapper.FormDateTimeFormat, fmt.Sprintf("%s %s", *req.Date, doorsTimeStr), util.TZLocation); err == nil {
 					event.DoorsAt = &newDoors
 				}
 			}
@@ -435,7 +330,7 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 	}
 	if req.StartTime != nil {
 		dateStr := event.StartAt.In(util.TZLocation).Format("2006-01-02")
-		newStart, err := time.ParseInLocation(formDTFormat, fmt.Sprintf("%s %s", dateStr, *req.StartTime), util.TZLocation)
+		newStart, err := time.ParseInLocation(mapper.FormDateTimeFormat, fmt.Sprintf("%s %s", dateStr, *req.StartTime), util.TZLocation)
 		if err != nil {
 			h.writeError(w, http.StatusBadRequest, "Invalid start time format")
 			return
@@ -451,7 +346,7 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 			updated = true
 		} else {
 			dateStr := event.StartAt.In(util.TZLocation).Format("2006-01-02")
-			newDoors, err := time.ParseInLocation(formDTFormat, fmt.Sprintf("%s %s", dateStr, *req.DoorsTime), util.TZLocation)
+			newDoors, err := time.ParseInLocation(mapper.FormDateTimeFormat, fmt.Sprintf("%s %s", dateStr, *req.DoorsTime), util.TZLocation)
 			if err != nil {
 				h.writeError(w, http.StatusBadRequest, "Invalid doors time format")
 				return

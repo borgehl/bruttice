@@ -1,33 +1,16 @@
 package api
 
 import (
-	"fmt"
+	"errors"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/mapper"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
-	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 )
 
-const formDTFormat = "2006-01-02 15:04"
-
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-
-// normalizeURL adds https:// prefix if no protocol is present
-func normalizeURL(url string) string {
-	url = strings.TrimSpace(url)
-	if url == "" {
-		return url
-	}
-	// Check if URL already has a protocol
-	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
-		return url
-	}
-	// Add https:// prefix
-	return "https://" + url
-}
 
 func (h *APIHandler) handleAddEvent(w http.ResponseWriter, r *http.Request) {
 	var req dto.AddEventRequest
@@ -62,40 +45,12 @@ func (h *APIHandler) handleAddEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var event models.Event
-	event.VerificationEmail = &req.Email
-	event.Title = req.Title
-	event.Link = normalizeURL(req.Link)
-	event.CoverCost = req.CoverCost
-	event.Venue.Name = req.Venue
-	event.Region.Name = req.Region
-	event.Age.Name = req.Age
-
-	startAt, err := time.ParseInLocation(formDTFormat, fmt.Sprintf("%s %s", req.Date, req.StartTime), util.TZLocation)
+	event, err := mapper.AddEventRequest(req)
 	if err != nil {
-		h.logger.Errorf("failed to parse start time: %v", err)
-		h.writeError(w, http.StatusBadRequest, "Invalid date or start time format")
+		h.logger.Errorf("failed to map add event request: %v", err)
+		h.writeError(w, http.StatusBadRequest, eventFormErrorMessage(err))
 		return
 	}
-	event.StartAt = startAt
-
-	// Parse doors time if provided
-	if req.DoorsTime != "" {
-		doorsAt, err := time.ParseInLocation(formDTFormat, fmt.Sprintf("%s %s", req.Date, req.DoorsTime), util.TZLocation)
-		if err != nil {
-			h.writeError(w, http.StatusBadRequest, "Invalid doors time format")
-			return
-		}
-		event.DoorsAt = &doorsAt
-	}
-
-	// Add tags
-	for _, tag := range req.Tags {
-		event.Tags = append(event.Tags, models.Tag{Name: tag})
-	}
-
-	event.CreateVerificationKey()
-	event.UpdateGuid(nil)
 
 	tx := h.database.DB.Begin()
 	if tx.Error != nil {
@@ -155,4 +110,14 @@ func (h *APIHandler) handleVerifyEvent(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		Message: "Email verified successfully. Your event will be reviewed by an admin.",
 	})
+}
+
+// eventFormErrorMessage is the message for an error from mapping an add event request.
+func eventFormErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, mapper.ErrInvalidDoorsTime):
+		return "Invalid doors time format"
+	default:
+		return "Invalid date or start time format"
+	}
 }

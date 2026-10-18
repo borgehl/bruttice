@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/mapper"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"net/http"
 )
@@ -16,54 +17,29 @@ func (h *APIHandler) handleGetFilterOptions(w http.ResponseWriter, r *http.Reque
 		h.writeError(w, http.StatusInternalServerError, "Failed to get tags")
 		return
 	}
-	tags := make([]dto.TagResponse, 0, len(tagNames))
-	for i, name := range tagNames {
-		tags = append(tags, dto.TagResponse{ID: int64(i + 1), Name: name})
-	}
 
-	// Get venues
-	venueModels, err := h.database.GetVenues(tx)
+	venues, err := h.database.GetVenues(tx)
 	if err != nil {
 		h.logger.Errorf("failed to get venues: %v", err)
 		h.writeError(w, http.StatusInternalServerError, "Failed to get venues")
 		return
 	}
-	venues := make([]dto.VenueResponse, 0, len(venueModels))
-	for _, v := range venueModels {
-		venues = append(venues, dto.VenueResponse{Name: v.Name, Slug: v.Slug, Link: v.Link})
-	}
 
-	// Get ages
-	ageModels, err := h.database.GetAges(tx)
+	ages, err := h.database.GetAges(tx)
 	if err != nil {
 		h.logger.Errorf("failed to get ages: %v", err)
 		h.writeError(w, http.StatusInternalServerError, "Failed to get ages")
 		return
 	}
-	ages := make([]dto.AgeResponse, 0, len(ageModels))
-	for _, age := range ageModels {
-		if age.Value > 100 {
-			// skip unknown ages for filters/event creation
-			continue
-		}
-		ages = append(ages, dto.AgeResponse{ID: int64(age.ID), Name: age.Name, Value: age.Value})
-	}
 
-	// Get regions
 	regionNames, err := h.database.GetRegionNames(tx)
 	if err != nil {
 		h.logger.Errorf("failed to get regions: %v", err)
 		h.writeError(w, http.StatusInternalServerError, "Failed to get regions")
 		return
 	}
-	regions := make([]dto.RegionResponse, 0, len(regionNames))
-	for i, name := range regionNames {
-		regions = append(regions, dto.RegionResponse{ID: int64(i + 1), Name: name})
-	}
 
-	h.writeJSON(w, http.StatusOK, dto.FilterOptionsResponse{
-		Tags: tags, Venues: venues, Ages: ages, Regions: regions,
-	})
+	h.writeJSON(w, http.StatusOK, mapper.FilterOptionsResponse(tagNames, venues, ages, regionNames))
 }
 
 func (h *APIHandler) handleGetFilter(w http.ResponseWriter, r *http.Request) {

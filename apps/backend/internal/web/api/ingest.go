@@ -3,6 +3,7 @@ package api
 import (
 	"crypto/subtle"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/mapper"
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/ingest"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
@@ -102,7 +103,7 @@ func (h *APIHandler) ingestPayload(payload ingest.IngestionOutput) (models.Inges
 
 	now := time.Now()
 	for _, scraped := range payload.Events {
-		event := ingestEventToModel(scraped, payload.VenueInfo, now)
+		event := mapper.IngestEvent(scraped, payload.VenueInfo, now)
 		// each event gets a savepoint so one bad event does not abort the rest
 		err := tx.Transaction(func(eventTx *gorm.DB) error {
 			return h.saveIngestedEvent(event, payload.VenueInfo.IsAutoIngest, eventTx)

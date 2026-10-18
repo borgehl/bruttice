@@ -48,7 +48,7 @@ func (h *APIHandler) processVote(vote string, guid string, user models.User, tx 
 		return err
 	}
 
-	score := getScore(event)
+	score := event.Score()
 	if score > 0 && event.ApprovedAt == nil {
 		if err := h.database.ApproveEvent(event, tx); err != nil {
 			return err

@@ -49,6 +49,19 @@ func (e *Event) UpdateGuid(id *string) {
 	e.Guid = util.EventGuid(e.Venue.Name, e.Title, e.StartAt, id)
 }
 
+// Score is the admins' approvals minus their denials.
+func (e *Event) Score() int {
+	ret := 0
+	for _, j := range e.EventAdminJudgements {
+		if j.IsApproval {
+			ret++
+		} else {
+			ret--
+		}
+	}
+	return ret
+}
+
 // creates a new base64 encoded uuid4
 // sets it to VerificationKey and returns that string
 func (e *Event) CreateVerificationKey() string {

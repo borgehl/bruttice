@@ -1,4 +1,6 @@
-package api
+// Package mapper converts between the request and response bodies in package dto and the
+// database models. Each file is named after the body it maps.
+package mapper
 
 import (
 	"time"
@@ -8,17 +10,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// ingestVerificationEmail stands in for the submitter of an ingested event. The
+// IngestVerificationEmail stands in for the submitter of an ingested event. The
 // approval notification lists the submitter of every event awaiting approval.
-const ingestVerificationEmail = "ingest@internal.scraper"
+const IngestVerificationEmail = "ingest@internal.scraper"
 
-// ingestEventToModel converts a scraper's event into a database event.
+// IngestEvent converts a scraper's event into a database event.
 //
 // Events are approved on arrival unless the payload asks for moderation, in which case
 // they are verified only and wait in the moderation queue.
-func ingestEventToModel(e ingest.Event, venue ingest.VenueInfo, now time.Time) models.Event {
+func IngestEvent(e ingest.Event, venue ingest.VenueInfo, now time.Time) models.Event {
 	verifiedAt := now.Unix()
-	email := ingestVerificationEmail
+	email := IngestVerificationEmail
 
 	event := models.Event{
 		Guid:              e.Guid,
