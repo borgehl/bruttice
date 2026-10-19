@@ -1,3 +1,4 @@
+import type { SiteConfig } from '../store/site';
 import type { Age, Event, FilterOptions, Venue, AdminDashboard, IngestRunsPage } from '../types/event';
 
 const API_BASE = '/api';
@@ -312,6 +313,8 @@ export interface AdminUpdateEventData {
   title?: string;
   link?: string;
   coverCost?: string;
+  // an empty string removes the flyer
+  flyerUrl?: string;
   venue?: string;
   region?: string;
   age?: string;
@@ -360,6 +363,16 @@ export async function verifyEvent(verifyKey: string): Promise<{ success: boolean
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to verify event');
+  }
+
+  return response.json();
+}
+
+export async function fetchSiteConfig(): Promise<Partial<SiteConfig>> {
+  const response = await fetch(`${API_BASE}/site`);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch site config');
   }
 
   return response.json();

@@ -3,6 +3,10 @@ import { fetchFilterOptions, fetchSubmissionVenues } from '../../../services/api
 import type { FilterOptions, Venue } from '../../../types/event';
 import DateInput from '../../ui/DateInput';
 import EditableCurrencyField from '../../ui/EditableCurrencyField';
+import Chip from '../../ui/Chip';
+import { fieldClass, primaryButtonClass } from '../../ui/Field';
+import { displayAge } from '../../../utils/age';
+import { displayTag } from '../../../utils/tag';
 
 const defaultTags = ['music', 'comedy', 'community', 'literature', 'diy', 'art', 'sports', 'film', 'free', 'recurring'];
 const defaultAgeOptions = ['all-ages', '16+', '18+', '21+', 'unknown'];
@@ -129,15 +133,15 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
   return (
     <>
       {error && (
-        <div className="mb-6 p-4 bg-error-muted border border-error/30 rounded-lg">
-          <p className="text-error">{error}</p>
+        <div className="mb-5 rounded-control border border-danger/30 bg-danger-muted p-4">
+          <p className="text-danger">{error}</p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-text mb-1">
-            {isAdmin ? 'Title *' : 'Event Title *'}
+          <label htmlFor="title" className="mb-1.5 block text-[13px] font-medium text-text-muted">
+            Event title *
           </label>
           <input
             type="text"
@@ -145,13 +149,13 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
             required
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="w-full px-3 py-2 bg-surface border border-border rounded-md text-text focus:outline-none focus:ring-2 focus:ring-primary"
+            className={fieldClass}
           />
         </div>
 
         <div>
-          <label htmlFor="link" className="block text-sm font-medium text-text mb-1">
-            {isAdmin ? 'URL *' : 'Event URL *'}
+          <label htmlFor="link" className="mb-1.5 block text-[13px] font-medium text-text-muted">
+            Event URL *
           </label>
           <input
             type="text"
@@ -160,12 +164,12 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
             placeholder="example.com/event"
             value={formData.link}
             onChange={(e) => setFormData({ ...formData, link: e.target.value })}
-            className="w-full px-3 py-2 bg-surface border border-border rounded-md text-text placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-primary"
+            className={fieldClass}
           />
         </div>
 
         <div>
-          <label htmlFor="venue" className="block text-sm font-medium text-text mb-1">
+          <label htmlFor="venue" className="mb-1.5 block text-[13px] font-medium text-text-muted">
             Venue *
           </label>
           <select
@@ -174,7 +178,7 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
             value={formData.venue}
             onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
             disabled={venuesLoading}
-            className="w-full px-3 py-2 bg-surface border border-border rounded-md text-text focus:outline-none focus:ring-2 focus:ring-primary"
+            className={fieldClass}
           >
             {venuesLoading ? (
               <option>Loading venues...</option>
@@ -190,7 +194,7 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
 
         {isAdmin && (
           <div>
-            <label htmlFor="region" className="block text-sm font-medium text-text mb-1">
+            <label htmlFor="region" className="mb-1.5 block text-[13px] font-medium text-text-muted">
               Region *
             </label>
             <select
@@ -198,7 +202,7 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
               required
               value={formData.region}
               onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-              className="w-full px-3 py-2 bg-surface border border-border rounded-md text-text focus:outline-none focus:ring-2 focus:ring-primary"
+              className={fieldClass}
             >
               {options?.regions.map((region) => (
                 <option key={region.id} value={region.name}>
@@ -211,7 +215,7 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="date" className="block text-sm font-medium text-text mb-1">
+            <label htmlFor="date" className="mb-1.5 block text-[13px] font-medium text-text-muted">
               Date *
             </label>
             <DateInput
@@ -219,24 +223,24 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
               required
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full py-2 rounded-md focus:ring-2 focus:ring-primary"
+              className={`${fieldClass} px-3`}
             />
           </div>
 
           <div>
-            <label htmlFor="age" className="block text-sm font-medium text-text mb-1">
-              {isAdmin ? 'Age Limit *' : 'Age Restriction'}
+            <label htmlFor="age" className="mb-1.5 block text-[13px] font-medium text-text-muted">
+              Age
             </label>
             <select
               id="age"
               required={isAdmin}
               value={formData.age}
               onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-              className="w-full px-3 py-2 bg-surface border border-border rounded-md text-text focus:outline-none focus:ring-2 focus:ring-primary"
+              className={fieldClass}
             >
               {ages.map((age) => (
                 <option key={age} value={age}>
-                  {age}
+                  {displayAge(age)}
                 </option>
               ))}
             </select>
@@ -245,21 +249,21 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="doorsTime" className="block text-sm font-medium text-text mb-1">
-              {isAdmin ? 'Doors' : 'Doors Open'}
+            <label htmlFor="doorsTime" className="mb-1.5 block text-[13px] font-medium text-text-muted">
+              Doors open
             </label>
             <DateInput
               type="time"
               id="doorsTime"
               value={formData.doorsTime}
               onChange={(e) => setFormData({ ...formData, doorsTime: e.target.value })}
-              className="w-full py-2 rounded-md focus:ring-2 focus:ring-primary"
+              className={`${fieldClass} px-3`}
             />
           </div>
 
           <div>
-            <label htmlFor="startTime" className="block text-sm font-medium text-text mb-1">
-              {isAdmin ? 'Start *' : 'Start Time *'}
+            <label htmlFor="startTime" className="mb-1.5 block text-[13px] font-medium text-text-muted">
+              Start time *
             </label>
             <DateInput
               type="time"
@@ -267,14 +271,14 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
               required
               value={formData.startTime}
               onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-              className="w-full py-2 rounded-md focus:ring-2 focus:ring-primary"
+              className={`${fieldClass} px-3`}
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text mb-1">
-            {isAdmin ? 'Cost' : 'Cover / Cost'}
+          <label className="mb-1.5 block text-[13px] font-medium text-text-muted">
+            Cover / cost
           </label>
           <EditableCurrencyField
             value={formData.coverCost}
@@ -283,30 +287,19 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
           />
         </div>
 
-        <div className="p-4 bg-surface border border-border rounded-lg">
-          <label className="block text-lg font-semibold text-text mb-3">Tags</label>
-          <div className="grid grid-cols-2 gap-2">
+        <div>
+          <span className="mb-2 block text-[13px] font-medium text-text-muted">Tags</span>
+          <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => toggleTag(tag)}
-                className={`px-3 py-2 text-sm rounded border transition-colors text-left ${
-                  formData.tags.includes(tag)
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-surface-elevated text-text-muted border-border hover:border-primary'
-                }`}
-              >
-                {tag}
-              </button>
+              <Chip key={tag} label={displayTag(tag)} selected={formData.tags.includes(tag)} onToggle={() => toggleTag(tag)} />
             ))}
           </div>
         </div>
 
         {!isAdmin && (
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-text mb-1">
-              Your Email *
+            <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-text-muted">
+              Your email *
             </label>
             <input
               type="email"
@@ -315,10 +308,10 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
               placeholder="For verification purposes"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 bg-surface border border-border rounded-md text-text placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-primary"
+              className={fieldClass}
             />
-            <p className="mt-1 text-xs text-text-dim">
-              We'll send you a verification email. Your email won't be displayed publicly.
+            <p className="mt-1.5 text-xs text-text-faint">
+              We&apos;ll email a verification link. Your email isn&apos;t shown publicly.
             </p>
           </div>
         )}
@@ -326,9 +319,9 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
         <button
           type="submit"
           disabled={submitting}
-          className="w-full px-4 py-3 bg-primary text-white font-medium rounded-md hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+          className={primaryButtonClass}
         >
-          {submitting ? 'Submitting...' : (isAdmin ? 'Submit' : 'Submit Event')}
+          {submitting ? 'Submitting...' : isAdmin ? 'Submit' : 'Submit event'}
         </button>
       </form>
     </>

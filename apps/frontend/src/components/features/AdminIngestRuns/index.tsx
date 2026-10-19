@@ -12,8 +12,10 @@ const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 const statusStyles: Record<IngestSource['status'], string> = {
   ok: 'text-success',
   errors: 'text-warning',
-  failed: 'text-error',
+  failed: 'text-danger',
 };
+
+const statusLabels: Record<IngestSource['status'], string> = { ok: 'OK', errors: 'Errors', failed: 'Failed' };
 
 function formatTime(unix: number): string {
   return new Date(unix * 1000).toLocaleString();
@@ -31,7 +33,7 @@ function SourceRow({ source }: { source: IngestSource }) {
       <div className="flex flex-wrap justify-between gap-2 text-sm">
         <span className="font-medium text-text">{source.source}</span>
         <span className="text-text-muted">
-          <span className={statusStyles[source.status]}>{source.status}</span>
+          <span className={`font-semibold ${statusStyles[source.status]}`}>{statusLabels[source.status]}</span>
           {' · '}
           {source.scrapedCount} scraped · {source.savedCount} saved · {source.failedCount} failed
         </span>
@@ -57,7 +59,6 @@ export default function AdminIngestRuns() {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inFlight = useRef(false);
   const [starting, setStarting] = useState(false);
@@ -129,15 +130,15 @@ export default function AdminIngestRuns() {
   // The observer is rebuilt after every load: a new observer reports the current intersection,
   // which keeps loading while the sentinel is still on screen.
   useEffect(() => {
-    const root = containerRef.current;
     const bottom = bottomRef.current;
-    if (!root || !bottom || !hasMore || error) return;
+    if (!bottom || !hasMore || error) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) void loadMore();
       },
-      { root, rootMargin: LOAD_MARGIN },
+      // no root: the page's own scroll area clips the sentinel, which is what counts
+      { rootMargin: LOAD_MARGIN },
     );
     observer.observe(bottom);
 
@@ -146,28 +147,28 @@ export default function AdminIngestRuns() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <div className="mb-4 flex flex-col gap-2">
         <button
           type="button"
           onClick={() => void handleStart()}
           disabled={starting || polling}
-          className="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="font-label chamfer h-11 w-full cursor-pointer rounded-control bg-accent text-sm font-semibold text-accent-ink enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {polling ? 'Ingestion running...' : 'Ingest now'}
         </button>
-        {startError && <span className="text-sm text-error">{startError}</span>}
+        {startError && <span className="text-sm text-danger">{startError}</span>}
       </div>
-    <div ref={containerRef} className="max-h-[700px] overflow-y-auto border border-border rounded-lg p-4 bg-surface space-y-4">
+    <div className="space-y-3">
       {runs.map((run) => (
-        <section key={run.id} className="p-4 bg-surface-elevated border border-border rounded-lg">
+        <section key={run.id} className="rounded-control border border-border bg-surface p-4">
           <div className="flex flex-wrap justify-between gap-2 mb-2">
-            <h3 className="font-semibold text-text">{formatTime(run.startedAt)}</h3>
-            <span className="text-sm text-text-muted">{formatDuration(run)}</span>
+            <h3 className="font-data text-sm font-semibold text-text">{formatTime(run.startedAt)}</h3>
+            <span className="font-data text-sm text-text-faint">{formatDuration(run)}</span>
           </div>
           <p className="text-sm text-text-muted mb-2">
             {run.sources.length} sources · {run.scraped} scraped · {run.saved} saved · {run.failed} failed
           </p>
-          {run.dedupeError && <p className="text-sm text-error mb-2">Deduplication failed: {run.dedupeError}</p>}
+          {run.dedupeError && <p className="text-sm text-danger mb-2">Deduplication failed: {run.dedupeError}</p>}
           <ul>
             {run.sources.map((source, i) => (
               <SourceRow key={`${source.source}-${i}`} source={source} />
@@ -176,15 +177,15 @@ export default function AdminIngestRuns() {
         </section>
       ))}
 
-      <div ref={bottomRef} className="text-center text-sm text-text-muted py-2">
+      <div ref={bottomRef} className="py-2 text-center text-[13px] text-text-faint">
         {loading && 'Loading more runs...'}
         {!hasMore && (runs.length === 0 ? 'No ingestion runs recorded yet.' : 'No more runs')}
       </div>
 
       {error && (
-        <div className="p-3 bg-error-muted border border-error/30 rounded-lg text-center">
-          <p className="text-error text-sm">{error}</p>
-          <button type="button" onClick={() => void loadMore()} className="mt-1 text-sm text-primary hover:underline cursor-pointer">
+        <div className="rounded-control border border-danger/30 bg-danger-muted p-3 text-center">
+          <p className="text-danger text-sm">{error}</p>
+          <button type="button" onClick={() => void loadMore()} className="mt-1 text-sm text-accent hover:underline cursor-pointer">
             Try again
           </button>
         </div>

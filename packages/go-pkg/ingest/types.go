@@ -34,6 +34,9 @@ type Event struct {
 	StartAt   time.Time  `json:"start_at"`
 	DoorsAt   *time.Time `json:"doors_at,omitempty"`
 	CoverCost string     `json:"cover_cost"`
+	// FlyerURL is an http(s) link to an image of the event's flyer. Optional. An empty value
+	// leaves a flyer already stored for the event alone.
+	FlyerURL string `json:"flyer_url,omitempty"`
 
 	// Venue is a venue name. Defaults to the payload's venue.
 	Venue string `json:"venue,omitempty"`

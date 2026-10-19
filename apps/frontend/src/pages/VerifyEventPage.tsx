@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { verifyEvent } from '../services/api';
+import Page from '../components/ui/Page';
+import StatusScreen from '../components/ui/StatusScreen';
+import { primaryButtonClass } from '../components/ui/Field';
 
 export default function VerifyEventPage() {
   const [searchParams] = useSearchParams();
@@ -31,47 +34,37 @@ export default function VerifyEventPage() {
     verify();
   }, [verifyKey]);
 
+  const toCalendar = (
+    <Link to="/" className={`${primaryButtonClass} hover:text-accent-ink`}>
+      Go to calendar
+    </Link>
+  );
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh]">
-        <div className="text-text-muted">Verifying your email...</div>
-      </div>
+      <Page title="Verify">
+        <p className="py-12 text-center text-text-muted">Verifying your email...</p>
+      </Page>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="p-6 bg-error-muted border border-error/30 rounded-lg">
-          <h2 className="text-xl font-semibold text-error mb-2">Verification Failed</h2>
-          <p className="text-error/80 mb-4">{error}</p>
-          <Link
-            to="/"
-            className="inline-block px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover"
-          >
-            Go to Calendar
-          </Link>
-        </div>
-      </div>
+      <Page title="Verify">
+        <StatusScreen kind="error" title="Verification failed" action={toCalendar}>
+          This link is invalid or has expired. Submit the event again to get a new one.
+        </StatusScreen>
+      </Page>
     );
   }
 
   if (success) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="p-6 bg-success-muted border border-success/30 rounded-lg">
-          <h2 className="text-xl font-semibold text-success mb-2">Email Verified!</h2>
-          <p className="text-success/80 mb-4">
-            Thanks for verifying your email! Your event will be reviewed by an admin soon.
-          </p>
-          <Link
-            to="/"
-            className="inline-block px-4 py-2 bg-success text-white rounded hover:bg-success/80"
-          >
-            Go to Calendar
-          </Link>
-        </div>
-      </div>
+      <Page title="Verify">
+        <StatusScreen kind="success" title="Email verified" action={toCalendar}>
+          Thanks for verifying your email. Your event will be reviewed by an admin soon.
+        </StatusScreen>
+      </Page>
     );
   }
 

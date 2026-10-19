@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchVenues } from '../services/api';
 import type { Venue } from '../types/event';
+import Page from '../components/ui/Page';
+import { useSiteStore } from '../store/site';
 
 export default function AboutPage() {
+  const { site } = useSiteStore();
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadVenues() {
       try {
-        const data = await fetchVenues();
-        setVenues(data);
+        setVenues(await fetchVenues());
       } catch {
-        // Silently fail - venues are optional
-      } finally {
-        setLoading(false);
+        // Venues are optional here.
       }
     }
 
@@ -22,54 +22,57 @@ export default function AboutPage() {
   }, []);
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-text">About</h1>
-
-      <div className="space-y-4 text-text-muted">
+    <Page title="About">
+      <div className="space-y-4 leading-relaxed text-text-muted">
         <p>
-          A community-driven event calendar. Our goal is to make it easy for locals to discover
-          live music, comedy, art, and community events happening around town.
+          <span className="font-semibold text-text">{site.name}</span>
+          {site.region && ` ${site.region}`}. A community-driven event calendar for {site.region || 'your area'}.
+          We make it easy to find live music, comedy, art and community events around town.
         </p>
 
         <p>
-          Event information is gathered from various sources including venue websites and community
-          submissions. We do our best to keep information accurate, but always recommend confirming
-          event details by clicking through to the original event link.
+          It&apos;s maintained by volunteers. Event information comes from venue websites and community
+          submissions. We try to keep it accurate, but always confirm details on the original event link.
         </p>
 
-        <h2 className="text-xl font-semibold mt-8 mb-4 text-text">How to Add an Event</h2>
+        <h2 className="font-label pt-2 text-lg font-semibold text-text">How to add an event</h2>
         <p>
-          Anyone can submit an event to be added to the calendar. Simply visit the{' '}
-          <a href="/add-event" className="text-primary hover:text-primary-hover">
-            Add Event
-          </a>{' '}
-          page and fill out the form. You'll receive an email to verify your submission, and then an
-          admin will review and approve it.
+          Anyone can submit an event on the <Link to="/add-event">Add event</Link> page. Verify by email,
+          then an admin reviews and approves it.
         </p>
 
-        {!loading && venues.length > 0 && (
+        {site.contactEmail && (
           <>
-            <h2 className="text-xl font-semibold mt-8 mb-4 text-text">Featured Venues</h2>
+            <h2 className="font-label pt-2 text-lg font-semibold text-text">Contact</h2>
             <p>
-              We track events from {venues.length} venues:
+              Questions, corrections, suggestions? <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4">
-              {venues.map((venue) => (
-                <a
-                  key={venue.slug}
-                  href={venue.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary hover:text-primary-hover"
-                >
-                  {venue.name}
-                </a>
-              ))}
-            </div>
           </>
         )}
 
+        {venues.length > 0 && (
+          <>
+            <h2 className="font-label flex items-baseline gap-2 pt-2 text-lg font-semibold text-text">
+              Featured venues
+              <span className="font-data text-xs font-normal text-text-faint">{venues.length} venues</span>
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {venues.map((venue) => (
+                <li key={venue.slug}>
+                  <a
+                    href={venue.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-9 items-center rounded-control border border-border px-3 text-sm"
+                  >
+                    {venue.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
-    </div>
+    </Page>
   );
 }

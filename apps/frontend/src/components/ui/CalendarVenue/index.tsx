@@ -9,7 +9,7 @@ export default function CalendarVenue({ name, link }: CalendarVenueProps) {
       href={link}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-base text-text-dim hover:text-primary"
+      className="text-sm text-text-muted hover:text-accent"
     >
       {name}
     </a>

@@ -15,11 +15,11 @@ export default function AdminDashboardDaySection({
   onUpdate,
 }: AdminDashboardDaySectionProps) {
   return (
-    <section className="mb-8">
-      <h3 className="sticky -top-4 z-10 text-xl font-semibold text-text pt-4 pb-3 px-4 -mx-4 mb-4 border-b-2 border-primary bg-surface">
+    <section>
+      <h3 className="sticky top-0 z-[1] border-y border-border bg-surface px-4 py-2 text-[13px] font-semibold text-text">
         {eventDay.day}
       </h3>
-      <div className="space-y-4">
+      <div className="space-y-3 p-4">
         {eventDay.events.map((event) => (
           <AdminEventCard key={event.guid} event={event} mode={mode} onVote={onVote} onUpdate={onUpdate} />
         ))}

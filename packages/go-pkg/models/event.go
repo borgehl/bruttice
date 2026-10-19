@@ -18,7 +18,9 @@ type Event struct {
 	DoorsAt   *time.Time
 	StartAt   time.Time
 	CoverCost string
-	Tags      []Tag `gorm:"many2many:event_tags"`
+	// FlyerURL is an optional image of the event's flyer, empty if there is none.
+	FlyerURL string
+	Tags     []Tag `gorm:"many2many:event_tags"`
 
 	// verification
 	VerificationKey      *string

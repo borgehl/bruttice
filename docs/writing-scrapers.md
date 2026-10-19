@@ -73,6 +73,7 @@ An event:
   "start_at": "2030-01-10T19:00:00-06:00",    // RFC 3339, with an offset
   "doors_at": null,                           // optional
   "cover_cost": "free",                       // free text: "$10", "$5-$15", "free"
+  "flyer_url": "https://venue.example.com/flyer.jpg",  // optional http(s) link to an image of the flyer
   "venue": "The Venue Name",                  // optional, defaults to venue_info.name
   "region": "tulsa",                          // optional, defaults to venue_info.default_region
   "age": "all-ages",
@@ -104,6 +105,7 @@ Responses:
 Details that matter:
 
 - **Identity.** Posting the same event again updates it. The identity is the `guid`. If you leave it empty, the server sets it to a hash of title, start time and venue, so a changed title or time makes a *new* event and orphans the old one. If the source has a stable id, use it: in Go, `event.UpdateGuid(&id)` produces `"<Venue>-<id>"`.
+- **Flyers.** `flyer_url` is optional and must be an `http://` or `https://` link, anything else is dropped. Leaving it empty never removes a flyer the event already has, whether an earlier post or an admin set it.
 - **Deleted events stay deleted.** If an admin deleted an event, re-ingesting its guid is ignored.
 - **Skipped events.** Titles containing "private party" or "private event" are dropped.
 - **Free events** (a zero or "free" cover cost) get the `free` tag automatically.

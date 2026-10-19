@@ -1,0 +1,120 @@
+/*
+ * Design tokens. Info is the default theme and lives in @theme, which Tailwind emits as CSS
+ * variables on :root. Neon overrides the same variables under [data-theme="neon"] on <html>.
+ * Components use only the semantic classes these tokens produce (bg-surface, text-accent, ...),
+ * never hex values or palette classes, so a theme is just a set of values.
+ */
+
+@theme {
+  --color-bg: #12161c;
+  --color-surface: #181d25;
+  --color-raised: #1f2530;
+  --color-border: #2a313c;
+  --color-text: #e8ebf0;
+  --color-text-muted: #9aa4b2;
+  --color-text-faint: #6b7685;
+
+  /* Actions: active tab, links, primary button, selected filters. */
+  --color-accent: #6cb4d8;
+  --color-accent-hover: color-mix(in srgb, var(--color-accent) 80%, white);
+  --color-accent-ink: #12161c;
+  /* Info: time only (the Today marker). Neon: data (times, dates, counts). */
+  --color-accent-2: #e5a95b;
+
+  --color-success: #6fbf8f;
+  --color-warning: #d9b25f;
+  --color-danger: #e07a6e;
+  --color-success-muted: color-mix(in srgb, var(--color-success) 14%, transparent);
+  --color-warning-muted: color-mix(in srgb, var(--color-warning) 14%, transparent);
+  --color-danger-muted: color-mix(in srgb, var(--color-danger) 14%, transparent);
+
+  --color-age-all: #9aa4b2;
+  --color-age-16: #9aa4b2;
+  --color-age-18: #9aa4b2;
+  --color-age-21: #9aa4b2;
+
+  --color-tag-music: #b4a7e0;
+  --color-tag-comedy: #d9c27a;
+  --color-tag-community: #8cc7a1;
+  --color-tag-art: #dba0b8;
+  --color-tag-diy: #d9a07a;
+  --color-tag-film: #8fb0e0;
+  --color-tag-literature: #84c5c2;
+  --color-tag-sports: #dc9a92;
+  --color-tag-free: #8cc7a1;
+  --color-tag-recurring: #9aa4b2;
+
+  --font-display: 'Public Sans Variable', system-ui, sans-serif;
+  --font-mono: 'Public Sans Variable', system-ui, sans-serif;
+  --font-body: 'Public Sans Variable', system-ui, sans-serif;
+
+  --radius-control: 6px;
+
+  /* Behind sheets and the flyer viewer, and the shadow of a sheet. The same in both themes. */
+  --color-scrim: rgb(0 0 0 / 0.6);
+  --color-scrim-strong: rgb(0 0 0 / 0.9);
+  --shadow-sheet: 0 -12px 24px rgb(0 0 0 / 0.35);
+}
+
+/* Values that are not colors, fonts or radii. */
+:root {
+  --glow-accent: none;
+  --glow-text: none;
+  --chamfer: 0px;
+  --label-transform: none;
+  --label-tracking: normal;
+  --nav-height: 64px;
+  /* How opaque a tag's outline is. Info tags have no border. */
+  --tag-border-alpha: 0%;
+  --tag-tint-alpha: 14%;
+}
+
+[data-theme='neon'] {
+  --color-bg: #0b0714;
+  --color-surface: #140d24;
+  --color-raised: #1c1233;
+  --color-border: #2d2050;
+  --color-text: #f4eefc;
+  --color-text-muted: #a698c4;
+  /* Decorative labels only. */
+  --color-text-faint: #6f6290;
+
+  --color-accent: #ff2bd6;
+  --color-accent-ink: #0b0714;
+  --color-accent-2: #22e5ff;
+
+  --color-success: #4dffb8;
+  --color-warning: #ffe14d;
+  --color-danger: #ff5470;
+
+  --color-age-all: #4dffb8;
+  --color-age-16: #22e5ff;
+  --color-age-18: #ffe14d;
+  --color-age-21: #ff9f1c;
+
+  --color-tag-music: #b794ff;
+  --color-tag-comedy: #ffe14d;
+  --color-tag-community: #4dffb8;
+  --color-tag-art: #ff7ac8;
+  --color-tag-diy: #ff9f1c;
+  --color-tag-film: #7aa2ff;
+  --color-tag-literature: #5cc8ff;
+  --color-tag-sports: #ff7a7a;
+  --color-tag-free: #22e5ff;
+  --color-tag-recurring: #a698c4;
+
+  --font-display: 'Chakra Petch', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --font-body: 'Inter Tight Variable', system-ui, sans-serif;
+
+  --radius-control: 3px;
+
+  --glow-accent: 0 0 14px color-mix(in srgb, var(--color-accent) 70%, transparent);
+  --glow-text: 0 0 14px color-mix(in srgb, var(--color-accent) 70%, transparent);
+  --chamfer: 8px;
+  --label-transform: uppercase;
+  --label-tracking: 0.04em;
+  --nav-height: 72px;
+  --tag-border-alpha: 60%;
+  --tag-tint-alpha: 10%;
+}

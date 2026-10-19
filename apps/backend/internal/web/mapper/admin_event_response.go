@@ -43,6 +43,7 @@ func adminEventResponse(event models.Event) dto.AdminEventResponse {
 		Time:      formatEventTime(event),
 		StartTime: event.StartAt.In(util.TZLocation).Format("15:04"),
 		CoverCost: event.CoverCost,
+		FlyerURL:  event.FlyerURL,
 		Tags:      tagNames(event),
 		Score:     event.Score(),
 	}

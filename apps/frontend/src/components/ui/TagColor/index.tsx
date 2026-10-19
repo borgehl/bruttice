@@ -1,16 +1,17 @@
+// Class names are written out in full so Tailwind can see them. Each sets --tag, which `tag` uses.
 const tagColors: Record<string, string> = {
-  music: 'bg-purple-900/50 text-purple-300',
-  comedy: 'bg-yellow-900/50 text-yellow-300',
-  community: 'bg-green-900/50 text-green-300',
-  literature: 'bg-sky-900/50 text-sky-300',
-  diy: 'bg-orange-900/50 text-orange-300',
-  free: 'bg-emerald-900/50 text-emerald-300',
-  recurring: 'bg-neutral-700/50 text-neutral-300',
-  art: 'bg-pink-900/50 text-pink-300',
-  sports: 'bg-red-900/50 text-red-300',
-  film: 'bg-indigo-900/50 text-indigo-300',
+  music: 'tag-music',
+  comedy: 'tag-comedy',
+  community: 'tag-community',
+  literature: 'tag-literature',
+  diy: 'tag-diy',
+  free: 'tag-free',
+  recurring: 'tag-recurring',
+  art: 'tag-art',
+  sports: 'tag-sports',
+  film: 'tag-film',
 };
 
 export function getTagColor(tag: string): string {
-  return tagColors[tag.toLowerCase()] || 'bg-neutral-700/50 text-neutral-300';
+  return `tag ${tagColors[tag.toLowerCase()] ?? 'tag-recurring'}`;
 }

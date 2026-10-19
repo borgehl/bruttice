@@ -1,17 +1,19 @@
+import Page from '../components/ui/Page';
+
 export default function PrivacyPolicy() {
   return (
-    <div className="prose prose-sm max-w-none text-text">
-      <h1 className="text-2xl font-bold mb-6">Privacy Policy</h1>
+    <Page title="Privacy policy">
+    <div className="text-sm leading-relaxed text-text-muted">
 
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Who we are</h2>
+        <h2 className="font-label mb-2 text-base font-semibold text-text">Who we are</h2>
         <p>
           A community event calendar.
         </p>
       </section>
 
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">What we collect</h2>
+        <h2 className="font-label mb-2 text-base font-semibold text-text">What we collect</h2>
         <p>When you accept the cookie banner, we collect:</p>
         <ul className="list-disc list-inside mt-2 space-y-1">
           <li>
@@ -32,7 +34,7 @@ export default function PrivacyPolicy() {
       </section>
 
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Why we collect it</h2>
+        <h2 className="font-label mb-2 text-base font-semibold text-text">Why we collect it</h2>
         <p>
           We use this data solely for anonymous aggregate analytics: how many unique
           visitors we receive per day, which pages are popular, and the general
@@ -51,7 +53,7 @@ export default function PrivacyPolicy() {
       </section>
 
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Legal basis</h2>
+        <h2 className="font-label mb-2 text-base font-semibold text-text">Legal basis</h2>
         <p>
           Processing is based on your explicit consent (GDPR Article 6(1)(a)). You
           may withdraw consent at any time by clearing your cookies; the banner will
@@ -60,7 +62,7 @@ export default function PrivacyPolicy() {
       </section>
 
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Data retention</h2>
+        <h2 className="font-label mb-2 text-base font-semibold text-text">Data retention</h2>
         <p>
           Access logs are retained for 12 months and then deleted. Your visitor ID
           cookie expires after 1 year.
@@ -68,7 +70,7 @@ export default function PrivacyPolicy() {
       </section>
 
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Your rights</h2>
+        <h2 className="font-label mb-2 text-base font-semibold text-text">Your rights</h2>
         <ul className="list-disc list-inside space-y-1">
           <li>
             <strong>Withdraw consent:</strong> Clear your cookies. The banner will
@@ -82,7 +84,7 @@ export default function PrivacyPolicy() {
       </section>
 
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Cookies we set</h2>
+        <h2 className="font-label mb-2 text-base font-semibold text-text">Cookies we set</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
@@ -108,7 +110,7 @@ export default function PrivacyPolicy() {
       </section>
 
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Third parties</h2>
+        <h2 className="font-label mb-2 text-base font-semibold text-text">Third parties</h2>
         <p>
           At the moment you accept the cookie banner, we perform a single IP
           geolocation lookup via{' '}
@@ -116,7 +118,7 @@ export default function PrivacyPolicy() {
             href="https://ipgeolocation.io"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary hover:text-primary-hover"
+            className="text-accent hover:text-accent-hover"
           >
             ipgeolocation.io
           </a>{' '}
@@ -125,5 +127,6 @@ export default function PrivacyPolicy() {
         </p>
       </section>
     </div>
+    </Page>
   );
 }

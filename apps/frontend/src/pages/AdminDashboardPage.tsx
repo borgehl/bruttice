@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import Page from '../components/ui/Page';
 import AdminDashboardDaySection from '../components/features/AdminDashboardDaySection';
 import AdminIngestRuns from '../components/features/AdminIngestRuns';
 import { useAuthStore } from '../store/auth';
@@ -72,54 +73,59 @@ export default function AdminDashboardPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh]">
-        <div className="text-text-muted">Loading...</div>
-      </div>
+      <Page title="Admin">
+        <p className="py-12 text-center text-text-muted">Loading...</p>
+      </Page>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="p-4 bg-error-muted border border-error/30 rounded-lg">
-          <p className="text-error">{error}</p>
+      <Page title="Admin">
+        <div className="rounded-control border border-danger/30 bg-danger-muted p-4">
+          <p className="text-danger">{error}</p>
         </div>
-      </div>
+      </Page>
     );
   }
 
+  const awaiting = dashboard?.awaitingApproval ?? [];
+  const awaitingCount = awaiting.reduce((total, day) => total + day.events.length, 0);
+  const upcoming = dashboard?.upcoming ?? [];
+  const upcomingCount = upcoming.reduce((total, day) => total + day.events.length, 0);
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-text">Admin Dashboard</h1>
+    <Page
+      title="Admin"
+      action={
         <button
+          type="button"
           onClick={handleLogout}
-          className="px-4 py-2 text-sm bg-surface border border-border rounded hover:bg-surface-elevated text-text-muted"
+          className="font-label h-9 cursor-pointer rounded-control border border-border px-3 text-sm font-semibold text-text-muted hover:text-text"
         >
           Logout
         </button>
-      </div>
+      }
+      flush
+    >
+      <p className="px-4 pt-3 text-sm text-text-muted">
+        <span className="font-medium text-text">{email}</span> ·{' '}
+        <Link to="/admin/add-event">add event</Link>
+      </p>
 
-      <div className="mb-6 p-4 bg-surface border border-border rounded-lg">
-        <p className="text-text-muted">
-          Welcome <span className="font-medium text-text">{email}</span>. The admin add event page is{' '}
-          <Link to="/admin/add-event" className="text-primary hover:text-primary-hover">
-            here
-          </Link>
-          .
-        </p>
-      </div>
-
-      <div className="flex gap-2 mb-6 border-b border-border">
+      <div role="tablist" className="mt-3 flex border-b border-border px-4">
         {([
           ['events', 'Events'],
           ['ingestion', 'Ingestion'],
         ] as const).map(([key, label]) => (
           <button
             key={key}
+            type="button"
+            role="tab"
+            aria-selected={tab === key}
             onClick={() => setTab(key)}
-            className={`px-4 py-2 text-sm -mb-px border-b-2 ${
-              tab === key ? 'border-primary text-text font-medium' : 'border-transparent text-text-muted hover:text-text'
+            className={`font-label -mb-px min-h-11 flex-1 cursor-pointer border-b-2 text-sm font-semibold ${
+              tab === key ? 'border-accent text-accent' : 'border-transparent text-text-muted hover:text-text'
             }`}
           >
             {label}
@@ -128,36 +134,40 @@ export default function AdminDashboardPage() {
       </div>
 
       {tab === 'ingestion' ? (
-        <AdminIngestRuns />
+        <div className="p-4">
+          <AdminIngestRuns />
+        </div>
       ) : (
         <>
-      <section className="mb-12">
-        <h2 className="text-xl font-bold text-text mb-4">Events Awaiting Approval</h2>
-        <div className="max-h-[500px] overflow-y-auto border border-border rounded-lg p-4 bg-surface">
-          {dashboard?.awaitingApproval && dashboard.awaitingApproval.length > 0 ? (
-            dashboard.awaitingApproval.map((day) => (
-              <AdminDashboardDaySection key={day.day} eventDay={day} mode="approval" onVote={handleVote} onUpdate={refreshDashboard} />
-            ))
-          ) : (
-            <p className="text-text-muted">No events awaiting approval.</p>
-          )}
-        </div>
-      </section>
+          <section>
+            <h2 className="font-label flex items-baseline justify-between px-4 pb-2 pt-4 text-base font-semibold text-text">
+              Awaiting approval
+              <span className="font-data text-xs font-normal text-text-faint">{awaitingCount}</span>
+            </h2>
+            {awaiting.length > 0 ? (
+              awaiting.map((day) => (
+                <AdminDashboardDaySection key={day.day} eventDay={day} mode="approval" onVote={handleVote} onUpdate={refreshDashboard} />
+              ))
+            ) : (
+              <p className="px-4 pb-4 text-sm text-text-muted">No events awaiting approval.</p>
+            )}
+          </section>
 
-      <section>
-        <h2 className="text-xl font-bold text-text mb-4">Upcoming Events Awaiting Fiery Judgement</h2>
-        <div className="max-h-[600px] overflow-y-auto border border-border rounded-lg p-4 bg-surface">
-          {dashboard?.upcoming && dashboard.upcoming.length > 0 ? (
-            dashboard.upcoming.map((day) => (
-              <AdminDashboardDaySection key={day.day} eventDay={day} mode="upcoming" onVote={handleVote} onUpdate={refreshDashboard} />
-            ))
-          ) : (
-            <p className="text-text-muted">No upcoming events.</p>
-          )}
-        </div>
-      </section>
+          <section>
+            <h2 className="font-label flex items-baseline justify-between border-t border-border px-4 pb-2 pt-4 text-base font-semibold text-text">
+              Upcoming awaiting judgement
+              <span className="font-data text-xs font-normal text-text-faint">{upcomingCount}</span>
+            </h2>
+            {upcoming.length > 0 ? (
+              upcoming.map((day) => (
+                <AdminDashboardDaySection key={day.day} eventDay={day} mode="upcoming" onVote={handleVote} onUpdate={refreshDashboard} />
+              ))
+            ) : (
+              <p className="px-4 pb-4 text-sm text-text-muted">No upcoming events.</p>
+            )}
+          </section>
         </>
       )}
-    </div>
+    </Page>
   );
 }

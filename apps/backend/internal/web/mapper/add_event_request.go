@@ -83,3 +83,13 @@ func NormalizeURL(url string) string {
 	}
 	return "https://" + url
 }
+
+// FlyerURL is the flyer link to store: an http(s) URL as given, or empty if the value is
+// blank or is not one. It is shown as an image, so other schemes are never kept.
+func FlyerURL(url string) string {
+	url = strings.TrimSpace(url)
+	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+		return url
+	}
+	return ""
+}

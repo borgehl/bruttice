@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { submitEvent } from '../services/api';
 import AddEventForm, { type AddEventFormData } from '../components/features/AddEventForm';
+import Page from '../components/ui/Page';
+import StatusScreen from '../components/ui/StatusScreen';
+import { ghostButtonClass } from '../components/ui/Field';
 
 export default function AddEventPage() {
   const [success, setSuccess] = useState(false);
@@ -24,36 +27,26 @@ export default function AddEventPage() {
 
   if (success) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="p-6 bg-success-muted border border-success/30 rounded-lg">
-          <h2 className="text-xl font-semibold text-success mb-2">Event Submitted!</h2>
-          <p className="text-success/80 mb-4">
-            Thank you for submitting your event. Please check your email to verify the submission.
-            Once verified, an admin will review and approve your event.
-          </p>
-          <button
-            onClick={() => {setSuccess(false); window.location.reload();}}
-            className="px-4 py-2 bg-success text-white rounded hover:bg-success/80"
-          >
-            Submit Another Event
-          </button>
-        </div>
-      </div>
+      <Page title="Add event">
+        <StatusScreen
+          kind="success"
+          title="Event submitted"
+          steps={['Check your email and verify', 'An admin reviews it', 'It appears on the calendar']}
+          action={
+            <button type="button" onClick={() => setSuccess(false)} className={ghostButtonClass}>
+              Submit another event
+            </button>
+          }
+        >
+          Thanks. Check your email to verify the submission. Once verified, an admin reviews and approves it.
+        </StatusScreen>
+      </Page>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-text">Add Event</h1>
-
-      <div className="mb-6 p-4 bg-info-muted border border-info/30 rounded-lg">
-        <p className="text-sm text-info">
-          Submit your event to be added to the calendar. You'll receive an email to verify your submission,
-          and then an admin will review and approve it.
-        </p>
-      </div>
-
+    <Page title="Add event" subtitle="Verify by email, then an admin approves it.">
       <AddEventForm onSubmit={handleSubmit} />
-    </div>
+    </Page>
   );
 }

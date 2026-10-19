@@ -9,11 +9,16 @@ export interface Event {
   startAt: string;
   doorsAt?: string;
   coverCost: string;
+  flyerUrl?: string;
   tags: string[];
 }
 
 export interface EventDay {
   day: string;
+  // "2026-10-22", "Thursday" and "Oct 22": the day split up for headers
+  dateKey: string;
+  weekday: string;
+  date: string;
   events: Event[];
 }
 
@@ -21,6 +26,8 @@ export interface Venue {
   name: string;
   slug: string;
   link: string;
+  // the venue's region name, empty if it has none
+  region: string;
 }
 
 export interface Tag {
@@ -71,6 +78,7 @@ export interface AdminEvent {
   startTime: string;
   doorsTime?: string;
   coverCost: string;
+  flyerUrl?: string;
   tags: string[];
   email: string;
   score: number;

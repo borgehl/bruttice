@@ -18,6 +18,7 @@ func EventResponse(event models.Event) dto.EventResponse {
 		Region:    event.Region.Name,
 		StartAt:   event.StartAt.Format(time.RFC3339),
 		CoverCost: event.CoverCost,
+		FlyerURL:  event.FlyerURL,
 		Tags:      tagNames(event),
 	}
 	if event.DoorsAt != nil && *event.DoorsAt != event.StartAt {

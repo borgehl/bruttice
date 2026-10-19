@@ -3,6 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
 import { adminAddEvent } from '../services/api';
 import AddEventForm, { type AddEventFormData } from '../components/features/AddEventForm';
+import Page from '../components/ui/Page';
+import StatusScreen from '../components/ui/StatusScreen';
+import { ghostButtonClass } from '../components/ui/Field';
 
 export default function AdminAddEventPage() {
   const { isAuthenticated, isLoading: authLoading, checkSession } = useAuthStore();
@@ -45,52 +48,41 @@ export default function AdminAddEventPage() {
 
   if (authLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh]">
-        <div className="text-text-muted">Loading...</div>
-      </div>
+      <Page title="Add event">
+        <p className="py-12 text-center text-text-muted">Loading...</p>
+      </Page>
     );
   }
 
   if (success) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="p-6 bg-success-muted border border-success/30 rounded-lg">
-          <h2 className="text-xl font-semibold text-success mb-2">Event Submitted!</h2>
-          <p className="text-success/80 mb-4">The event has been added successfully.</p>
-          <div className="flex gap-4">
-            <button
-              onClick={() => setSuccess(false)}
-              className="px-4 py-2 bg-success text-white rounded hover:bg-success/80"
-            >
-              Add Another Event
-            </button>
-            <Link
-              to="/admin"
-              className="px-4 py-2 bg-surface border border-border text-text-muted rounded hover:bg-surface-elevated"
-            >
-              Back to Dashboard
-            </Link>
-          </div>
-        </div>
-      </div>
+      <Page title="Add event">
+        <StatusScreen
+          kind="success"
+          title="Event added"
+          action={
+            <div className="flex flex-col gap-2.5">
+              <button type="button" onClick={() => setSuccess(false)} className={ghostButtonClass}>
+                Add another event
+              </button>
+              <Link to="/admin" className={`${ghostButtonClass} border-border text-text-muted hover:text-text`}>
+                Back to dashboard
+              </Link>
+            </div>
+          }
+        >
+          The event has been added successfully.
+        </StatusScreen>
+      </Page>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-text">Add New Event (Admin Version)</h1>
-
-      <p className="mb-6 text-text-muted">
-        Back to{' '}
-        <Link to="/admin" className="text-primary hover:text-primary-hover">
-          Admin Dashboard
-        </Link>
-        .
+    <Page title="Add event" subtitle="Admin version. Labels marked with a * are required.">
+      <p className="mb-5 text-sm">
+        <Link to="/admin">Back to the admin dashboard</Link>
       </p>
-
-      <p className="mb-6 text-text-dim">Labels marked with a * are required.</p>
-
       <AddEventForm isAdmin onSubmit={handleSubmit} />
-    </div>
+    </Page>
   );
 }

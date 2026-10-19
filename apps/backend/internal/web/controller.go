@@ -3,6 +3,7 @@ package web
 import (
 	"github.com/borgehl/bruttice/apps/backend/internal/web/api"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/controlcookie"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/dbx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
@@ -18,7 +19,7 @@ type Controller struct {
 	cookieSessions *controlcookie.CookieStore
 }
 
-func NewController(logger *logx.Logger, database *dbx.DatabaseClient, mux *http.ServeMux, ingestKey string, ingestTrigger api.IngestTrigger, cookieSalt string) *Controller {
+func NewController(logger *logx.Logger, database *dbx.DatabaseClient, mux *http.ServeMux, ingestKey string, ingestTrigger api.IngestTrigger, cookieSalt string, site dto.SiteResponse) *Controller {
 	ret := &Controller{
 		mux:            mux,
 		logger:         logger,
@@ -27,7 +28,7 @@ func NewController(logger *logx.Logger, database *dbx.DatabaseClient, mux *http.
 		cookieSessions: controlcookie.NewCookieStore(database, cookieSalt),
 	}
 
-	apiHandler := api.NewAPIHandler(logger, database, ret.cookieSessions, ingestKey, ingestTrigger)
+	apiHandler := api.NewAPIHandler(logger, database, ret.cookieSessions, ingestKey, ingestTrigger, site)
 	apiHandler.RegisterRoutes(ret.mux)
 
 	return ret

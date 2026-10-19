@@ -54,8 +54,8 @@ export default function EditableCurrencyField({ value, onChange, className = '',
   }, []);
 
   const inputClass = variant === 'form'
-    ? `w-full px-3 py-2 bg-surface border ${validationError ? 'border-error' : 'border-border'} rounded-md text-text placeholder-text-dim focus:outline-none focus:ring-2 focus:ring-primary`
-    : `bg-transparent border ${validationError ? 'border-error' : 'border-transparent hover:border-border'} focus:border-primary focus:outline-none rounded px-1 -mx-1`;
+    ? `w-full px-3 py-2 bg-surface border ${validationError ? 'border-danger' : 'border-border'} rounded-md text-text placeholder-text-faint focus:outline-none focus:ring-2 focus:ring-accent`
+    : `bg-transparent border ${validationError ? 'border-danger' : 'border-transparent hover:border-border'} focus:border-accent focus:outline-none rounded px-1 -mx-1`;
 
   return (
     <div className={className}>
@@ -67,7 +67,7 @@ export default function EditableCurrencyField({ value, onChange, className = '',
         placeholder={placeholder ?? '0.00'}
         className={inputClass}
       />
-      {validationError && <p className="text-xs text-error mt-1">{validationError}</p>}
+      {validationError && <p className="text-xs text-danger mt-1">{validationError}</p>}
     </div>
   );
 }

@@ -2,10 +2,10 @@ interface CalendarCostProps {
   cost: string;
 }
 
-function formatCost(cost: string): string {
+export function formatCost(cost: string): string {
   const num = Number(cost);
   if (!isNaN(num) && cost.trim() !== '') {
-    return `$${num.toFixed(2)}`;
+    return num === 0 ? 'Free' : `$${num.toFixed(2)}`;
   }
   return cost;
 }
@@ -13,7 +13,5 @@ function formatCost(cost: string): string {
 export default function CalendarCost({ cost }: CalendarCostProps) {
   if (!cost) return null;
 
-  return (
-    <span className="text-text-muted">{formatCost(cost)}</span>
-  );
+  return <span className="font-data">{formatCost(cost)}</span>;
 }

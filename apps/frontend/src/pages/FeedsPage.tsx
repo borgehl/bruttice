@@ -1,82 +1,80 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import Page from '../components/ui/Page';
+import { ghostButtonClass } from '../components/ui/Field';
+import { feedUrl } from '../utils/feeds';
+
+const feeds = [
+  { type: 'RSS', key: 'rss', description: 'Standard RSS 2.0, works with most feed readers.' },
+  { type: 'Atom', key: 'atom', description: 'Atom 1.0 feed format.' },
+  { type: 'JSON', key: 'json', description: 'JSON feed for programmatic access.' },
+];
 
 export default function FeedsPage() {
+  const [searchParams] = useSearchParams();
+  const filterKey = searchParams.get('filterKey');
   const [copiedFeed, setCopiedFeed] = useState<string | null>(null);
 
-  const baseUrl = window.location.origin;
-
-  const copyFeedUrl = (feedType: string, url: string) => {
-    navigator.clipboard.writeText(url);
-    setCopiedFeed(feedType);
-    setTimeout(() => setCopiedFeed(null), 2000);
+  const copyFeedUrl = async (feedType: string, url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedFeed(feedType);
+      setTimeout(() => setCopiedFeed(null), 2000);
+    } catch {
+      // Clipboard access can be refused. The URL is on screen to copy by hand.
+    }
   };
 
-  const feeds = [
-    {
-      type: 'RSS',
-      description: 'Standard RSS 2.0 feed, compatible with most feed readers.',
-      url: `${baseUrl}/api/feeds?feedType=rss`,
-    },
-    {
-      type: 'Atom',
-      description: 'Atom 1.0 feed format.',
-      url: `${baseUrl}/api/feeds?feedType=atom`,
-    },
-    {
-      type: 'JSON',
-      description: 'JSON feed format for programmatic access.',
-      url: `${baseUrl}/api/feeds?feedType=json`,
-    },
-  ];
-
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-text">Event Feeds</h1>
+    <Page
+      title="Feeds"
+      subtitle={
+        filterKey
+          ? 'These feeds follow the filter you are looking at.'
+          : 'Subscribe in your feed reader or calendar app.'
+      }
+    >
+      <ul className="space-y-3">
+        {feeds.map((feed) => {
+          const url = feedUrl(window.location.origin, feed.key, filterKey);
+          return (
+            <li key={feed.key} className="rounded-control border border-border bg-surface p-4">
+              <div className="mb-1 flex items-center gap-2">
+                <h2 className="font-label text-base font-semibold text-text">{feed.type}</h2>
+                <span className="font-data text-xs text-text-faint">.{feed.key}</span>
+              </div>
+              <p className="mb-3 text-sm text-text-muted">{feed.description}</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  aria-label={`${feed.type} feed URL`}
+                  value={url}
+                  onFocus={(event) => event.currentTarget.select()}
+                  className="font-data h-10 min-w-0 flex-1 rounded-control border border-border bg-raised px-3 text-xs text-text"
+                />
+                <button
+                  type="button"
+                  onClick={() => copyFeedUrl(feed.key, url)}
+                  className="font-label h-10 min-w-[72px] cursor-pointer rounded-control border border-accent px-3 text-sm font-semibold text-accent hover:text-accent-hover"
+                >
+                  {copiedFeed === feed.key ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
 
-      <div className="mb-6 p-4 bg-info-muted border border-info/30 rounded-lg">
-        <p className="text-sm text-info">
-          Subscribe to our event feeds to stay updated on upcoming events.
-          You can use these feeds with your favorite feed reader or calendar app.
+      <section className="mt-6">
+        <h2 className="font-label mb-1 text-base font-semibold text-text">Filtered feeds</h2>
+        <p className="mb-3 text-sm text-text-muted">
+          Want only some events? Create a filter, then open Feeds from the calendar to copy its feed link.
         </p>
-      </div>
-
-      <div className="space-y-4">
-        {feeds.map((feed) => (
-          <div key={feed.type} className="p-4 bg-surface border border-border rounded-lg">
-            <h2 className="text-lg font-semibold mb-1 text-text">{feed.type} Feed</h2>
-            <p className="text-sm text-text-muted mb-3">{feed.description}</p>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                readOnly
-                value={feed.url}
-                className="flex-1 px-3 py-2 text-sm bg-surface-elevated border border-border rounded text-text"
-              />
-              <button
-                onClick={() => copyFeedUrl(feed.type, feed.url)}
-                className="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-primary-hover min-w-[70px]"
-              >
-                {copiedFeed === feed.type ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-8 p-4 bg-surface border border-border rounded-lg">
-        <h2 className="text-lg font-semibold mb-2 text-text">Custom Filtered Feeds</h2>
-        <p className="text-sm text-text-muted mb-3">
-          Want to subscribe to a filtered feed? Create a custom filter first, then use the generated
-          feed URL with your filter key.
-        </p>
-        <Link
-          to="/filter"
-          className="inline-block px-4 py-2 bg-primary text-white text-sm rounded hover:bg-primary-hover"
-        >
-          Create Custom Filter
+        <Link to="/filter" className={`${ghostButtonClass} hover:text-accent-hover`}>
+          Create custom filter
         </Link>
-      </div>
-    </div>
+      </section>
+    </Page>
   );
 }

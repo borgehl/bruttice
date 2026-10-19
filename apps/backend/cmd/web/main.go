@@ -5,6 +5,7 @@ import (
 	"github.com/borgehl/bruttice/apps/backend/internal/web"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/api"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/ingesttrigger"
+	"github.com/borgehl/bruttice/apps/backend/internal/web/mapper"
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/configx"
@@ -94,7 +95,7 @@ func main() {
 		ingestTrigger = ingesttrigger.NewHTTPTrigger(cfg.IngestTriggerURL, cfg.IngestKey)
 	}
 
-	server.Web = web.NewController(server.Logger, server.Database, server.Mux, cfg.IngestKey, ingestTrigger, cfg.CookieSalt)
+	server.Web = web.NewController(server.Logger, server.Database, server.Mux, cfg.IngestKey, ingestTrigger, cfg.CookieSalt, mapper.SiteResponse(cfg.Site))
 
 	go notifications.GoRunSendApprovalNotifications()
 

@@ -11,7 +11,7 @@ export default function DateInput({
   className = '',
   ...props
 }: DateInputProps) {
-  const baseClasses = 'px-2 py-1.5 text-sm bg-surface border border-border rounded focus:outline-none focus:border-primary cursor-pointer w-auto';
+  const baseClasses = 'px-2 py-1.5 text-sm bg-surface border border-border rounded-control focus:outline-none focus:border-accent cursor-pointer w-auto';
   const combinedClasses = className ? `${baseClasses} ${className}` : baseClasses;
 
   return (

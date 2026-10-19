@@ -25,12 +25,25 @@ type ConfigRawRegion struct {
 	Timezone string `yaml:"timezone"`
 }
 
+// ConfigRawSite is what differs between deployments of the site, shown to visitors.
+type ConfigRawSite struct {
+	Name         string `yaml:"name"`
+	Region       string `yaml:"region"`
+	ContactEmail string `yaml:"contact-email"`
+	Description  string `yaml:"description"`
+	// PopBooker shows the Pop! Booker page.
+	PopBooker bool `yaml:"pop-booker"`
+	// PopBookerURL is the calendar the Pop! Booker page embeds. Without one the page has no calendar.
+	PopBookerURL string `yaml:"pop-booker-url"`
+}
+
 type ConfigRaw struct {
 	AdminAccounts    []string            `yaml:"admin-accounts"`
 	Timezone         string              `yaml:"timezone"`
 	CookieSalt       string              `yaml:"cookie-salt"`
 	IngestKey        string              `yaml:"ingest-key"`
 	IngestTriggerURL string              `yaml:"ingest-trigger-url"`
+	Site             ConfigRawSite       `yaml:"site"`
 	Tags             []string            `yaml:"tags"`
 	AgeGroups        []ConfigRawAgeGroup `yaml:"age-groups"`
 	Regions          []ConfigRawRegion   `yaml:"regions"`
@@ -56,6 +69,7 @@ type Config struct {
 	IngestKey     string
 	// IngestTriggerURL is the scraper service endpoint that starts a run, empty if there is none
 	IngestTriggerURL string
+	Site             ConfigRawSite
 	InitialData      InitialData
 }
 
@@ -79,6 +93,7 @@ func ParseConfig(configFilename *string) Config {
 		CookieSalt:       raw.CookieSalt,
 		IngestKey:        raw.IngestKey,
 		IngestTriggerURL: raw.IngestTriggerURL,
+		Site:             raw.Site,
 		InitialData: InitialData{
 			Tags:      raw.Tags,
 			AgeGroups: raw.AgeGroups,

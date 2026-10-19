@@ -29,6 +29,7 @@ func IngestEvent(e ingest.Event, venue ingest.VenueInfo, now time.Time) models.E
 		StartAt:           e.StartAt,
 		DoorsAt:           e.DoorsAt,
 		CoverCost:         e.CoverCost,
+		FlyerURL:          FlyerURL(e.FlyerURL),
 		Venue:             models.Venue{Name: firstNonEmpty(e.Venue, venue.Name)},
 		Region:            models.Region{Name: firstNonEmpty(e.Region, venue.DefaultRegion)},
 		Age:               models.Age{Name: e.Age},

@@ -1,23 +1,29 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { postVisitorConsent } from '../../../services/api';
 
-export default function CookieBanner() {
-  const [visible, setVisible] = useState(() => {
-    return localStorage.getItem('tracking-consent') === null;
-  });
-  const bannerRef = useRef<HTMLDivElement>(null);
-  const [bannerHeight, setBannerHeight] = useState(0);
+const CONSENT_KEY = 'tracking-consent';
 
-  useEffect(() => {
-    if (!visible || !bannerRef.current) return;
-    const el = bannerRef.current;
-    const update = () => setBannerHeight(el.offsetHeight);
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [visible]);
+function hasChosen(): boolean {
+  try {
+    return localStorage.getItem(CONSENT_KEY) !== null;
+  } catch {
+    // Without storage the choice can't be remembered, so ask once per visit.
+    return false;
+  }
+}
+
+function saveChoice(value: 'accepted' | 'declined'): void {
+  try {
+    localStorage.setItem(CONSENT_KEY, value);
+  } catch {
+    // The choice still applies for this visit.
+  }
+}
+
+// Sits just above the bottom nav and pushes the page up instead of covering it.
+export default function CookieBanner() {
+  const [visible, setVisible] = useState(() => !hasChosen());
 
   if (!visible) return null;
 
@@ -27,47 +33,43 @@ export default function CookieBanner() {
     } catch {
       // Non-fatal: consent endpoint failure doesn't block the UI choice.
     }
-    localStorage.setItem('tracking-consent', 'accepted');
+    saveChoice('accepted');
     setVisible(false);
   }
 
   function handleDecline() {
-    localStorage.setItem('tracking-consent', 'declined');
+    saveChoice('declined');
     setVisible(false);
   }
 
   return (
-    <>
-      {/* Spacer prevents the fixed banner from covering page content */}
-      <div style={{ height: bannerHeight }} aria-hidden="true" />
-      <div
-        ref={bannerRef}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-border shadow-lg"
-      >
-        <div className="max-w-4xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <p className="text-sm text-text-muted flex-1">
-            We use a single analytics cookie to count unique visitors and understand which
-            cities our audience comes from. No personal information is collected or sold.{' '}
-            <Link to="/privacy-policy" className="text-primary hover:text-primary-hover underline">
-              Privacy Policy
-            </Link>
-          </p>
-          <div className="flex gap-3 shrink-0">
-            <button
-              onClick={handleDecline}
-              className="px-4 py-2 text-sm border border-border rounded hover:bg-surface text-text-muted"
-            >
-              Decline
-            </button>
-            <button
-              onClick={handleAccept}
-              className="px-4 py-2 text-sm border border-border rounded hover:bg-surface text-text-muted"
-            >
-              Accept
-            </button>
-          </div>
-        </div>
+    <section
+      aria-label="Cookie consent"
+      className="flex shrink-0 flex-col gap-3.5 border-t border-border bg-surface p-4 shadow-sheet"
+    >
+      <p className="text-sm leading-relaxed text-text">
+        One analytics cookie counts unique visitors and which cities they come from. No personal info is
+        collected or sold.{' '}
+        <Link to="/privacy-policy" className="underline">
+          Privacy policy
+        </Link>
+      </p>
+      <div className="flex gap-2.5">
+        <button
+          type="button"
+          onClick={handleDecline}
+          className="font-label h-12 flex-1 cursor-pointer rounded-control border border-border text-sm font-semibold text-text-muted"
+        >
+          Decline
+        </button>
+        <button
+          type="button"
+          onClick={handleAccept}
+          className="font-label chamfer h-12 flex-1 cursor-pointer rounded-control bg-accent text-sm font-semibold text-accent-ink"
+        >
+          Accept
+        </button>
       </div>
-    </>
+    </section>
   );
 }

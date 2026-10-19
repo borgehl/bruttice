@@ -2,6 +2,26 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchFilterOptions, createFilter } from '../services/api';
 import type { FilterOptions } from '../types/event';
+import Page from '../components/ui/Page';
+import Chip from '../components/ui/Chip';
+import Segmented from '../components/ui/Segmented';
+import FilterGroup from '../components/features/FilterGroup';
+import VenueList from '../components/features/VenueList';
+import { displayAge } from '../utils/age';
+import { displayTag } from '../utils/tag';
+import { dropHiddenVenues, toggle, venueHint, visibleVenues } from '../utils/venueFilter';
+
+type Apply = 'include' | 'exclude';
+type Bound = 'max' | 'min';
+
+const includeOptions: { value: Apply; label: string }[] = [
+  { value: 'include', label: 'Include' },
+  { value: 'exclude', label: 'Exclude' },
+];
+const ageOptions: { value: Bound; label: string }[] = [
+  { value: 'max', label: 'Max' },
+  { value: 'min', label: 'Min' },
+];
 
 export default function FilterPage() {
   const navigate = useNavigate();
@@ -11,20 +31,20 @@ export default function FilterPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [tagsInclude, setTagsInclude] = useState(true);
-  const [selectedVenues, setSelectedVenues] = useState<string[]>([]);
-  const [venuesInclude, setVenuesInclude] = useState(true);
+  const [tagsMode, setTagsMode] = useState<Apply>('include');
   const [selectedAges, setSelectedAges] = useState<number[]>([]);
-  const [agesLessThan, setAgesLessThan] = useState(true);
+  const [agesMode, setAgesMode] = useState<Bound>('max');
+  // Regions only narrow the venue list. They are not saved with the filter.
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [selectedVenues, setSelectedVenues] = useState<string[]>([]);
+  const [venuesMode, setVenuesMode] = useState<Apply>('include');
 
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     async function loadOptions() {
       try {
-        setLoading(true);
-        const data = await fetchFilterOptions();
-        setFilterOptions(data);
+        setFilterOptions(await fetchFilterOptions());
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load filter options');
       } finally {
@@ -35,6 +55,16 @@ export default function FilterPage() {
     loadOptions();
   }, []);
 
+  const venues = filterOptions?.venues ?? [];
+  const shownVenues = visibleVenues(venues, selectedRegions);
+  const total = selectedTags.length + selectedAges.length + selectedRegions.length + selectedVenues.length;
+
+  const toggleRegion = (name: string) => {
+    const regions = toggle(selectedRegions, name);
+    setSelectedRegions(regions);
+    setSelectedVenues((current) => dropHiddenVenues(current, venues, regions));
+  };
+
   const handleCreateFilter = async () => {
     setCreating(true);
     setError(null);
@@ -42,11 +72,11 @@ export default function FilterPage() {
     try {
       const result = await createFilter({
         tags: selectedTags,
-        tagsInclude,
+        tagsInclude: tagsMode === 'include',
         ages: selectedAges,
-        agesLessThan,
+        agesLessThan: agesMode === 'max',
         venues: selectedVenues,
-        venuesInclude,
+        venuesInclude: venuesMode === 'include',
       });
       navigate(`/?filterKey=${result.filterKey}`);
     } catch (err) {
@@ -56,163 +86,116 @@ export default function FilterPage() {
     }
   };
 
-  const toggleTag = (tagName: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tagName) ? prev.filter((name) => name !== tagName) : [...prev, tagName]
-    );
-  };
-
-  const toggleVenue = (venueName: string) => {
-    setSelectedVenues((prev) =>
-      prev.includes(venueName) ? prev.filter((v) => v !== venueName) : [...prev, venueName]
-    );
-  };
-
-  const toggleAge = (ageValue: number) => {
-    setSelectedAges((prev) =>
-      prev.includes(ageValue) ? prev.filter((v) => v !== ageValue) : [...prev, ageValue]
-    );
-  };
-
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-        <p className="mt-4 text-text-muted">Loading filter options...</p>
-      </div>
+      <Page title="Filters">
+        <div className="py-12 text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent"></div>
+          <p className="mt-4 text-text-muted">Loading filter options...</p>
+        </div>
+      </Page>
     );
   }
 
   if (error && !filterOptions) {
     return (
-      <div className="p-4 bg-error-muted border border-error/30 rounded-lg">
-        <p className="text-error">{error}</p>
-      </div>
+      <Page title="Filters">
+        <div className="rounded-control border border-danger/30 bg-danger-muted p-4">
+          <p className="text-danger">{error}</p>
+        </div>
+      </Page>
     );
   }
 
+  const disabled = creating || total === 0;
+
   return (
-    <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-text">Create Custom Filter</h1>
-
-      <div className="mb-6 p-4 bg-info-muted border border-info/30 rounded-lg">
-        <p className="text-sm text-info">
-          Create a custom filter to see only the events you're interested in. You can filter by tags,
-          venues, and age restrictions. Once created, you'll get a shareable URL for your filtered calendar.
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-6 p-4 bg-error-muted border border-error/30 rounded-lg">
-          <p className="text-error">{error}</p>
+    <Page
+      title="Filters"
+      subtitle="Choose what to show. You get a link you can share or subscribe to."
+      flush
+      footer={
+        <div>
+          {error && <p className="mb-2 text-sm text-danger">{error}</p>}
+          <button
+            type="button"
+            onClick={handleCreateFilter}
+            disabled={disabled}
+            className="font-label chamfer flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-control bg-accent text-sm font-semibold text-accent-ink enabled:hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-raised disabled:text-text-faint"
+          >
+            {creating ? 'Creating filter...' : 'Create filter'}
+            <span className="font-data text-xs font-normal opacity-80">{total} selected</span>
+          </button>
         </div>
+      }
+    >
+      {filterOptions && filterOptions.tags.length > 0 && (
+        <FilterGroup
+          title="Tags"
+          count={selectedTags.length}
+          mode={<Segmented label="Tags apply" value={tagsMode} options={includeOptions} onChange={setTagsMode} />}
+        >
+          <div className="flex flex-wrap gap-2">
+            {filterOptions.tags.map((tag) => (
+              <Chip
+                key={tag.name}
+                label={displayTag(tag.name)}
+                selected={selectedTags.includes(tag.name)}
+                onToggle={() => setSelectedTags((current) => toggle(current, tag.name))}
+              />
+            ))}
+          </div>
+        </FilterGroup>
       )}
 
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filterOptions?.tags && filterOptions.tags.length > 0 && (
-            <section className="p-4 bg-surface border border-border rounded-lg">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold text-text">Tags</h2>
-                <select
-                  onChange={(e) => setTagsInclude(e.target.value == "true")}
-                  className="text-sm border border-border rounded px-2 py-1 bg-surface-elevated text-text"
-                >
-                  <option value="true">Include</option>
-                  <option value="false">Exclude</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {filterOptions.tags.map((tag) => (
-                  <button
-                    key={tag.name}
-                    type="button"
-                    onClick={() => toggleTag(tag.name)}
-                    className={`px-3 py-2 text-sm rounded border transition-colors text-left ${
-                      selectedTags.includes(tag.name)
-                        ? 'bg-primary text-white border-primary'
-                        : 'bg-surface-elevated text-text-muted border-border hover:border-primary'
-                    }`}
-                  >
-                    {tag.name}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {filterOptions?.ages && filterOptions.ages.length > 0 && (
-            <section className="p-4 bg-surface border border-border rounded-lg">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold text-text">Age Restrictions</h2>
-                <select
-                  onChange={(e) => setAgesLessThan(e.target.value == "true")}
-                  className="text-sm border border-border rounded px-2 py-1 bg-surface-elevated text-text"
-                >
-                  <option value="true">&le; (max)</option>
-                  <option value="false">&ge; (min)</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {filterOptions.ages.map((age) => (
-                  <button
-                    key={age.value}
-                    type="button"
-                    onClick={() => toggleAge(age.value)}
-                    className={`px-3 py-2 text-sm rounded border transition-colors text-left ${
-                      selectedAges.includes(age.value)
-                        ? 'bg-primary text-white border-primary'
-                        : 'bg-surface-elevated text-text-muted border-border hover:border-primary'
-                    }`}
-                  >
-                    {age.name}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-
-        {filterOptions?.venues && filterOptions.venues.length > 0 && (
-          <section className="p-4 bg-surface border border-border rounded-lg">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-text">Venues</h2>
-              <select
-                onChange={(e) => setVenuesInclude(e.target.value == "true")}
-                className="text-sm border border-border rounded px-2 py-1 bg-surface-elevated text-text"
-              >
-                <option value="true">Include</option>
-                <option value="false">Exclude</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
-              {filterOptions.venues.map((venue) => (
-                <button
-                  key={venue.slug}
-                  type="button"
-                  onClick={() => toggleVenue(venue.name)}
-                  className={`px-3 py-2 text-sm rounded border transition-colors text-left truncate ${
-                    selectedVenues.includes(venue.name)
-                      ? 'bg-primary text-white border-primary'
-                      : 'bg-surface-elevated text-text-muted border-border hover:border-primary'
-                  }`}
-                  title={venue.name}
-                >
-                  {venue.name}
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <button
-          onClick={handleCreateFilter}
-          disabled={creating || (selectedTags.length === 0 && selectedVenues.length === 0 && selectedAges.length === 0)}
-          className="w-full px-4 py-3 bg-primary text-white font-medium rounded-md hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+      {filterOptions && filterOptions.ages.length > 0 && (
+        <FilterGroup
+          title="Age"
+          count={selectedAges.length}
+          mode={<Segmented label="Age applies" value={agesMode} options={ageOptions} onChange={setAgesMode} />}
         >
-          {creating ? 'Creating Filter...' : 'Create Filter'}
-        </button>
-      </div>
-    </div>
+          <div className="flex flex-wrap gap-2">
+            {filterOptions.ages.map((age) => (
+              <Chip
+                key={age.value}
+                label={displayAge(age.name)}
+                selected={selectedAges.includes(age.value)}
+                onToggle={() => setSelectedAges((current) => toggle(current, age.value))}
+              />
+            ))}
+          </div>
+        </FilterGroup>
+      )}
+
+      {filterOptions && filterOptions.regions.length > 0 && (
+        <FilterGroup title="Region" count={selectedRegions.length}>
+          <div className="flex flex-wrap gap-2">
+            {filterOptions.regions.map((region) => (
+              <Chip
+                key={region.name}
+                label={region.name}
+                selected={selectedRegions.includes(region.name)}
+                onToggle={() => toggleRegion(region.name)}
+              />
+            ))}
+          </div>
+        </FilterGroup>
+      )}
+
+      {venues.length > 0 && (
+        <FilterGroup
+          title="Venues"
+          count={selectedVenues.length}
+          hint={venueHint(selectedRegions)}
+          mode={<Segmented label="Venues apply" value={venuesMode} options={includeOptions} onChange={setVenuesMode} />}
+        >
+          <VenueList
+            venues={shownVenues}
+            selected={selectedVenues}
+            onToggle={(name) => setSelectedVenues((current) => toggle(current, name))}
+          />
+        </FilterGroup>
+      )}
+    </Page>
   );
 }

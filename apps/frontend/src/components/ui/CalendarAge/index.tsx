@@ -1,4 +1,5 @@
 import { getAgeColor } from '../AgeColor';
+import { displayAge } from '../../../utils/age';
 
 interface CalendarAgeProps {
   age: string;
@@ -6,8 +7,8 @@ interface CalendarAgeProps {
 
 export default function CalendarAge({ age }: CalendarAgeProps) {
   return (
-    <span className={`font-medium ${getAgeColor(age)}`}>
-      {age}
+    <span className={`font-data ${getAgeColor(age)}`}>
+      {displayAge(age)}
     </span>
   );
 }

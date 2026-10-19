@@ -5,6 +5,12 @@ cookie-salt: "demo-cookie-salt"
 
 ingest-key: "demo-ingest-key"
 
+site:
+  name: Bruttice Demo
+  region: Anywhere
+  contact-email: demo@example.com
+  description: A demo of the Bruttice community calendar.
+
 admin-accounts:
   - "admin@example.com;demo-password"
 

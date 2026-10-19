@@ -26,9 +26,10 @@ type APIHandler struct {
 	geoClient      *geoipx.GeoIpClient
 	ingestKey      string
 	ingestTrigger  IngestTrigger
+	site           dto.SiteResponse
 }
 
-func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSessions *controlcookie.CookieStore, ingestKey string, ingestTrigger IngestTrigger) *APIHandler {
+func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSessions *controlcookie.CookieStore, ingestKey string, ingestTrigger IngestTrigger, site dto.SiteResponse) *APIHandler {
 	return &APIHandler{
 		logger:         logger,
 		database:       database,
@@ -37,6 +38,7 @@ func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSess
 		geoClient:      geoipx.NewGeoIpClient(logger),
 		ingestKey:      ingestKey,
 		ingestTrigger:  ingestTrigger,
+		site:           site,
 	}
 }
 
@@ -44,6 +46,7 @@ func (h *APIHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/calendar", middleware.MiddlewareVisitorTracker(h.database, h.logger, h.geoClient, h.handleGetCalendar))
 	mux.HandleFunc("GET /api/filter-options", middleware.MiddlewareVisitorTracker(h.database, h.logger, h.geoClient, h.handleGetFilterOptions))
 	mux.HandleFunc("GET /api/filter", h.handleGetFilter)
+	mux.HandleFunc("GET /api/site", h.handleGetSite)
 	mux.HandleFunc("GET /api/venues", h.handleGetVenues)
 	mux.HandleFunc("GET /api/submission-venues", h.handleGetSubmissionVenues)
 	mux.HandleFunc("POST /api/add-event", middleware.MiddlewareVisitorTracker(h.database, h.logger, h.geoClient, h.handleAddEvent))

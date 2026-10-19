@@ -1,4 +1,5 @@
 import { getTagColor } from '../TagColor';
+import { displayTag } from '../../../utils/tag';
 
 interface CalendarTagsProps {
   tags: string[];
@@ -8,15 +9,15 @@ export default function CalendarTags({ tags }: CalendarTagsProps) {
   if (tags.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <ul className="mt-1.5 flex flex-wrap gap-1.5">
       {tags.map((tag) => (
-        <span
+        <li
           key={tag}
-          className={`px-2 py-0.5 text-xs rounded-full ${getTagColor(tag)}`}
+          className={`flex h-[22px] items-center rounded-[4px] px-2 text-xs font-medium ${getTagColor(tag)}`}
         >
-          {tag}
-        </span>
+          {displayTag(tag)}
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

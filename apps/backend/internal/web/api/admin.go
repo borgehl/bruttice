@@ -8,6 +8,7 @@ import (
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/passwordsx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -279,6 +280,17 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 	if req.CoverCost != nil && *req.CoverCost != event.CoverCost {
 		event.CoverCost = *req.CoverCost
 		updated = true
+	}
+	if req.FlyerURL != nil {
+		flyer := mapper.FlyerURL(*req.FlyerURL)
+		if flyer == "" && strings.TrimSpace(*req.FlyerURL) != "" {
+			h.writeError(w, http.StatusBadRequest, "Flyer must be an http or https link")
+			return
+		}
+		if flyer != event.FlyerURL {
+			event.FlyerURL = flyer
+			updated = true
+		}
 	}
 	if req.Venue != nil && *req.Venue != event.Venue.Name {
 		venue, err := h.database.GetVenue(models.Venue{Name: *req.Venue}, tx)

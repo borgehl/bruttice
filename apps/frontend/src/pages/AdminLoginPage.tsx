@@ -1,6 +1,8 @@
 import { useState, type FormEvent, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
+import Page from '../components/ui/Page';
+import { fieldClass, primaryButtonClass } from '../components/ui/Field';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -24,62 +26,52 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-text">Admin Dashboard Login</h1>
-
+    <Page title="Admin login">
       {error && (
-        <div className="mb-6 p-4 bg-error-muted border border-error/30 rounded-lg">
-          <p className="text-error">{error}</p>
+        <div role="alert" className="mb-5 rounded-control border border-danger/30 bg-danger-muted p-4">
+          <p className="text-danger">{error}</p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-text mb-1">
+          <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-text-muted">
             Email
           </label>
           <input
             type="email"
             id="email"
             required
+            autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 bg-surface border border-border rounded-md text-text focus:outline-none focus:ring-2 focus:ring-primary"
+            className={fieldClass}
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-text mb-1">
+          <label htmlFor="password" className="mb-1.5 block text-[13px] font-medium text-text-muted">
             Password
           </label>
           <input
             type="password"
             id="password"
             required
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 bg-surface border border-border rounded-md text-text focus:outline-none focus:ring-2 focus:ring-primary"
+            className={fieldClass}
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full px-4 py-3 bg-primary text-white font-medium rounded-md hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <button type="submit" disabled={isLoading} className={primaryButtonClass}>
           {isLoading ? 'Logging in...' : 'Login'}
         </button>
       </form>
 
-      <div className="mt-8 p-4 bg-surface border border-border rounded-lg">
-        <p className="text-sm text-text-muted">
-          Head over to the{' '}
-          <Link to="/calendar" className="text-primary hover:text-primary-hover">
-            Calendar
-          </Link>{' '}
-          if you got here by accident.
-        </p>
-      </div>
-    </div>
+      <p className="mt-8 text-center text-sm text-text-muted">
+        Got here by accident? <Link to="/">Back to calendar</Link>
+      </p>
+    </Page>
   );
 }

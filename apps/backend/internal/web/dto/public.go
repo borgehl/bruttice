@@ -16,6 +16,7 @@ type EventResponse struct {
 	StartAt   string   `json:"startAt"`
 	DoorsAt   string   `json:"doorsAt,omitempty"`
 	CoverCost string   `json:"coverCost"`
+	FlyerURL  string   `json:"flyerUrl,omitempty"`
 	Tags      []string `json:"tags"`
 }
 
@@ -28,6 +29,24 @@ type VenueResponse struct {
 	Name string `json:"name"`
 	Slug string `json:"slug"`
 	Link string `json:"link"`
+	// Region is the name of the venue's region, empty if it has none.
+	Region string `json:"region"`
+}
+
+// SiteResponse is what differs between deployments of the site: its name and contact
+// address, the About text, and which optional pages it has. It comes from config.yaml.
+type SiteResponse struct {
+	Name         string       `json:"name"`
+	Region       string       `json:"region"`
+	ContactEmail string       `json:"contactEmail"`
+	Description  string       `json:"description"`
+	Features     SiteFeatures `json:"features"`
+	// PopBookerURL is the calendar the Pop! Booker page embeds, empty if there is none.
+	PopBookerURL string `json:"popBookerUrl,omitempty"`
+}
+
+type SiteFeatures struct {
+	PopBooker bool `json:"popBooker"`
 }
 
 type TagResponse struct {

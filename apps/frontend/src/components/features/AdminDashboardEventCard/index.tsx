@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { AdminEvent, Age, FilterOptions, Venue } from '../../../types/event';
 import { adminUpdateEvent, fetchAdminAges, fetchFilterOptions, fetchVenues } from '../../../services/api';
 import EditableCurrencyField from '../../ui/EditableCurrencyField';
+import { getTagColor } from '../../ui/TagColor';
+import { displayTag } from '../../../utils/tag';
 
 interface EditableFieldProps {
   value: string;
@@ -47,7 +49,7 @@ function EditableField({ value, onChange, className = '', multiline = false, pla
         value={localValue}
         onChange={(e) => handleChange(e.target.value)}
         placeholder={placeholder}
-        className={`bg-transparent border border-transparent hover:border-border focus:border-primary focus:outline-none rounded px-1 -mx-1 resize-none ${className}`}
+        className={`bg-transparent border border-transparent hover:border-border focus:border-accent focus:outline-none rounded px-1 -mx-1 resize-none ${className}`}
         rows={2}
       />
     );
@@ -59,7 +61,7 @@ function EditableField({ value, onChange, className = '', multiline = false, pla
       value={localValue}
       onChange={(e) => handleChange(e.target.value)}
       placeholder={placeholder}
-      className={`bg-transparent border border-transparent hover:border-border focus:border-primary focus:outline-none rounded px-1 -mx-1 ${className}`}
+      className={`bg-transparent border border-transparent hover:border-border focus:border-accent focus:outline-none rounded px-1 -mx-1 ${className}`}
     />
   );
 }
@@ -82,7 +84,7 @@ function EditableSelect({ value, options, onChange, className = '' }: EditableSe
     <select
       value={value}
       onChange={(e) => handleChange(e.target.value)}
-      className={`bg-transparent border border-transparent hover:border-border focus:border-primary focus:outline-none rounded px-1 -mx-1 cursor-pointer ${className}`}
+      className={`bg-transparent border border-transparent hover:border-border focus:border-accent focus:outline-none rounded px-1 -mx-1 cursor-pointer ${className}`}
     >
       {options.map((opt) => (
         <option key={opt} value={opt}>
@@ -143,7 +145,7 @@ export function AdminEventCard({
     loadOptions();
   }, []);
 
-  const handleFieldUpdate = useCallback(async (field: 'title' | 'link' | 'coverCost' | 'venue' | 'region' | 'age' | 'date' | 'startTime' | 'doorsTime', value: string) => {
+  const handleFieldUpdate = useCallback(async (field: 'title' | 'link' | 'coverCost' | 'flyerUrl' | 'venue' | 'region' | 'age' | 'date' | 'startTime' | 'doorsTime', value: string) => {
     setSaving(true);
     setError(null);
 
@@ -182,9 +184,9 @@ export function AdminEventCard({
   }, [event.guid, currentTags, onUpdate]);
 
   return (
-    <div className="p-4 bg-surface-elevated border border-border rounded-lg space-y-3">
+    <div className="space-y-3 rounded-control border border-border bg-surface p-4">
       {error && (
-        <div className="text-xs text-error bg-error-muted px-2 py-1 rounded">
+        <div className="text-xs text-danger bg-danger-muted px-2 py-1 rounded">
           {error}
         </div>
       )}
@@ -192,16 +194,16 @@ export function AdminEventCard({
       <div className="flex items-center justify-between">
         <div className="flex gap-4">
           <div>
-            <label className="text-xs text-text-dim">Date</label>
+            <label className="text-xs text-text-faint">Date</label>
             <input
               type="date"
               value={event.date}
               onChange={(e) => handleFieldUpdate('date', e.target.value)}
-              className="block bg-transparent border border-transparent hover:border-border focus:border-primary focus:outline-none rounded px-1 -mx-1 text-sm font-medium text-text-muted cursor-pointer"
+              className="block bg-transparent border border-transparent hover:border-border focus:border-accent focus:outline-none rounded px-1 -mx-1 text-sm font-medium text-text-muted cursor-pointer"
             />
           </div>
           <div>
-            <label className="text-xs text-text-dim">Venue</label>
+            <label className="text-xs text-text-faint">Venue</label>
             {venueNames.length > 0 ? (
               <EditableSelect
                 value={event.venue}
@@ -214,19 +216,19 @@ export function AdminEventCard({
             )}
           </div>
         </div>
-        {saving && <span className="text-xs text-text-dim">Saving...</span>}
+        {saving && <span className="text-xs text-text-faint">Saving...</span>}
       </div>
 
       <div>
         <EditableField
           value={event.title}
           onChange={(value) => handleFieldUpdate('title', value)}
-          className="text-lg font-semibold text-primary w-full"
+          className="text-lg font-semibold text-accent w-full"
           placeholder="Event title"
         />
       </div>
 
-      <div className="text-sm text-text-dim">
+      <div className="text-sm text-text-faint">
         <span className="text-text-muted">Link: </span>
         <EditableField
           value={event.link}
@@ -236,9 +238,19 @@ export function AdminEventCard({
         />
       </div>
 
+      <div className="text-sm text-text-faint">
+        <span className="text-text-muted">Flyer: </span>
+        <EditableField
+          value={event.flyerUrl ?? ''}
+          onChange={(value) => handleFieldUpdate('flyerUrl', value)}
+          className="w-full break-all"
+          placeholder="Flyer image URL (optional)"
+        />
+      </div>
+
       <div className="flex flex-wrap gap-4 text-sm text-text-muted">
         <div>
-          <label className="text-xs text-text-dim">Region</label>
+          <label className="text-xs text-text-faint">Region</label>
           {regionNames.length > 0 ? (
             <EditableSelect
               value={event.region}
@@ -251,7 +263,7 @@ export function AdminEventCard({
           )}
         </div>
         <div>
-          <label className="text-xs text-text-dim">Age</label>
+          <label className="text-xs text-text-faint">Age</label>
           {ageNames.length > 0 ? (
             <EditableSelect
               value={event.age}
@@ -264,7 +276,7 @@ export function AdminEventCard({
           )}
         </div>
         <div>
-          <label className="text-xs text-text-dim">Cost</label>
+          <label className="text-xs text-text-faint">Cost</label>
           <EditableCurrencyField
             value={event.coverCost}
             onChange={(value) => handleFieldUpdate('coverCost', value)}
@@ -273,34 +285,34 @@ export function AdminEventCard({
         </div>
         <div className="basis-full sm:basis-auto" />
         <div>
-          <label className="text-xs text-text-dim">Start</label>
+          <label className="text-xs text-text-faint">Start</label>
           <input
             type="time"
             value={event.startTime}
             onChange={(e) => handleFieldUpdate('startTime', e.target.value)}
-            className="block bg-transparent border border-transparent hover:border-border focus:border-primary focus:outline-none rounded px-1 -mx-1 text-sm text-text-muted cursor-pointer"
+            className="block bg-transparent border border-transparent hover:border-border focus:border-accent focus:outline-none rounded px-1 -mx-1 text-sm text-text-muted cursor-pointer"
           />
         </div>
         <div>
-          <label className="text-xs text-text-dim">Doors</label>
+          <label className="text-xs text-text-faint">Doors</label>
           <input
             type="time"
             value={event.doorsTime ?? ''}
             onChange={(e) => handleFieldUpdate('doorsTime', e.target.value)}
-            className="block bg-transparent border border-transparent hover:border-border focus:border-primary focus:outline-none rounded px-1 -mx-1 text-sm text-text-muted cursor-pointer"
+            className="block bg-transparent border border-transparent hover:border-border focus:border-accent focus:outline-none rounded px-1 -mx-1 text-sm text-text-muted cursor-pointer"
           />
         </div>
       </div>
 
       {event.email && (
-        <p className="text-sm text-text-dim">
+        <p className="text-sm text-text-faint">
           Submission from <span className="font-medium text-text-muted">{event.email}</span>
         </p>
       )}
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="text-xs text-text-dim">Tags</label>
+          <label className="text-xs text-text-faint">Tags</label>
           <span className="text-sm font-medium text-text-muted">Score: {event.score}</span>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -310,38 +322,40 @@ export function AdminEventCard({
                 key={tag}
                 type="button"
                 onClick={() => handleTagToggle(tag)}
-                className={`px-2 py-0.5 text-xs rounded-full transition-colors cursor-pointer ${
+                className={`min-h-8 cursor-pointer rounded-control border px-2.5 text-xs font-medium ${
                   currentTags.includes(tag)
-                    ? 'bg-primary text-white border border-primary'
-                    : 'bg-surface border border-border text-text-dim hover:border-text-muted'
+                    ? 'border-accent bg-accent/15 text-accent'
+                    : 'border-border text-text-muted hover:border-text-faint'
                 }`}
               >
-                {tag}
+                {displayTag(tag)}
               </button>
             ))
           ) : (
             currentTags.map((tag) => (
               <span
                 key={tag}
-                className="px-2 py-0.5 text-xs bg-surface border border-border rounded-full text-text-muted"
+                className={`flex h-[22px] items-center rounded-[4px] px-2 text-xs font-medium ${getTagColor(tag)}`}
               >
-                {tag}
+                {displayTag(tag)}
               </span>
             ))
           )}
         </div>
       </div>
 
-      <div className="flex gap-2 ml-auto">
+      <div className="flex gap-2.5">
         <button
+          type="button"
           onClick={() => onVote(event.guid, mode === 'approval' ? 'Approve' : 'Keep')}
-          className="px-3 py-1 text-xs font-medium rounded transition-colors bg-success text-white hover:bg-success/80"
+          className="font-label h-11 flex-1 cursor-pointer rounded-control bg-success text-sm font-semibold text-bg hover:opacity-90"
         >
           {mode === 'approval' ? 'Approve' : 'Keep'}
         </button>
         <button
+          type="button"
           onClick={() => onVote(event.guid, mode === 'approval' ? 'Deny' : 'Remove')}
-          className="px-3 py-1 text-xs font-medium rounded transition-colors bg-error text-white hover:bg-error/80"
+          className="font-label h-11 flex-1 cursor-pointer rounded-control border border-danger text-sm font-semibold text-danger hover:bg-danger-muted"
         >
           {mode === 'approval' ? 'Deny' : 'Remove'}
         </button>

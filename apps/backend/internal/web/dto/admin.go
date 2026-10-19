@@ -26,6 +26,7 @@ type AdminEventResponse struct {
 	StartTime string   `json:"startTime"`
 	DoorsTime string   `json:"doorsTime,omitempty"`
 	CoverCost string   `json:"coverCost"`
+	FlyerURL  string   `json:"flyerUrl,omitempty"`
 	Tags      []string `json:"tags"`
 	Email     string   `json:"email"`
 	Score     int      `json:"score"`
@@ -73,10 +74,12 @@ type AdminAddEventResponse struct {
 
 // Admin update event request - all fields optional except guid
 type AdminUpdateEventRequest struct {
-	Guid      string   `json:"guid"`
-	Title     *string  `json:"title,omitempty"`
-	Link      *string  `json:"link,omitempty"`
-	CoverCost *string  `json:"coverCost,omitempty"`
+	Guid      string  `json:"guid"`
+	Title     *string `json:"title,omitempty"`
+	Link      *string `json:"link,omitempty"`
+	CoverCost *string `json:"coverCost,omitempty"`
+	// FlyerURL replaces the flyer link, an empty string removes the flyer.
+	FlyerURL  *string  `json:"flyerUrl,omitempty"`
 	Venue     *string  `json:"venue,omitempty"`
 	Region    *string  `json:"region,omitempty"`
 	Age       *string  `json:"age,omitempty"`

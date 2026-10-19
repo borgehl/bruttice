@@ -30,6 +30,10 @@ func (d *DatabaseClient) SaveEvent(event models.Event, isScraper bool, tx *gorm.
 		event.ID = existingEvent.ID
 		event.CreatedAt = existingEvent.CreatedAt
 		event.DeletedAt = existingEvent.DeletedAt
+		// a source that reports no flyer must not wipe one that was set by hand or earlier
+		if event.FlyerURL == "" {
+			event.FlyerURL = existingEvent.FlyerURL
+		}
 	}
 
 	event.Age, err = d.GetAge(event.Age, tx)
