@@ -60,18 +60,8 @@ func TestVenueResponsesRegion(t *testing.T) {
 }
 
 func TestSiteResponse(t *testing.T) {
-	got := SiteResponse(configx.ConfigRawSite{Name: "N", Region: "R", ContactEmail: "a@b.c", Description: "D", PopBooker: true, PopBookerURL: "https://app.popbooker.com/x"})
-	if got.PopBookerURL != "https://app.popbooker.com/x" {
-		t.Errorf("pop booker url = %q", got.PopBookerURL)
-	}
-	if got.Name != "N" || got.Region != "R" || got.ContactEmail != "a@b.c" || got.Description != "D" || !got.Features.PopBooker {
+	got := SiteResponse(configx.ConfigRawSite{Name: "N", Region: "R", ContactEmail: "a@b.c", Description: "D"})
+	if got.Name != "N" || got.Region != "R" || got.ContactEmail != "a@b.c" || got.Description != "D" {
 		t.Errorf("site = %+v", got)
-	}
-}
-
-func TestSiteResponseDropsANonHTTPPopBookerURL(t *testing.T) {
-	got := SiteResponse(configx.ConfigRawSite{PopBookerURL: "javascript:alert(1)"})
-	if got.PopBookerURL != "" {
-		t.Errorf("pop booker url = %q", got.PopBookerURL)
 	}
 }

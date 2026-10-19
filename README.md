@@ -67,7 +67,8 @@ Key fields:
 | `ingest-key` | Secret shared with scrapers posting events (see [docs/writing-scrapers.md](docs/writing-scrapers.md)) |
 | `ingest-trigger-url` | Optional. Endpoint of your scraper service that starts a run, used by the admin dashboard's "run ingestion" button (see [Triggering a run](#triggering-a-run-from-the-admin-dashboard)) |
 | `admin-accounts` | `email;password` pairs — first entry is the root admin |
-| `site` | What shows on the pages of your deployment: `name`, `region`, `contact-email`, `description`, `pop-booker` (true to show the Pop! Booker page) and `pop-booker-url` (the calendar that page embeds). All optional, see `GET /api/site` |
+| `site` | What shows on the pages of your deployment: `name`, `region`, `contact-email` and `description`. All optional, see `GET /api/site` |
+| `pages-dir` | Optional. Directory of your own pages, as Markdown files (default `/app/pages`). See [docs/custom-pages.md](docs/custom-pages.md) |
 | `tags` | Tags seeded into the database on first run |
 | `age-groups` | Age restriction tiers (`name` + numeric `value`; 1 = all-ages, 255 = unknown) |
 | `regions` | Geographic regions available for events |

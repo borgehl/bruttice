@@ -16,7 +16,7 @@ const items = [
   { to: '/filter', label: 'Filters', icon: icons.filters, also: [] },
   { to: '/feeds', label: 'Feeds', icon: icons.feeds, also: [] },
   // More leads to everything that has no tab of its own.
-  { to: '/more', label: 'More', icon: icons.more, also: ['/about', '/pop-booker', '/privacy-policy', '/admin'] },
+  { to: '/more', label: 'More', icon: icons.more, also: ['/about', '/p', '/privacy-policy', '/admin'] },
 ];
 
 export default function BottomNav() {

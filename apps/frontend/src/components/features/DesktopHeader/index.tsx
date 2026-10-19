@@ -2,6 +2,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import ThemeSwitchCompact from '../ThemeSwitchCompact';
 import { useAuthStore } from '../../../store/auth';
 import { useSiteStore } from '../../../store/site';
+import { navPages, usePagesStore } from '../../../store/pages';
 import { isActive, linkFor } from '../../../utils/nav';
 
 interface NavItem {
@@ -16,6 +17,7 @@ export default function DesktopHeader() {
   const filterKey = new URLSearchParams(search).get('filterKey');
   const { isAuthenticated } = useAuthStore();
   const { site } = useSiteStore();
+  const { pages } = usePagesStore();
 
   const items: NavItem[] = [
     { to: '/', label: 'Calendar', also: ['/calendar'] },
@@ -23,7 +25,7 @@ export default function DesktopHeader() {
     { to: '/filter', label: 'Filters' },
     { to: '/feeds', label: 'Feeds' },
     { to: '/about', label: 'About' },
-    ...(site.features.popBooker ? [{ to: '/pop-booker', label: 'Pop! Booker' }] : []),
+    ...navPages(pages).map((page) => ({ to: `/p/${page.slug}`, label: page.title })),
     ...(isAuthenticated ? [{ to: '/admin', label: 'Admin' }] : []),
   ];
 

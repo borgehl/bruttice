@@ -11,6 +11,7 @@ import (
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/configx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/dbx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
+	"github.com/borgehl/bruttice/packages/go-pkg/platform/pagesx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/passwordsx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
 	"net/http"
@@ -95,7 +96,13 @@ func main() {
 		ingestTrigger = ingesttrigger.NewHTTPTrigger(cfg.IngestTriggerURL, cfg.IngestKey)
 	}
 
-	server.Web = web.NewController(server.Logger, server.Database, server.Mux, cfg.IngestKey, ingestTrigger, cfg.CookieSalt, mapper.SiteResponse(cfg.Site))
+	pages, problems := pagesx.Load(cfg.PagesDir)
+	for _, problem := range problems {
+		server.Logger.Errorf("page skipped: %s", problem)
+	}
+	server.Logger.Infof("loaded %d pages from %s", len(pages), cfg.PagesDir)
+
+	server.Web = web.NewController(server.Logger, server.Database, server.Mux, cfg.IngestKey, ingestTrigger, cfg.CookieSalt, mapper.SiteResponse(cfg.Site), pages)
 
 	go notifications.GoRunSendApprovalNotifications()
 

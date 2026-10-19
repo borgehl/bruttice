@@ -25,16 +25,18 @@ site:
   region: "Tulsa"
   contact-email: "info@example.com"
   description: "A calendar."
-  pop-booker: true
-  pop-booker-url: "https://app.popbooker.com/x"
+pages-dir: /srv/pages
 `)
 	cfg := ParseConfig(&path)
 	want := ConfigRawSite{
 		Name: "Do It Together", Region: "Tulsa", ContactEmail: "info@example.com",
-		Description: "A calendar.", PopBooker: true, PopBookerURL: "https://app.popbooker.com/x",
+		Description: "A calendar.",
 	}
 	if cfg.Site != want {
 		t.Errorf("site = %+v, want %+v", cfg.Site, want)
+	}
+	if cfg.PagesDir != "/srv/pages" {
+		t.Errorf("pages dir = %q", cfg.PagesDir)
 	}
 }
 
@@ -43,6 +45,9 @@ func TestParseConfigWithoutSite(t *testing.T) {
 	cfg := ParseConfig(&path)
 	if cfg.Site != (ConfigRawSite{}) {
 		t.Errorf("site = %+v, want the zero value", cfg.Site)
+	}
+	if cfg.PagesDir != DefaultPagesDir {
+		t.Errorf("pages dir = %q, want the default", cfg.PagesDir)
 	}
 }
 

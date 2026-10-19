@@ -33,20 +33,31 @@ type VenueResponse struct {
 	Region string `json:"region"`
 }
 
-// SiteResponse is what differs between deployments of the site: its name and contact
-// address, the About text, and which optional pages it has. It comes from config.yaml.
+// SiteResponse is what differs between deployments of the site: its name, contact address
+// and description. It comes from config.yaml.
 type SiteResponse struct {
-	Name         string       `json:"name"`
-	Region       string       `json:"region"`
-	ContactEmail string       `json:"contactEmail"`
-	Description  string       `json:"description"`
-	Features     SiteFeatures `json:"features"`
-	// PopBookerURL is the calendar the Pop! Booker page embeds, empty if there is none.
-	PopBookerURL string `json:"popBookerUrl,omitempty"`
+	Name         string `json:"name"`
+	Region       string `json:"region"`
+	ContactEmail string `json:"contactEmail"`
+	Description  string `json:"description"`
 }
 
-type SiteFeatures struct {
-	PopBooker bool `json:"popBooker"`
+// PageSummaryResponse is a page in the list the navigation is built from.
+type PageSummaryResponse struct {
+	Slug  string `json:"slug"`
+	Title string `json:"title"`
+	// Nav is true if the page is listed in the navigation.
+	Nav   bool `json:"nav"`
+	Order int  `json:"order"`
+}
+
+// PageResponse is one of the deployment's own pages.
+type PageResponse struct {
+	PageSummaryResponse
+	// Body is Markdown.
+	Body string `json:"body"`
+	// Embed is an http(s) page shown in a frame under the body, empty if there is none.
+	Embed string `json:"embed,omitempty"`
 }
 
 type TagResponse struct {

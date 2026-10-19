@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useSiteStore } from './store/site';
+import { usePagesStore } from './store/pages';
 import BottomNav from './components/features/BottomNav';
 import DesktopHeader from './components/features/DesktopHeader';
 import DesktopFooter from './components/features/DesktopFooter';
@@ -12,7 +13,7 @@ import AddEventPage from './pages/AddEventPage';
 import FilterPage from './pages/FilterPage';
 import FeedsPage from './pages/FeedsPage';
 import MorePage from './pages/MorePage';
-import PopBookerPage from './pages/PopBookerPage';
+import ContentPage from './pages/ContentPage';
 import AboutPage from './pages/AboutPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -22,9 +23,11 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 
 function App() {
   const loadSite = useSiteStore((state) => state.load);
+  const loadPages = usePagesStore((state) => state.load);
   useEffect(() => {
     void loadSite();
-  }, [loadSite]);
+    void loadPages();
+  }, [loadSite, loadPages]);
 
   return (
     <BrowserRouter>
@@ -41,7 +44,7 @@ function App() {
             <Route path="/feeds" element={<FeedsPage />} />
             <Route path="/more" element={<MorePage />} />
             <Route path="/about" element={<AboutPage />} />
-            <Route path="/pop-booker" element={<PopBookerPage />} />
+            <Route path="/p/:slug" element={<ContentPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/add-event" element={<AdminAddEventPage />} />

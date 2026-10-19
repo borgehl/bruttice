@@ -14,12 +14,10 @@ describe('mergeSiteConfig', () => {
     expect(site.description).toBe(defaultSiteConfig.description)
   })
 
-  it('keeps default features that the response leaves out', () => {
-    const site = mergeSiteConfig({ features: {} as never })
-    expect(site.features.popBooker).toBe(false)
-  })
-
-  it('turns Pop! Booker on', () => {
-    expect(mergeSiteConfig({ features: { popBooker: true } }).features.popBooker).toBe(true)
+  it('keeps a default the server leaves empty', () => {
+    const site = mergeSiteConfig({ name: '', region: 'Tulsa', description: '' })
+    expect(site.name).toBe(defaultSiteConfig.name)
+    expect(site.description).toBe(defaultSiteConfig.description)
+    expect(site.region).toBe('Tulsa')
   })
 })

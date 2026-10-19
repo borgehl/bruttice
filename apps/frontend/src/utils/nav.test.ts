@@ -15,7 +15,7 @@ describe('isActive', () => {
   })
 
   it('matches the extra paths', () => {
-    expect(isActive('/about', '/more', ['/about', '/pop-booker'])).toBe(true)
+    expect(isActive('/about', '/more', ['/about', '/p'])).toBe(true)
   })
 })
 

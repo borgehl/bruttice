@@ -9,6 +9,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// DefaultPagesDir is where pages are read from unless config.yaml says otherwise.
+const DefaultPagesDir = "/app/pages"
+
 type ConfigRawVenue struct {
 	Name   string `yaml:"name"`
 	Link   string `yaml:"link"`
@@ -31,10 +34,6 @@ type ConfigRawSite struct {
 	Region       string `yaml:"region"`
 	ContactEmail string `yaml:"contact-email"`
 	Description  string `yaml:"description"`
-	// PopBooker shows the Pop! Booker page.
-	PopBooker bool `yaml:"pop-booker"`
-	// PopBookerURL is the calendar the Pop! Booker page embeds. Without one the page has no calendar.
-	PopBookerURL string `yaml:"pop-booker-url"`
 }
 
 type ConfigRaw struct {
@@ -43,6 +42,7 @@ type ConfigRaw struct {
 	CookieSalt       string              `yaml:"cookie-salt"`
 	IngestKey        string              `yaml:"ingest-key"`
 	IngestTriggerURL string              `yaml:"ingest-trigger-url"`
+	PagesDir         string              `yaml:"pages-dir"`
 	Site             ConfigRawSite       `yaml:"site"`
 	Tags             []string            `yaml:"tags"`
 	AgeGroups        []ConfigRawAgeGroup `yaml:"age-groups"`
@@ -70,7 +70,9 @@ type Config struct {
 	// IngestTriggerURL is the scraper service endpoint that starts a run, empty if there is none
 	IngestTriggerURL string
 	Site             ConfigRawSite
-	InitialData      InitialData
+	// PagesDir holds the deployment's own pages, see package pagesx
+	PagesDir    string
+	InitialData InitialData
 }
 
 func ParseConfig(configFilename *string) Config {
@@ -88,12 +90,18 @@ func ParseConfig(configFilename *string) Config {
 		panic(err)
 	}
 
+	pagesDir := raw.PagesDir
+	if pagesDir == "" {
+		pagesDir = DefaultPagesDir
+	}
+
 	ret := Config{
 		AdminAccounts:    make([]AdminAccount, 0, len(raw.AdminAccounts)),
 		CookieSalt:       raw.CookieSalt,
 		IngestKey:        raw.IngestKey,
 		IngestTriggerURL: raw.IngestTriggerURL,
 		Site:             raw.Site,
+		PagesDir:         pagesDir,
 		InitialData: InitialData{
 			Tags:      raw.Tags,
 			AgeGroups: raw.AgeGroups,

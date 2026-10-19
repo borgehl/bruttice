@@ -9,6 +9,7 @@ import (
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/geoipx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
+	"github.com/borgehl/bruttice/packages/go-pkg/platform/pagesx"
 	"net/http"
 )
 
@@ -27,9 +28,10 @@ type APIHandler struct {
 	ingestKey      string
 	ingestTrigger  IngestTrigger
 	site           dto.SiteResponse
+	pages          []pagesx.Page
 }
 
-func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSessions *controlcookie.CookieStore, ingestKey string, ingestTrigger IngestTrigger, site dto.SiteResponse) *APIHandler {
+func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSessions *controlcookie.CookieStore, ingestKey string, ingestTrigger IngestTrigger, site dto.SiteResponse, pages []pagesx.Page) *APIHandler {
 	return &APIHandler{
 		logger:         logger,
 		database:       database,
@@ -39,6 +41,7 @@ func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSess
 		ingestKey:      ingestKey,
 		ingestTrigger:  ingestTrigger,
 		site:           site,
+		pages:          pages,
 	}
 }
 
@@ -47,6 +50,8 @@ func (h *APIHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/filter-options", middleware.MiddlewareVisitorTracker(h.database, h.logger, h.geoClient, h.handleGetFilterOptions))
 	mux.HandleFunc("GET /api/filter", h.handleGetFilter)
 	mux.HandleFunc("GET /api/site", h.handleGetSite)
+	mux.HandleFunc("GET /api/pages", h.handleGetPages)
+	mux.HandleFunc("GET /api/pages/{slug}", h.handleGetPage)
 	mux.HandleFunc("GET /api/venues", h.handleGetVenues)
 	mux.HandleFunc("GET /api/submission-venues", h.handleGetSubmissionVenues)
 	mux.HandleFunc("POST /api/add-event", middleware.MiddlewareVisitorTracker(h.database, h.logger, h.geoClient, h.handleAddEvent))

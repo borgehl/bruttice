@@ -1,5 +1,5 @@
 import type { SiteConfig } from '../store/site';
-import type { Age, Event, FilterOptions, Venue, AdminDashboard, IngestRunsPage } from '../types/event';
+import type { Age, Event, FilterOptions, Venue, AdminDashboard, IngestRunsPage, PageSummary, SitePage } from '../types/event';
 
 const API_BASE = '/api';
 
@@ -373,6 +373,28 @@ export async function fetchSiteConfig(): Promise<Partial<SiteConfig>> {
 
   if (!response.ok) {
     throw new Error('Failed to fetch site config');
+  }
+
+  return response.json();
+}
+
+export async function fetchPages(): Promise<PageSummary[]> {
+  const response = await fetch(`${API_BASE}/pages`);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch pages');
+  }
+
+  return response.json();
+}
+
+// null if the deployment has no page with this slug
+export async function fetchPage(slug: string): Promise<SitePage | null> {
+  const response = await fetch(`${API_BASE}/pages/${encodeURIComponent(slug)}`);
+
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error('Failed to fetch page');
   }
 
   return response.json();

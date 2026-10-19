@@ -7,6 +7,7 @@ import (
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/dbx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
+	"github.com/borgehl/bruttice/packages/go-pkg/platform/pagesx"
 	"net/http"
 )
 
@@ -19,7 +20,7 @@ type Controller struct {
 	cookieSessions *controlcookie.CookieStore
 }
 
-func NewController(logger *logx.Logger, database *dbx.DatabaseClient, mux *http.ServeMux, ingestKey string, ingestTrigger api.IngestTrigger, cookieSalt string, site dto.SiteResponse) *Controller {
+func NewController(logger *logx.Logger, database *dbx.DatabaseClient, mux *http.ServeMux, ingestKey string, ingestTrigger api.IngestTrigger, cookieSalt string, site dto.SiteResponse, pages []pagesx.Page) *Controller {
 	ret := &Controller{
 		mux:            mux,
 		logger:         logger,
@@ -28,7 +29,7 @@ func NewController(logger *logx.Logger, database *dbx.DatabaseClient, mux *http.
 		cookieSessions: controlcookie.NewCookieStore(database, cookieSalt),
 	}
 
-	apiHandler := api.NewAPIHandler(logger, database, ret.cookieSessions, ingestKey, ingestTrigger, site)
+	apiHandler := api.NewAPIHandler(logger, database, ret.cookieSessions, ingestKey, ingestTrigger, site, pages)
 	apiHandler.RegisterRoutes(ret.mux)
 
 	return ret

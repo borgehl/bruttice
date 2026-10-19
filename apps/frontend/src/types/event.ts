@@ -119,3 +119,19 @@ export interface IngestRunsPage {
   runs: IngestRun[];
   hasMore: boolean;
 }
+
+// A page of the deployment's own, from its pages directory.
+export interface PageSummary {
+  slug: string;
+  title: string;
+  // listed in the navigation
+  nav: boolean;
+  order: number;
+}
+
+export interface SitePage extends PageSummary {
+  // Markdown
+  body: string;
+  // an http(s) page shown in a frame under the body
+  embed?: string;
+}

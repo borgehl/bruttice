@@ -3,6 +3,7 @@ import Page from '../components/ui/Page';
 import ThemeSwitch from '../components/features/ThemeSwitch';
 import { useAuthStore } from '../store/auth';
 import { useSiteStore } from '../store/site';
+import { navPages, usePagesStore } from '../store/pages';
 
 interface Row {
   to: string;
@@ -13,12 +14,11 @@ interface Row {
 export default function MorePage() {
   const { isAuthenticated } = useAuthStore();
   const { site } = useSiteStore();
+  const { pages } = usePagesStore();
 
   const rows: Row[] = [
     { to: '/about', label: 'About', sub: 'Who runs this, contact, venues' },
-    ...(site.features.popBooker
-      ? [{ to: '/pop-booker', label: 'Pop! Booker', sub: 'DIY booking platform + TK calendar' }]
-      : []),
+    ...navPages(pages).map((page) => ({ to: `/p/${page.slug}`, label: page.title, sub: '' })),
     { to: '/privacy-policy', label: 'Privacy policy', sub: 'Analytics cookie' },
     isAuthenticated
       ? { to: '/admin', label: 'Admin', sub: 'Events and ingestion' }
@@ -35,7 +35,7 @@ export default function MorePage() {
             <Link to={row.to} className="flex items-center justify-between gap-4 py-3.5 text-text hover:text-text">
               <span>
                 <span className="block font-medium">{row.label}</span>
-                <span className="block text-sm text-text-faint">{row.sub}</span>
+                {row.sub && <span className="block text-sm text-text-faint">{row.sub}</span>}
               </span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <path d="M9 6l6 6-6 6" />

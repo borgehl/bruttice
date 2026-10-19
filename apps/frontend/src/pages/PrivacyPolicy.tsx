@@ -1,6 +1,20 @@
 import Page from '../components/ui/Page';
+import Markdown from '../components/ui/Markdown';
+import { usePageOverride } from '../hooks/usePageOverride';
 
+// The deployment's own privacy-policy page replaces this text if it has one.
 export default function PrivacyPolicy() {
+  const { page: own, ready } = usePageOverride('privacy-policy');
+
+  if (!ready) return <Page title="Privacy policy">{null}</Page>;
+  if (own) {
+    return (
+      <Page title="Privacy policy">
+        <Markdown>{own.body}</Markdown>
+      </Page>
+    );
+  }
+
   return (
     <Page title="Privacy policy">
     <div className="text-sm leading-relaxed text-text-muted">

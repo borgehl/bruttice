@@ -7,6 +7,7 @@ services:
   bruttice-backend:
     volumes: !override
       - ./demo/config.yaml:/app/config.yaml:ro
+      - ./demo/pages:/app/pages:ro
     env_file: !override
       - demo/env
 
