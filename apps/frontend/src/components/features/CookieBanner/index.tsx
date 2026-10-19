@@ -45,16 +45,16 @@ export default function CookieBanner() {
   return (
     <section
       aria-label="Cookie consent"
-      className="flex shrink-0 flex-col gap-3.5 border-t border-border bg-surface p-4 shadow-sheet"
+      className="flex shrink-0 flex-col gap-3.5 border-t border-border bg-surface p-4 shadow-sheet md:flex-row md:items-center md:gap-6"
     >
-      <p className="text-sm leading-relaxed text-text">
+      <p className="flex-1 text-sm leading-relaxed text-text">
         One analytics cookie counts unique visitors and which cities they come from. No personal info is
         collected or sold.{' '}
         <Link to="/privacy-policy" className="underline">
           Privacy policy
         </Link>
       </p>
-      <div className="flex gap-2.5">
+      <div className="flex gap-2.5 md:w-72 md:shrink-0">
         <button
           type="button"
           onClick={handleDecline}

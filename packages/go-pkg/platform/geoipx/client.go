@@ -10,7 +10,8 @@ type GeoIpClient struct {
 
 func NewGeoIpClient(log *logx.Logger) *GeoIpClient {
 	config := NewGeoIpConfig()
-	log.Infof("Config: %+v\n", config)
+	// never log the config itself, it holds the API key
+	log.Infof("geolocation configured, API key set: %t", config.IpGeolocationIoApiKey != "")
 	ret := GeoIpClient{}
 	ret.clients = append(ret.clients, NewIPGeolocationIoClient(config))
 	return &ret

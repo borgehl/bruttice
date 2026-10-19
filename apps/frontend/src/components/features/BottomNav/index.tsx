@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
+import { isActive, linkFor } from '../../../utils/nav';
 
 // Stroke paths on a 24 x 24 grid.
 const icons = {
@@ -18,19 +19,6 @@ const items = [
   { to: '/more', label: 'More', icon: icons.more, also: ['/about', '/pop-booker', '/privacy-policy', '/admin'] },
 ];
 
-function isActive(pathname: string, to: string, also: string[]): boolean {
-  if (to === '/') return pathname === '/' || also.includes(pathname);
-  return [to, ...also].some((path) => pathname === path || pathname.startsWith(`${path}/`));
-}
-
-// The calendar keeps its date and filter when you come back to it, and Feeds shows the feeds of the
-// filter you are looking at.
-function linkFor(to: string, search: string, filterKey: string | null) {
-  if (to === '/') return { pathname: '/', search };
-  if (to === '/feeds' && filterKey) return { pathname: '/feeds', search: `?filterKey=${encodeURIComponent(filterKey)}` };
-  return to;
-}
-
 export default function BottomNav() {
   const { pathname, search } = useLocation();
   const filterKey = new URLSearchParams(search).get('filterKey');
@@ -38,7 +26,7 @@ export default function BottomNav() {
   return (
     <nav
       aria-label="Main"
-      className="flex shrink-0 border-t border-border bg-bg"
+      className="flex shrink-0 border-t border-border bg-bg md:hidden"
       style={{ height: 'var(--nav-height)' }}
     >
       {items.map((item) => {

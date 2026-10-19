@@ -53,8 +53,8 @@ export default function Calendar() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex min-h-[60px] shrink-0 items-center justify-between gap-3 px-4 py-2">
-        <h1 className="font-label min-w-0 truncate text-[17px] font-bold leading-tight tracking-tight text-text in-data-[theme=neon]:text-[19px] in-data-[theme=neon]:text-accent in-data-[theme=neon]:glow-text">
+      <header className="flex min-h-[60px] shrink-0 items-center justify-between gap-3 px-4 py-2 md:justify-end">
+        <h1 className="font-label min-w-0 truncate md:hidden text-[17px] font-bold leading-tight tracking-tight text-text in-data-[theme=neon]:text-[19px] in-data-[theme=neon]:text-accent in-data-[theme=neon]:glow-text">
           <span>{site.name}</span>
           {site.region && (
             <span className="font-medium text-text-muted before:content-['_·_'] in-data-[theme=neon]:block in-data-[theme=neon]:text-xs in-data-[theme=neon]:text-accent-2 in-data-[theme=neon]:before:content-['//_']">

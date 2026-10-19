@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useSiteStore } from './store/site';
 import BottomNav from './components/features/BottomNav';
+import DesktopHeader from './components/features/DesktopHeader';
+import DesktopFooter from './components/features/DesktopFooter';
 import LinkNoticeSheet from './components/features/LinkNoticeSheet';
 import FlyerViewer from './components/features/FlyerViewer';
 import CookieBanner from './components/features/CookieBanner';
@@ -26,7 +28,10 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="mx-auto flex h-dvh w-full max-w-[480px] flex-col bg-bg text-text sm:border-x sm:border-border">
+      <div className="flex h-dvh flex-col bg-bg text-text">
+        <DesktopHeader />
+        {/* a phone-width column below tablet size, a wider one from there up */}
+        <div className="mx-auto flex min-h-0 w-full max-w-[480px] flex-1 flex-col sm:border-x sm:border-border md:max-w-4xl">
         <main className="flex min-h-0 flex-1 flex-col">
           <Routes>
             <Route path="/" element={<CalendarPage />} />
@@ -45,6 +50,8 @@ function App() {
           </Routes>
         </main>
         <CookieBanner />
+        </div>
+        <DesktopFooter />
         <BottomNav />
         <LinkNoticeSheet />
         <FlyerViewer />

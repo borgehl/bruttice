@@ -15,14 +15,14 @@ function Sheet({ url }: { url: string }) {
   const ref = useDialog<HTMLDivElement>(close);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-scrim" onClick={close}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-scrim md:items-center" onClick={close}>
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-labelledby="link-notice-title"
         onClick={(event) => event.stopPropagation()}
-        className="flex w-full max-w-[480px] flex-col gap-3.5 border-t border-border bg-surface p-4 shadow-sheet"
+        className="flex w-full max-w-[480px] flex-col gap-3.5 border-t border-border bg-surface p-4 shadow-sheet md:rounded-control md:border"
       >
         <h2 id="link-notice-title" className="font-label text-lg font-bold text-text">
           Before you go

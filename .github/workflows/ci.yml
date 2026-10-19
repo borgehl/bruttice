@@ -1,8 +1,9 @@
 name: CI
 
 on:
+  # Pushes run only where images are published. Everything else is tested by its pull request.
   push:
-    branches: ["**"]
+    branches: [main, initial-port-from-old-arch]
   pull_request:
     branches: [main]
   release:
