@@ -7,6 +7,11 @@ export default defineConfig({
   test: {
     globals: true,
   },
+  // The production image serves with `vite preview` behind a reverse proxy that routes by
+  // host, so any host name reaches it.
+  preview: {
+    allowedHosts: true,
+  },
   server: {
     proxy: {
       '/api': {
