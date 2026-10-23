@@ -7,10 +7,10 @@ import (
 )
 
 func TestPageResponses(t *testing.T) {
-	page := pagesx.Page{Slug: "about", Title: "About", Nav: true, Order: 3, Embed: "https://x.example", Body: "Hi"}
+	page := pagesx.Page{Slug: "about", Title: "About", Nav: true, Order: 3, Embed: "https://x.example", EmbedHTML: "<p>x</p>", Body: "Hi"}
 
 	full := PageResponse(page)
-	if full.Slug != "about" || full.Title != "About" || !full.Nav || full.Order != 3 || full.Body != "Hi" || full.Embed != "https://x.example" {
+	if full.Slug != "about" || full.Title != "About" || !full.Nav || full.Order != 3 || full.Body != "Hi" || full.Embed != "https://x.example" || full.EmbedHTML != "<p>x</p>" {
 		t.Errorf("page = %+v", full)
 	}
 

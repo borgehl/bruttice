@@ -34,7 +34,7 @@ export default function AboutPage() {
           (own ? (
             <>
               <Markdown>{own.body}</Markdown>
-              {own.embed && <EmbedFrame url={own.embed} title={own.title} />}
+              {(own.embed || own.embedHtml) && <EmbedFrame url={own.embed} html={own.embedHtml} title={own.title} />}
             </>
           ) : (
             <>

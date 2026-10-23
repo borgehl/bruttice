@@ -58,6 +58,8 @@ type PageResponse struct {
 	Body string `json:"body"`
 	// Embed is an http(s) page shown in a frame under the body, empty if there is none.
 	Embed string `json:"embed,omitempty"`
+	// EmbedHTML is a complete HTML document, shown in a sandboxed frame under the body.
+	EmbedHTML string `json:"embedHtml,omitempty"`
 }
 
 type TagResponse struct {

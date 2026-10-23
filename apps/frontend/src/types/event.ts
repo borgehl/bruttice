@@ -134,4 +134,6 @@ export interface SitePage extends PageSummary {
   body: string;
   // an http(s) page shown in a frame under the body
   embed?: string;
+  // a complete HTML document shown in a sandboxed frame under the body
+  embedHtml?: string;
 }

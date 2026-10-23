@@ -34,6 +34,30 @@ The header is optional YAML between two `---` lines:
 
 The file name is the slug: lower case letters, digits and single dashes, then `.md`. A new page is at `/p/<slug>`, and `GET /api/pages` and `GET /api/pages/<slug>` serve the same content as JSON.
 
+## Embedding with a script
+
+Some embeds are a snippet of HTML with a script, not a page you can link to. Put a complete HTML document in a file with the same name as the page, with `.html` in place of `.md`:
+
+```
+pages/
+  pop-booker.md     the page: title, text
+  pop-booker.html   a full HTML document, shown under the text
+```
+
+It is shown in place of `embed`, in a frame that has no `allow-same-origin`. The script runs, but the document has an opaque origin: it can't read this site's cookies or storage or call its admin API, and it can't navigate the page. Links it opens in a new tab work as normal pages. Because the frame has its own document, style it there: set the `body` background and `margin: 0` or you will see white around the widget.
+
+The frame starts 420px tall. To fit the content, have the document post its height:
+
+```html
+<script>
+  new ResizeObserver(() => {
+    parent.postMessage({ type: 'bruttice-embed-height', height: document.documentElement.scrollHeight }, '*');
+  }).observe(document.documentElement);
+</script>
+```
+
+Heights are kept between 120 and 2400px. A request the widget makes from the frame carries `Origin: null`, so the service it talks to must allow cross-origin requests. The `.html` file counts toward the 256 KB limit, is served as the page's `embedHtml` field, and is skipped with a logged problem if there is no `.md` of the same name.
+
 Markdown is rendered with `react-markdown`. Raw HTML in a page is not rendered, and `javascript:` links are dropped.
 
 ## Replacing built-in text

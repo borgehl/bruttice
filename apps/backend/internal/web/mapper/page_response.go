@@ -18,5 +18,5 @@ func PageSummaryResponses(pages []pagesx.Page) []dto.PageSummaryResponse {
 }
 
 func PageResponse(page pagesx.Page) dto.PageResponse {
-	return dto.PageResponse{PageSummaryResponse: PageSummaryResponse(page), Body: page.Body, Embed: page.Embed}
+	return dto.PageResponse{PageSummaryResponse: PageSummaryResponse(page), Body: page.Body, Embed: page.Embed, EmbedHTML: page.EmbedHTML}
 }

@@ -143,3 +143,34 @@ func TestLoadFollowsSymlinks(t *testing.T) {
 		t.Errorf("pages = %v, problems = %v", pages, problems)
 	}
 }
+
+func TestLoadReadsTheHTMLNextToAPage(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "cal.md", "---\ntitle: Cal\n---\ntext")
+	write(t, dir, "cal.html", "\n<!doctype html><p>widget</p>\n")
+	write(t, dir, "plain.md", "text")
+	write(t, dir, "stray.html", "<p>no page</p>")
+
+	pages, problems := Load(dir)
+	got := map[string]string{}
+	for _, p := range pages {
+		got[p.Slug] = p.EmbedHTML
+	}
+	if len(pages) != 2 || got["cal"] != "<!doctype html><p>widget</p>" || got["plain"] != "" {
+		t.Errorf("pages = %+v", pages)
+	}
+	if len(problems) != 1 || !strings.Contains(problems[0], "stray.html") {
+		t.Errorf("problems = %v, want the html file without a page", problems)
+	}
+}
+
+func TestLoadSkipsAnOversizedHTMLFile(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "cal.md", "text")
+	write(t, dir, "cal.html", strings.Repeat("x", maxFileSize+1))
+
+	pages, problems := Load(dir)
+	if len(pages) != 1 || pages[0].EmbedHTML != "" || len(problems) != 1 {
+		t.Errorf("pages = %+v, problems = %v", pages, problems)
+	}
+}

@@ -8,6 +8,9 @@
 //	embed: https://app.example.com/calendar
 //	---
 //	The body, in Markdown.
+//
+// A page can also have an HTML file with the same name, such as pop-booker.html next to
+// pop-booker.md. The frontend shows it in a sandboxed frame under the body, see Page.EmbedHTML.
 package pagesx
 
 import (
@@ -35,7 +38,10 @@ type Page struct {
 	Order int
 	// Embed is an http(s) page shown under the body in a frame, empty if there is none.
 	Embed string
-	Body  string
+	// EmbedHTML is a complete HTML document from the page's .html file, empty if there is none.
+	// It can hold scripts, so the frontend only ever shows it in a frame with an opaque origin.
+	EmbedHTML string
+	Body      string
 }
 
 type header struct {
@@ -45,7 +51,7 @@ type header struct {
 	Embed string `yaml:"embed"`
 }
 
-// Load reads every .md file in dir. A missing directory is not an error, a deployment may
+// Load reads every .md file in dir, and the .html file next to each, if any. A missing directory is not an error, a deployment may
 // have no pages. Files that can't be used are skipped and described in problems, so one bad
 // file never takes the others down. Pages come back ordered by Order, then Title.
 func Load(dir string) (pages []Page, problems []string) {
@@ -60,27 +66,34 @@ func Load(dir string) (pages []Page, problems []string) {
 	for _, entry := range entries {
 		name := entry.Name()
 		// a ConfigMap mounted as a directory holds symlinks, and hidden entries like ..data
-		if strings.HasPrefix(name, ".") || filepath.Ext(name) != ".md" {
+		if strings.HasPrefix(name, ".") {
 			continue
 		}
-		path := filepath.Join(dir, name)
-		info, err := os.Stat(path)
-		if err != nil || info.IsDir() {
+		switch filepath.Ext(name) {
+		case ".html":
+			// belongs to the page of the same name, read below
+			if _, err := os.Stat(filepath.Join(dir, strings.TrimSuffix(name, ".html")+".md")); err != nil {
+				problems = append(problems, fmt.Sprintf("%s: no %s.md next to it, skipped", name, strings.TrimSuffix(name, ".html")))
+			}
+			continue
+		case ".md":
+		default:
 			continue
 		}
-		if info.Size() > maxFileSize {
-			problems = append(problems, fmt.Sprintf("%s: larger than %d bytes, skipped", name, maxFileSize))
+		data, ok := readFile(dir, name, &problems)
+		if !ok {
 			continue
 		}
-		data, err := os.ReadFile(path)
+		slug := strings.TrimSuffix(name, ".md")
+		page, err := Parse(slug, string(data))
 		if err != nil {
 			problems = append(problems, fmt.Sprintf("%s: %v", name, err))
 			continue
 		}
-		page, err := Parse(strings.TrimSuffix(name, ".md"), string(data))
-		if err != nil {
-			problems = append(problems, fmt.Sprintf("%s: %v", name, err))
-			continue
+		if _, err := os.Stat(filepath.Join(dir, slug+".html")); err == nil {
+			if html, ok := readFile(dir, slug+".html", &problems); ok {
+				page.EmbedHTML = strings.TrimSpace(string(html))
+			}
 		}
 		pages = append(pages, page)
 	}
@@ -92,6 +105,26 @@ func Load(dir string) (pages []Page, problems []string) {
 		return pages[i].Title < pages[j].Title
 	})
 	return pages, problems
+}
+
+// readFile reads one file, unless it is a directory or too large. Why it could not be used goes
+// to problems, except for a directory, which is ignored.
+func readFile(dir, name string, problems *[]string) ([]byte, bool) {
+	path := filepath.Join(dir, name)
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return nil, false
+	}
+	if info.Size() > maxFileSize {
+		*problems = append(*problems, fmt.Sprintf("%s: larger than %d bytes, skipped", name, maxFileSize))
+		return nil, false
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		*problems = append(*problems, fmt.Sprintf("%s: %v", name, err))
+		return nil, false
+	}
+	return data, true
 }
 
 // Parse builds a page from a slug and the text of its file.

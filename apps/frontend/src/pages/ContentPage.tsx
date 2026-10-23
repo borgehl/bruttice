@@ -71,7 +71,7 @@ export default function ContentPage() {
     <Page title={page.title}>
       <div className="space-y-4">
         <Markdown>{page.body}</Markdown>
-        {page.embed && <EmbedFrame url={page.embed} title={page.title} />}
+        {(page.embed || page.embedHtml) && <EmbedFrame url={page.embed} html={page.embedHtml} title={page.title} />}
       </div>
     </Page>
   );
