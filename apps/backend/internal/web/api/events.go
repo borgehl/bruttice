@@ -72,8 +72,8 @@ func (h *APIHandler) handleAddEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send verification email asynchronously
-	msg := h.email.GetVerifyEventEmail(event.Title, req.Email, *event.VerificationKey)
-	go h.email.SendEmail(req.Email, msg)
+	msg := h.email.VerifyEventMessage(event.Title, req.Email, *event.VerificationKey)
+	go func() { _ = h.email.Send(msg) }()
 
 	h.writeJSON(w, http.StatusOK, dto.AddEventResponse{
 		Success: true,

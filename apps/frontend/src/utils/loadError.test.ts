@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ApiError, describeLoadError } from './loadError'
+import { ApiError, describeLoadError, describeSubmitError } from './loadError'
 
 describe('describeLoadError', () => {
   it('says the server cannot be reached when fetch itself fails', () => {
@@ -19,5 +19,17 @@ describe('describeLoadError', () => {
   it('never shows the server or error text', () => {
     const { title, message } = describeLoadError(new ApiError(500, 'pq: connection refused'))
     expect(title + message).not.toContain('pq')
+  })
+})
+
+describe('describeSubmitError', () => {
+  it('shows the reason the server gives for a refusal', () => {
+    expect(describeSubmitError(new ApiError(400, 'Message is too short'))).toBe('Message is too short')
+    expect(describeSubmitError(new ApiError(429, 'Too many messages. Try again later'))).toBe('Too many messages. Try again later')
+  })
+
+  it('does not show the text of a server failure or a lost connection', () => {
+    expect(describeSubmitError(new ApiError(502, 'pq: boom'))).not.toContain('pq')
+    expect(describeSubmitError(new TypeError('Failed to fetch'))).toContain("Can't reach the server")
   })
 })

@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 )
 
 // handleStartIngestRun opens a run that a scraper service can attach its payloads to.
@@ -74,6 +72,6 @@ func (h *APIHandler) emailRunErrors(runID int64, weeklyCheck bool) {
 		return
 	}
 
-	h.email.SendEmail(configs.RootUser.Email, h.email.GetErrorsEmail(errs))
-	h.logger.Infof("sent email with %d errors from ingest run %d", len(errs), runID)
+	// Send says if it did, or why not
+	_ = h.email.Send(h.email.ErrorsMessage(errs))
 }

@@ -94,6 +94,30 @@ export async function submitEvent(data: AddEventData): Promise<{ success: boolea
   return response.json();
 }
 
+export interface ContactData {
+  name: string;
+  email: string;
+  message: string;
+  // a field people never see, only a bot fills it in
+  website: string;
+}
+
+export async function sendContactMessage(data: ContactData): Promise<void> {
+  const response = await fetch(`${API_BASE}/contact`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    // the server's reason is meant for the visitor: what to fix, or to wait
+    const error = await response.json().catch(() => null);
+    throw new ApiError(response.status, error?.error || 'Your message could not be sent');
+  }
+}
+
 export interface CreateFilterData {
   tags: string[];
   tagsInclude: boolean;

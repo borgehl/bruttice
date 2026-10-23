@@ -22,26 +22,28 @@ type IngestTrigger interface {
 type APIHandler struct {
 	logger         *logx.Logger
 	database       *dbx.DatabaseClient
-	email          emailx.EmailClient
+	email          *emailx.EmailClient
 	cookieSessions *controlcookie.CookieStore
 	geoClient      *geoipx.GeoIpClient
 	ingestKey      string
 	ingestTrigger  IngestTrigger
 	site           dto.SiteResponse
 	pages          []pagesx.Page
+	contactLimit   *rateLimiter
 }
 
-func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSessions *controlcookie.CookieStore, ingestKey string, ingestTrigger IngestTrigger, site dto.SiteResponse, pages []pagesx.Page) *APIHandler {
+func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSessions *controlcookie.CookieStore, ingestKey string, ingestTrigger IngestTrigger, site dto.SiteResponse, pages []pagesx.Page, email *emailx.EmailClient) *APIHandler {
 	return &APIHandler{
 		logger:         logger,
 		database:       database,
-		email:          emailx.NewEmailClient(logger),
+		email:          email,
 		cookieSessions: cookieSessions,
 		geoClient:      geoipx.NewGeoIpClient(logger),
 		ingestKey:      ingestKey,
 		ingestTrigger:  ingestTrigger,
 		site:           site,
 		pages:          pages,
+		contactLimit:   newContactLimiter(),
 	}
 }
 
@@ -55,6 +57,7 @@ func (h *APIHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/venues", h.handleGetVenues)
 	mux.HandleFunc("GET /api/submission-venues", h.handleGetSubmissionVenues)
 	mux.HandleFunc("POST /api/add-event", middleware.MiddlewareVisitorTracker(h.database, h.logger, h.geoClient, h.handleAddEvent))
+	mux.HandleFunc("POST /api/contact", h.handleContact)
 	mux.HandleFunc("POST /api/visitor/consent", h.handleVisitorConsent)
 	mux.HandleFunc("POST /api/filter", h.handleCreateFilter)
 	mux.HandleFunc("GET /api/verify-event", h.handleVerifyEvent)

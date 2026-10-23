@@ -49,7 +49,7 @@ Key values to set:
 | `HOST` | Public base URL, e.g. `https://events.example.com` |
 | `PORT` | Host port nginx binds on |
 | `FEED_TITLE` / `FEED_DESCRIPTION` / `FEED_AUTHOR` | RSS/Atom/JSON feed metadata |
-| `MAIL_SERVER` / `MAIL_EMAIL` / `MAIL_PASSWORD` / `MAIL_PORT` | SMTP for outbound email (leave blank to disable) |
+| `RESEND_API_KEY` | [Resend](https://resend.com) API key for outbound email: event verification, admin notifications, run reports and the contact form. Leave blank to disable all of them. Needs `site.contact-email` in `config.yaml` |
 | `IP_GEOLOCATION_IO_API_KEY` | Optional — enables geo lookup for analytics |
 
 Create `apps/backend/config.yaml` from the example:
@@ -67,7 +67,7 @@ Key fields:
 | `ingest-key` | Secret shared with scrapers posting events (see [docs/writing-scrapers.md](docs/writing-scrapers.md)) |
 | `ingest-trigger-url` | Optional. Endpoint of your scraper service that starts a run, used by the admin dashboard's "run ingestion" button (see [Triggering a run](#triggering-a-run-from-the-admin-dashboard)) |
 | `admin-accounts` | `email;password` pairs — first entry is the root admin |
-| `site` | What shows on the pages of your deployment: `name`, `region`, `contact-email` and `description`. All optional, see `GET /api/site` |
+| `site` | What shows on the pages of your deployment: `name`, `region`, `contact-email` and `description`. All optional, see `GET /api/site`. `contact-email` is the address all mail is sent from and the contact form's messages go to. It is never shown to visitors, and has to be on a domain verified in Resend |
 | `pages-dir` | Optional. Directory of your own pages, as Markdown files (default `/app/pages`). See [docs/custom-pages.md](docs/custom-pages.md) |
 | `tags` | Tags seeded into the database on first run |
 | `age-groups` | Age restriction tiers (`name` + numeric `value`; 1 = all-ages, 255 = unknown) |

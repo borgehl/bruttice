@@ -1,20 +1,21 @@
 import { create } from 'zustand';
 import { fetchSiteConfig } from '../services/api';
 
-// Settings that belong to one deployment of the site rather than to the code: its name, contact
-// address and description. The server supplies them, and these defaults apply
+// Settings that belong to one deployment of the site rather than to the code: its name, region,
+// description, and whether it has a contact form. The server supplies them, and these defaults apply
 // until it answers (or if it can't).
 export interface SiteConfig {
   name: string;
   region: string;
-  contactEmail: string;
+  // true if messages from the contact form can be delivered
+  contactForm: boolean;
   description: string;
 }
 
 export const defaultSiteConfig: SiteConfig = {
   name: 'Bruttice',
   region: '',
-  contactEmail: '',
+  contactForm: false,
   description: 'A community calendar for local events. A simple aggregate of events, with no algorithms.',
 };
 
@@ -28,12 +29,12 @@ interface SiteState {
 // A setting the server leaves empty keeps its default, so a config without a `site` block still
 // gives the pages a name.
 export function mergeSiteConfig(partial: Partial<SiteConfig> | null | undefined): SiteConfig {
-  const site = { ...defaultSiteConfig };
-  for (const key of Object.keys(site) as (keyof SiteConfig)[]) {
-    const value = partial?.[key];
-    if (value) site[key] = value;
-  }
-  return site;
+  return {
+    name: partial?.name || defaultSiteConfig.name,
+    region: partial?.region || defaultSiteConfig.region,
+    description: partial?.description || defaultSiteConfig.description,
+    contactForm: partial?.contactForm === true,
+  };
 }
 
 export const useSiteStore = create<SiteState>((set) => ({

@@ -16,20 +16,20 @@ type Controller struct {
 
 	logger         *logx.Logger
 	database       *dbx.DatabaseClient
-	email          emailx.EmailClient
+	email          *emailx.EmailClient
 	cookieSessions *controlcookie.CookieStore
 }
 
-func NewController(logger *logx.Logger, database *dbx.DatabaseClient, mux *http.ServeMux, ingestKey string, ingestTrigger api.IngestTrigger, cookieSalt string, site dto.SiteResponse, pages []pagesx.Page) *Controller {
+func NewController(logger *logx.Logger, database *dbx.DatabaseClient, mux *http.ServeMux, ingestKey string, ingestTrigger api.IngestTrigger, cookieSalt string, site dto.SiteResponse, pages []pagesx.Page, email *emailx.EmailClient) *Controller {
 	ret := &Controller{
 		mux:            mux,
 		logger:         logger,
 		database:       database,
-		email:          emailx.NewEmailClient(logger),
+		email:          email,
 		cookieSessions: controlcookie.NewCookieStore(database, cookieSalt),
 	}
 
-	apiHandler := api.NewAPIHandler(logger, database, ret.cookieSessions, ingestKey, ingestTrigger, site, pages)
+	apiHandler := api.NewAPIHandler(logger, database, ret.cookieSessions, ingestKey, ingestTrigger, site, pages, email)
 	apiHandler.RegisterRoutes(ret.mux)
 
 	return ret

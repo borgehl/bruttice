@@ -17,11 +17,8 @@ POSTGRES_PORT=5432
 TZ=America/Chicago
 PGTZ=America/Chicago
 
-# no outbound email
-MAIL_SERVER=""
-MAIL_EMAIL=""
-MAIL_PASSWORD=""
-MAIL_PORT=587
+# no outbound email, so no contact form either
+RESEND_API_KEY=""
 
 IP_GEOLOCATION_IO_API_KEY=""
 

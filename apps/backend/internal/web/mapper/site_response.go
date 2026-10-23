@@ -7,9 +7,8 @@ import (
 
 func SiteResponse(site configx.ConfigRawSite) dto.SiteResponse {
 	return dto.SiteResponse{
-		Name:         site.Name,
-		Region:       site.Region,
-		ContactEmail: site.ContactEmail,
-		Description:  site.Description,
+		Name:        site.Name,
+		Region:      site.Region,
+		Description: site.Description,
 	}
 }

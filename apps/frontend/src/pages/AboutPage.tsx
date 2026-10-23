@@ -57,11 +57,11 @@ export default function AboutPage() {
           then an admin reviews and approves it.
         </p>
 
-        {site.contactEmail && (
+        {site.contactForm && (
           <>
             <h2 className="font-label pt-2 text-lg font-semibold text-text">Contact</h2>
             <p>
-              Questions, corrections, suggestions? <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>
+              Questions, corrections, suggestions? <Link to="/contact">Send us a message</Link>.
             </p>
           </>
         )}

@@ -17,8 +17,9 @@ export default function MorePage() {
   const { pages } = usePagesStore();
 
   const rows: Row[] = [
-    { to: '/about', label: 'About', sub: 'Who runs this, contact, venues' },
+    { to: '/about', label: 'About', sub: 'Who runs this, venues' },
     ...navPages(pages).map((page) => ({ to: `/p/${page.slug}`, label: page.title, sub: '' })),
+    ...(site.contactForm ? [{ to: '/contact', label: 'Contact', sub: 'Questions, corrections, suggestions' }] : []),
     { to: '/privacy-policy', label: 'Privacy policy', sub: 'Analytics cookie' },
     isAuthenticated
       ? { to: '/admin', label: 'Admin', sub: 'Events and ingestion' }
@@ -43,14 +44,6 @@ export default function MorePage() {
             </Link>
           </li>
         ))}
-        {site.contactEmail && (
-          <li className="border-b border-border">
-            <a href={`mailto:${site.contactEmail}`} className="block py-3.5 text-text hover:text-text">
-              <span className="block font-medium">Contact</span>
-              <span className="block text-sm text-text-faint">{site.contactEmail}</span>
-            </a>
-          </li>
-        )}
       </ul>
 
       <p className="mt-6 text-sm leading-relaxed text-text-muted">{site.description}</p>

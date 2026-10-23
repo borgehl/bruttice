@@ -61,7 +61,7 @@ func TestVenueResponsesRegion(t *testing.T) {
 
 func TestSiteResponse(t *testing.T) {
 	got := SiteResponse(configx.ConfigRawSite{Name: "N", Region: "R", ContactEmail: "a@b.c", Description: "D"})
-	if got.Name != "N" || got.Region != "R" || got.ContactEmail != "a@b.c" || got.Description != "D" {
+	if got.Name != "N" || got.Region != "R" || got.ContactForm || got.Description != "D" {
 		t.Errorf("site = %+v", got)
 	}
 }

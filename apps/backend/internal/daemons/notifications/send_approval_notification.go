@@ -2,7 +2,6 @@ package notifications
 
 import (
 	"fmt"
-	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/dbx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
@@ -10,32 +9,28 @@ import (
 )
 
 // sencd approval notes every hour
-func GoRunSendApprovalNotifications() {
+func GoRunSendApprovalNotifications(emailClient *emailx.EmailClient) {
 	for {
-		SendApprovalNotification()
+		SendApprovalNotification(emailClient)
 		now := time.Now()
 		next := now.Add(time.Hour)
 		time.Sleep(next.Sub(now))
 	}
 }
 
-func SendApprovalNotification() {
+func SendApprovalNotification(emailClient *emailx.EmailClient) {
 	log := logx.NewLogger(nil, nil)
 	db := dbx.NewDatabaseClient(log)
-	emailClient := emailx.NewEmailClient(log)
 
 	tx := db.DB.Begin()
 	defer tx.Commit()
 
 	events, err := db.GetAwaitingApprovalEvents(tx)
 	if err != nil {
-		emailClient.SendEmail(
-			configs.RootUser.Email,
-			emailClient.GetGenericEmail(
-				"Failed to get awaiting approval events",
-				fmt.Sprintf("Received database error: %s", err),
-			),
-		)
+		_ = emailClient.Send(emailClient.GenericMessage(
+			"Failed to get awaiting approval events",
+			fmt.Sprintf("Received database error: %s", err),
+		))
 		return
 	}
 
@@ -44,16 +39,13 @@ func SendApprovalNotification() {
 		return
 	}
 
-	msg := "Events awaiting approval:\r\n"
+	msg := "Events awaiting approval:\n"
 	for _, event := range events {
-		msg += fmt.Sprintf("%s at %s by %s\r\n", event.Title, event.Venue.Name, *event.VerificationEmail)
+		msg += fmt.Sprintf("%s at %s by %s\n", event.Title, event.Venue.Name, *event.VerificationEmail)
 	}
 
-	emailClient.SendEmail(
-		configs.RootUser.Email,
-		emailClient.GetGenericEmail(
-			fmt.Sprintf("Events awaiting approval: %d", len(events)),
-			msg,
-		),
-	)
+	_ = emailClient.Send(emailClient.GenericMessage(
+		fmt.Sprintf("Events awaiting approval: %d", len(events)),
+		msg,
+	))
 }

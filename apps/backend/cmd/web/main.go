@@ -10,11 +10,13 @@ import (
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/configx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/dbx"
+	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/pagesx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/passwordsx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
 	"net/http"
+	"os"
 
 	_ "time/tzdata"
 )
@@ -102,9 +104,23 @@ func main() {
 	}
 	server.Logger.Infof("loaded %d pages from %s", len(pages), cfg.PagesDir)
 
-	server.Web = web.NewController(server.Logger, server.Database, server.Mux, cfg.IngestKey, ingestTrigger, cfg.CookieSalt, mapper.SiteResponse(cfg.Site), pages)
+	// Mail goes out from the site's contact address, through Resend.
+	emailClient := emailx.NewEmailClient(server.Logger, emailx.Config{
+		APIKey:   os.Getenv("RESEND_API_KEY"),
+		From:     cfg.Site.ContactEmail,
+		SiteName: cfg.Site.Name,
+		Host:     os.Getenv("HOST"),
+	})
+	if !emailClient.Enabled() {
+		server.Logger.Infof("email is off: it needs RESEND_API_KEY and site.contact-email")
+	}
+	// the contact form is only offered if its messages can be delivered
+	site := mapper.SiteResponse(cfg.Site)
+	site.ContactForm = emailClient.Enabled()
 
-	go notifications.GoRunSendApprovalNotifications()
+	server.Web = web.NewController(server.Logger, server.Database, server.Mux, cfg.IngestKey, ingestTrigger, cfg.CookieSalt, site, pages, emailClient)
+
+	go notifications.GoRunSendApprovalNotifications(emailClient)
 
 	server.Run()
 }

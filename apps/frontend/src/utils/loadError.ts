@@ -31,3 +31,11 @@ export function toLoadError(err: unknown): LoadError {
   console.error(err);
   return describeLoadError(err);
 }
+
+// What to tell a visitor whose submission failed. A refusal (4xx) comes with a reason the server
+// wrote for them, such as what to fix or to wait. Anything else gets the general copy.
+export function describeSubmitError(err: unknown): string {
+  if (err instanceof ApiError && err.status >= 400 && err.status < 500) return err.message;
+  const { title, message } = describeLoadError(err);
+  return `${title}. ${message}`;
+}

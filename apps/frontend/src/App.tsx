@@ -20,6 +20,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminAddEventPage from './pages/AdminAddEventPage';
 import VerifyEventPage from './pages/VerifyEventPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import ContactPage from './pages/ContactPage';
 
 function App() {
   const loadSite = useSiteStore((state) => state.load);
@@ -44,6 +45,7 @@ function App() {
             <Route path="/feeds" element={<FeedsPage />} />
             <Route path="/more" element={<MorePage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
             <Route path="/p/:slug" element={<ContentPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/admin" element={<AdminDashboardPage />} />

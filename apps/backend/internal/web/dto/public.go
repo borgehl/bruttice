@@ -33,13 +33,14 @@ type VenueResponse struct {
 	Region string `json:"region"`
 }
 
-// SiteResponse is what differs between deployments of the site: its name, contact address
-// and description. It comes from config.yaml.
+// SiteResponse is what differs between deployments of the site: its name and description. It
+// comes from config.yaml. The contact address is never sent, visitors use the contact form.
 type SiteResponse struct {
-	Name         string `json:"name"`
-	Region       string `json:"region"`
-	ContactEmail string `json:"contactEmail"`
-	Description  string `json:"description"`
+	Name   string `json:"name"`
+	Region string `json:"region"`
+	// ContactForm is true if messages from the contact form can be delivered.
+	ContactForm bool   `json:"contactForm"`
+	Description string `json:"description"`
 }
 
 // PageSummaryResponse is a page in the list the navigation is built from.
@@ -119,6 +120,15 @@ type AddEventRequest struct {
 	CoverCost string   `json:"coverCost"`
 	Tags      []string `json:"tags"`
 	Email     string   `json:"email"`
+}
+
+// ContactRequest is a message from the contact form.
+type ContactRequest struct {
+	Name    string `json:"name"`
+	Email   string `json:"email"`
+	Message string `json:"message"`
+	// Website is a field people never see, so only a bot fills it in.
+	Website string `json:"website"`
 }
 
 type AddEventResponse struct {

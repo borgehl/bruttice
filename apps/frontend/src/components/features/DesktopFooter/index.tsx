@@ -13,7 +13,11 @@ export default function DesktopFooter() {
           {site.description}
         </p>
         <div className="flex shrink-0 items-center gap-4 text-xs">
-          {site.contactEmail && <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>}
+          {site.contactForm && (
+            <Link to="/contact" className="text-text-faint hover:text-accent">
+              Contact
+            </Link>
+          )}
           <Link to="/privacy-policy" className="text-text-faint hover:text-accent">
             Privacy policy
           </Link>

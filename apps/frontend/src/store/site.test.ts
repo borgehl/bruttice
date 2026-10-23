@@ -14,6 +14,12 @@ describe('mergeSiteConfig', () => {
     expect(site.description).toBe(defaultSiteConfig.description)
   })
 
+  it('has a contact form only if the server says so', () => {
+    expect(mergeSiteConfig(null).contactForm).toBe(false)
+    expect(mergeSiteConfig({ contactForm: false }).contactForm).toBe(false)
+    expect(mergeSiteConfig({ contactForm: true }).contactForm).toBe(true)
+  })
+
   it('keeps a default the server leaves empty', () => {
     const site = mergeSiteConfig({ name: '', region: 'Tulsa', description: '' })
     expect(site.name).toBe(defaultSiteConfig.name)
