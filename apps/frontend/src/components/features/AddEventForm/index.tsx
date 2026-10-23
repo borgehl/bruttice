@@ -4,6 +4,8 @@ import type { FilterOptions, Venue } from '../../../types/event';
 import DateInput from '../../ui/DateInput';
 import EditableCurrencyField from '../../ui/EditableCurrencyField';
 import Chip from '../../ui/Chip';
+import InlineError from '../../ui/InlineError';
+import { toLoadError } from '../../../utils/loadError';
 import { fieldClass, primaryButtonClass } from '../../ui/Field';
 import { displayAge } from '../../../utils/age';
 import { displayTag } from '../../../utils/tag';
@@ -78,8 +80,9 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
             setFormData((prev) => ({ ...prev, venue: venueData[0].name }));
           }
         }
-      } catch {
-        const errorMsg = 'Failed to load options';
+      } catch (err) {
+        const { title, message } = toLoadError(err);
+        const errorMsg = `${title}. ${message}`;
         setError(errorMsg);
         onLoadError?.(errorMsg);
       } finally {
@@ -132,11 +135,7 @@ export default function AddEventForm({ isAdmin = false, onSubmit, onLoadError }:
 
   return (
     <>
-      {error && (
-        <div className="mb-5 rounded-control border border-danger/30 bg-danger-muted p-4">
-          <p className="text-danger">{error}</p>
-        </div>
-      )}
+      {error && <InlineError message={error} className="mb-5" />}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>

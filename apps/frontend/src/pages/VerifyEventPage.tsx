@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { verifyEvent } from '../services/api';
 import Page from '../components/ui/Page';
+import LoadingBlock from '../components/ui/LoadingBlock';
 import StatusScreen from '../components/ui/StatusScreen';
 import { primaryButtonClass } from '../components/ui/Field';
 
@@ -43,7 +44,7 @@ export default function VerifyEventPage() {
   if (loading) {
     return (
       <Page title="Verify">
-        <p className="py-12 text-center text-text-muted">Verifying your email...</p>
+        <LoadingBlock label="Verifying your email" />
       </Page>
     );
   }

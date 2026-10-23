@@ -41,7 +41,14 @@ export default function VenueList({ venues, selected, onToggle }: VenueListProps
       </label>
 
       {shown.length === 0 ? (
-        <p className="py-4 text-center text-sm text-text-faint">No venues match.</p>
+        <div className="py-4 text-center text-sm text-text-faint">
+          <p>{query.trim() ? `No venues match "${query.trim()}".` : 'No venues to show.'}</p>
+          {query && (
+            <button type="button" onClick={() => setQuery('')} className="mt-1 min-h-11 cursor-pointer text-accent hover:underline">
+              Clear search
+            </button>
+          )}
+        </div>
       ) : (
         <ul className="max-h-64 overflow-y-auto rounded-control border border-border">
           {shown.map((venue) => {

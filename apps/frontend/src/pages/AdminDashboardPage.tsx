@@ -5,13 +5,22 @@ import AdminDashboardDaySection from '../components/features/AdminDashboardDaySe
 import AdminIngestRuns from '../components/features/AdminIngestRuns';
 import { useAuthStore } from '../store/auth';
 import { fetchAdminDashboard, submitVote } from '../services/api';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+import InlineError from '../components/ui/InlineError';
+import LoadFailed from '../components/ui/LoadFailed';
+import { toLoadError, type LoadError } from '../utils/loadError';
 import type { AdminDashboard } from '../types/event';
 
 export default function AdminDashboardPage() {
   const { isAuthenticated, isLoading: authLoading, email, logout, checkSession } = useAuthStore();
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // the dashboard could not be loaded at all, or a later action failed while it is on screen
+  const [loadError, setLoadError] = useState<LoadError | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  // bumped by Try again to load the dashboard once more
+  const [attempt, setAttempt] = useState(0);
   const [tab, setTab] = useState<'events' | 'ingestion'>('events');
   const navigate = useNavigate();
 
@@ -32,11 +41,12 @@ export default function AdminDashboardPage() {
       try {
         const data = await fetchAdminDashboard();
         setDashboard(data);
+        setLoadError(null);
       } catch (err) {
         if (err instanceof Error && err.message === 'Authentication required') {
           navigate('/admin/login');
         } else {
-          setError(err instanceof Error ? err.message : 'Failed to load dashboard');
+          setLoadError(toLoadError(err));
         }
       } finally {
         setLoading(false);
@@ -46,23 +56,32 @@ export default function AdminDashboardPage() {
     if (isAuthenticated) {
       loadDashboard();
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, attempt]);
+
+  const retryLoad = () => {
+    setLoading(true);
+    setAttempt((n) => n + 1);
+  };
 
   const refreshDashboard = async () => {
     try {
       const data = await fetchAdminDashboard();
       setDashboard(data);
+      setActionError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to refresh dashboard');
+      console.error(err);
+      setActionError('The dashboard could not be refreshed.');
     }
   };
 
   const handleVote = async (guid: string, vote: string) => {
+    setActionError(null);
     try {
       await submitVote({ guid, vote: vote as 'Approve' | 'Deny' | 'Keep' | 'Remove' });
       await refreshDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit vote');
+      console.error(err);
+      setActionError('Your vote was not saved.');
     }
   };
 
@@ -74,17 +93,15 @@ export default function AdminDashboardPage() {
   if (authLoading || loading) {
     return (
       <Page title="Admin">
-        <p className="py-12 text-center text-text-muted">Loading...</p>
+        <Skeleton variant="adminCard" count={4} label="Loading the dashboard" />
       </Page>
     );
   }
 
-  if (error) {
+  if (loadError) {
     return (
       <Page title="Admin">
-        <div className="rounded-control border border-danger/30 bg-danger-muted p-4">
-          <p className="text-danger">{error}</p>
-        </div>
+        <LoadFailed error={loadError} onRetry={retryLoad} />
       </Page>
     );
   }
@@ -112,6 +129,8 @@ export default function AdminDashboardPage() {
         <span className="font-medium text-text">{email}</span> ·{' '}
         <Link to="/admin/add-event">add event</Link>
       </p>
+
+      {actionError && <InlineError message={actionError} className="mx-4 mt-3" />}
 
       <div role="tablist" className="mt-3 flex border-b border-border px-4">
         {([
@@ -149,7 +168,7 @@ export default function AdminDashboardPage() {
                 <AdminDashboardDaySection key={day.day} eventDay={day} mode="approval" onVote={handleVote} onUpdate={refreshDashboard} />
               ))
             ) : (
-              <p className="px-4 pb-4 text-sm text-text-muted">No events awaiting approval.</p>
+              <EmptyState title="Nothing to review">New submissions and scraped events show up here.</EmptyState>
             )}
           </section>
 

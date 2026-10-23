@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 interface StatusScreenProps {
   kind: 'success' | 'error';
@@ -12,9 +12,15 @@ interface StatusScreenProps {
 // The outcome of a submission or a verification link: an icon, what happened, what comes next.
 export default function StatusScreen({ kind, title, children, steps, action }: StatusScreenProps) {
   const ok = kind === 'success';
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  // an error replaces the view, so put focus on what happened
+  useEffect(() => {
+    if (!ok) heading.current?.focus();
+  }, [ok]);
 
   return (
-    <div className="flex flex-col items-center gap-4 py-6 text-center">
+    <div role={ok ? undefined : 'alert'} className="flex flex-col items-center gap-4 py-6 text-center">
       <div
         className={`flex h-16 w-16 items-center justify-center rounded-full border-2 shadow-[0_0_24px_color-mix(in_srgb,currentColor_35%,transparent)] ${
           ok ? 'border-success text-success' : 'border-danger text-danger'
@@ -25,7 +31,9 @@ export default function StatusScreen({ kind, title, children, steps, action }: S
           <path d={ok ? 'M5 12l5 5 9-10' : 'M6 6l12 12M18 6L6 18'} />
         </svg>
       </div>
-      <h2 className="font-label text-xl font-bold text-text">{title}</h2>
+      <h2 ref={heading} tabIndex={-1} className="font-label text-xl font-bold text-text outline-none">
+        {title}
+      </h2>
       <p className="max-w-sm text-[15px] leading-relaxed text-text-muted">{children}</p>
 
       {steps && steps.length > 0 && (

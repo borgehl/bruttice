@@ -5,13 +5,18 @@ import type { SitePage } from '../types/event';
 import Page from '../components/ui/Page';
 import Markdown from '../components/ui/Markdown';
 import EmbedFrame from '../components/ui/EmbedFrame';
+import LoadingBlock from '../components/ui/LoadingBlock';
+import LoadFailed from '../components/ui/LoadFailed';
+import { describeLoadError, type LoadError } from '../utils/loadError';
 
-type State = { status: 'loading' } | { status: 'missing' } | { status: 'error' } | { status: 'ready'; page: SitePage };
+type State = { status: 'loading' } | { status: 'missing' } | { status: 'error'; error: LoadError } | { status: 'ready'; page: SitePage };
 
 // A page the deployment supplies, at /p/<slug>.
 export default function ContentPage() {
   const { slug = '' } = useParams();
   const [loaded, setLoaded] = useState<{ slug: string; state: State } | null>(null);
+  // bumped by Try again to fetch the page once more
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -19,30 +24,43 @@ export default function ContentPage() {
       .then((page) => {
         if (!cancelled) setLoaded({ slug, state: page ? { status: 'ready', page } : { status: 'missing' } });
       })
-      .catch(() => {
-        if (!cancelled) setLoaded({ slug, state: { status: 'error' } });
+      .catch((err) => {
+        console.error(err);
+        if (!cancelled) setLoaded({ slug, state: { status: 'error', error: describeLoadError(err) } });
       });
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, attempt]);
+
+  const retry = () => {
+    setLoaded(null);
+    setAttempt((n) => n + 1);
+  };
 
   const state: State = loaded && loaded.slug === slug ? loaded.state : { status: 'loading' };
 
   if (state.status === 'loading') {
     return (
       <Page title="">
-        <p className="py-12 text-center text-text-muted">Loading...</p>
+        <LoadingBlock label="Loading page" />
       </Page>
     );
   }
 
-  if (state.status !== 'ready') {
+  if (state.status === 'error') {
     return (
-      <Page title={state.status === 'missing' ? 'Page not found' : 'Something went wrong'}>
+      <Page title="">
+        <LoadFailed error={state.error} onRetry={retry} />
+      </Page>
+    );
+  }
+
+  if (state.status === 'missing') {
+    return (
+      <Page title="Page not found">
         <p className="text-text-muted">
-          {state.status === 'missing' ? 'There is no page here.' : 'The page could not be loaded.'}{' '}
-          <Link to="/">Back to the calendar</Link>
+          There is no page here. <Link to="/">Back to the calendar</Link>
         </p>
       </Page>
     );

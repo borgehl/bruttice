@@ -4,6 +4,9 @@ import { fetchFilterOptions, createFilter } from '../services/api';
 import type { FilterOptions } from '../types/event';
 import Page from '../components/ui/Page';
 import Chip from '../components/ui/Chip';
+import LoadingBlock from '../components/ui/LoadingBlock';
+import LoadFailed from '../components/ui/LoadFailed';
+import { toLoadError, type LoadError } from '../utils/loadError';
 import Segmented from '../components/ui/Segmented';
 import FilterGroup from '../components/features/FilterGroup';
 import VenueList from '../components/features/VenueList';
@@ -28,7 +31,10 @@ export default function FilterPage() {
 
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<LoadError | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // bumped by Try again to load the options once more
+  const [attempt, setAttempt] = useState(0);
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagsMode, setTagsMode] = useState<Apply>('include');
@@ -45,15 +51,21 @@ export default function FilterPage() {
     async function loadOptions() {
       try {
         setFilterOptions(await fetchFilterOptions());
+        setLoadError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load filter options');
+        setLoadError(toLoadError(err));
       } finally {
         setLoading(false);
       }
     }
 
     loadOptions();
-  }, []);
+  }, [attempt]);
+
+  const retryLoad = () => {
+    setLoading(true);
+    setAttempt((n) => n + 1);
+  };
 
   const venues = filterOptions?.venues ?? [];
   const shownVenues = visibleVenues(venues, selectedRegions);
@@ -89,20 +101,15 @@ export default function FilterPage() {
   if (loading) {
     return (
       <Page title="Filters">
-        <div className="py-12 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent"></div>
-          <p className="mt-4 text-text-muted">Loading filter options...</p>
-        </div>
+        <LoadingBlock label="Loading filter options" />
       </Page>
     );
   }
 
-  if (error && !filterOptions) {
+  if (loadError && !filterOptions) {
     return (
       <Page title="Filters">
-        <div className="rounded-control border border-danger/30 bg-danger-muted p-4">
-          <p className="text-danger">{error}</p>
-        </div>
+        <LoadFailed error={loadError} onRetry={retryLoad} />
       </Page>
     );
   }

@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Skeleton from '../../ui/Skeleton';
+import Spinner from '../../ui/Spinner';
+import EmptyState from '../../ui/EmptyState';
+import InlineError from '../../ui/InlineError';
+import { toLoadError } from '../../../utils/loadError';
 import { fetchIngestRuns, startIngest } from '../../../services/api';
 import type { IngestRun, IngestSource } from '../../../types/event';
 
@@ -78,7 +83,8 @@ export default function AdminIngestRuns() {
       setRuns((prev) => [...prev, ...page.runs]);
       setHasMore(page.hasMore);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load ingest runs');
+      const { title, message } = toLoadError(err);
+      setError(`${title}. ${message}`);
     } finally {
       inFlight.current = false;
       setLoading(false);
@@ -159,6 +165,7 @@ export default function AdminIngestRuns() {
         {startError && <span className="text-sm text-danger">{startError}</span>}
       </div>
     <div className="space-y-3">
+      {runs.length === 0 && loading && <Skeleton variant="runRow" label="Loading ingestion runs" />}
       {runs.map((run) => (
         <section key={run.id} className="rounded-control border border-border bg-surface p-4">
           <div className="flex flex-wrap justify-between gap-2 mb-2">
@@ -178,18 +185,20 @@ export default function AdminIngestRuns() {
       ))}
 
       <div ref={bottomRef} className="py-2 text-center text-[13px] text-text-faint">
-        {loading && 'Loading more runs...'}
-        {!hasMore && (runs.length === 0 ? 'No ingestion runs recorded yet.' : 'No more runs')}
+        {loading && runs.length > 0 && (
+          <span className="inline-flex items-center gap-2">
+            <Spinner size="sm" />
+            Loading more runs
+          </span>
+        )}
+        {!hasMore && runs.length > 0 && 'No more runs'}
       </div>
 
-      {error && (
-        <div className="rounded-control border border-danger/30 bg-danger-muted p-3 text-center">
-          <p className="text-danger text-sm">{error}</p>
-          <button type="button" onClick={() => void loadMore()} className="mt-1 text-sm text-accent hover:underline cursor-pointer">
-            Try again
-          </button>
-        </div>
+      {!hasMore && runs.length === 0 && (
+        <EmptyState title="No ingestion runs yet">Runs appear here after the first scrape.</EmptyState>
       )}
+
+      {error && <InlineError message={error} onRetry={() => void loadMore()} />}
     </div>
     </div>
   );

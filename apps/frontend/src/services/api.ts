@@ -1,3 +1,4 @@
+import { ApiError } from '../utils/loadError';
 import type { SiteConfig } from '../store/site';
 import type { Age, Event, FilterOptions, Venue, AdminDashboard, IngestRunsPage, PageSummary, SitePage } from '../types/event';
 
@@ -26,7 +27,7 @@ export async function fetchCalendarEvents(params?: CalendarParams): Promise<Even
   const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error('Failed to fetch events');
+    throw new ApiError(response.status, 'Failed to fetch events');
   }
 
   return response.json();
@@ -36,7 +37,7 @@ export async function fetchFilterOptions(): Promise<FilterOptions> {
   const response = await fetch(`${API_BASE}/filter-options`);
 
   if (!response.ok) {
-    throw new Error('Failed to fetch filter options');
+    throw new ApiError(response.status, 'Failed to fetch filter options');
   }
 
   return response.json();
@@ -46,7 +47,7 @@ export async function fetchVenues(): Promise<Venue[]> {
   const response = await fetch(`${API_BASE}/venues`);
 
   if (!response.ok) {
-    throw new Error('Failed to fetch venues');
+    throw new ApiError(response.status, 'Failed to fetch venues');
   }
 
   return response.json();
@@ -56,7 +57,7 @@ export async function fetchSubmissionVenues(): Promise<Venue[]> {
   const response = await fetch(`${API_BASE}/submission-venues`);
 
   if (!response.ok) {
-    throw new Error('Failed to fetch venues');
+    throw new ApiError(response.status, 'Failed to fetch venues');
   }
 
   return response.json();
@@ -112,7 +113,7 @@ export async function createFilter(data: CreateFilterData): Promise<{ filterKey:
   });
 
   if (!response.ok) {
-    throw new Error('Failed to create filter');
+    throw new ApiError(response.status, 'Failed to create filter');
   }
 
   return response.json();
@@ -131,7 +132,7 @@ export async function fetchFilterDetails(filterKey: string): Promise<FilterDetai
   const response = await fetch(`${API_BASE}/filter?filterKey=${encodeURIComponent(filterKey)}`);
 
   if (!response.ok) {
-    throw new Error('Failed to fetch filter details');
+    throw new ApiError(response.status, 'Failed to fetch filter details');
   }
 
   return response.json();
@@ -187,7 +188,7 @@ export async function adminLogout(): Promise<void> {
   });
 
   if (!response.ok) {
-    throw new Error('Logout failed');
+    throw new ApiError(response.status, 'Logout failed');
   }
 }
 
@@ -210,9 +211,9 @@ export async function fetchAdminDashboard(): Promise<AdminDashboard> {
 
   if (!response.ok) {
     if (response.status === 401) {
-      throw new Error('Authentication required');
+      throw new ApiError(response.status, 'Authentication required');
     }
-    throw new Error('Failed to fetch dashboard');
+    throw new ApiError(response.status, 'Failed to fetch dashboard');
   }
 
   return response.json();
@@ -227,9 +228,9 @@ export async function fetchIngestRuns(beforeId?: number): Promise<IngestRunsPage
 
   if (!response.ok) {
     if (response.status === 401) {
-      throw new Error('Authentication required');
+      throw new ApiError(response.status, 'Authentication required');
     }
-    throw new Error('Failed to fetch ingest runs');
+    throw new ApiError(response.status, 'Failed to fetch ingest runs');
   }
 
   return response.json();
@@ -243,12 +244,12 @@ export async function startIngest(): Promise<void> {
 
   if (!response.ok) {
     if (response.status === 401) {
-      throw new Error('Authentication required');
+      throw new ApiError(response.status, 'Authentication required');
     }
     if (response.status === 409) {
-      throw new Error('An ingestion is already running');
+      throw new ApiError(response.status, 'An ingestion is already running');
     }
-    throw new Error('Failed to start ingestion');
+    throw new ApiError(response.status, 'Failed to start ingestion');
   }
 }
 
@@ -268,7 +269,7 @@ export async function submitVote(data: VoteData): Promise<{ success: boolean }> 
   });
 
   if (!response.ok) {
-    throw new Error('Failed to submit vote');
+    throw new ApiError(response.status, 'Failed to submit vote');
   }
 
   return response.json();
@@ -299,7 +300,7 @@ export async function adminAddEvent(data: AdminAddEventData): Promise<{ success:
 
   if (!response.ok) {
     if (response.status === 401) {
-      throw new Error('Authentication required');
+      throw new ApiError(response.status, 'Authentication required');
     }
     const error = await response.json();
     throw new Error(error.error || 'Failed to add event');
@@ -330,7 +331,7 @@ export async function fetchAdminAges(): Promise<Age[]> {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch ages');
+    throw new ApiError(response.status, 'Failed to fetch ages');
   }
 
   return response.json();
@@ -348,7 +349,7 @@ export async function adminUpdateEvent(data: AdminUpdateEventData): Promise<{ su
 
   if (!response.ok) {
     if (response.status === 401) {
-      throw new Error('Authentication required');
+      throw new ApiError(response.status, 'Authentication required');
     }
     const error = await response.json();
     throw new Error(error.error || 'Failed to update event');
@@ -372,7 +373,7 @@ export async function fetchSiteConfig(): Promise<Partial<SiteConfig>> {
   const response = await fetch(`${API_BASE}/site`);
 
   if (!response.ok) {
-    throw new Error('Failed to fetch site config');
+    throw new ApiError(response.status, 'Failed to fetch site config');
   }
 
   return response.json();
@@ -382,7 +383,7 @@ export async function fetchPages(): Promise<PageSummary[]> {
   const response = await fetch(`${API_BASE}/pages`);
 
   if (!response.ok) {
-    throw new Error('Failed to fetch pages');
+    throw new ApiError(response.status, 'Failed to fetch pages');
   }
 
   return response.json();
@@ -394,7 +395,7 @@ export async function fetchPage(slug: string): Promise<SitePage | null> {
 
   if (response.status === 404) return null;
   if (!response.ok) {
-    throw new Error('Failed to fetch page');
+    throw new ApiError(response.status, 'Failed to fetch page');
   }
 
   return response.json();

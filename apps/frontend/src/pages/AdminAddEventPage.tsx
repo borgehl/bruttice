@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/auth';
 import { adminAddEvent } from '../services/api';
 import AddEventForm, { type AddEventFormData } from '../components/features/AddEventForm';
 import Page from '../components/ui/Page';
+import LoadingBlock from '../components/ui/LoadingBlock';
 import StatusScreen from '../components/ui/StatusScreen';
 import { ghostButtonClass } from '../components/ui/Field';
 
@@ -49,7 +50,7 @@ export default function AdminAddEventPage() {
   if (authLoading) {
     return (
       <Page title="Add event">
-        <p className="py-12 text-center text-text-muted">Loading...</p>
+        <LoadingBlock label="Checking your session" />
       </Page>
     );
   }

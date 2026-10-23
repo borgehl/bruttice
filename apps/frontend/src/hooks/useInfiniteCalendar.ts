@@ -8,6 +8,7 @@ import {
   windowAfter,
   windowBefore,
 } from '../utils/calendarWindow';
+import { toLoadError, type LoadError } from '../utils/loadError';
 
 interface UseInfiniteCalendarOptions {
   filterKey?: string;
@@ -26,7 +27,7 @@ export function useInfiniteCalendar({ filterKey, startDate, onBeforePrepend }: U
   const [loadingLater, setLoadingLater] = useState(false);
   const [reachedStart, setReachedStart] = useState(false);
   const [reachedEnd, setReachedEnd] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<LoadError | null>(null);
 
   // first and last day (inclusive) already requested
   const loaded = useRef({ first: startDate, last: addDays(startDate, -1) });
@@ -64,7 +65,7 @@ export function useInfiniteCalendar({ filterKey, startDate, onBeforePrepend }: U
       }
       setReachedEnd(true);
     } catch (err) {
-      if (mounted.current) setError(err instanceof Error ? err.message : 'Failed to load events');
+      if (mounted.current) setError(toLoadError(err));
     } finally {
       busy.current.later = false;
       if (mounted.current) {
@@ -94,7 +95,7 @@ export function useInfiniteCalendar({ filterKey, startDate, onBeforePrepend }: U
       }
       setReachedStart(true);
     } catch (err) {
-      if (mounted.current) setError(err instanceof Error ? err.message : 'Failed to load events');
+      if (mounted.current) setError(toLoadError(err));
     } finally {
       busy.current.earlier = false;
       if (mounted.current) setLoadingEarlier(false);

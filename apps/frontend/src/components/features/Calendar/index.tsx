@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useSiteStore } from '../../../store/site';
 import { fetchFilterDetails, type FilterDetails } from '../../../services/api';
 import { useInfiniteCalendar } from '../../../hooks/useInfiniteCalendar';
@@ -9,6 +9,12 @@ import { describeFilter } from '../../../utils/filterSummary';
 import EventDaySection from '../EventDaySection';
 import StartDateFilter, { START_DATE_PARAM } from '../StartDateFilter';
 import ActiveFilters from '../ActiveFilters';
+import Skeleton from '../../ui/Skeleton';
+import Spinner from '../../ui/Spinner';
+import EmptyState from '../../ui/EmptyState';
+import InlineError from '../../ui/InlineError';
+import LoadFailed from '../../ui/LoadFailed';
+import { ghostButtonClass, primaryButtonClass } from '../../ui/Field';
 
 // Loads more when a sentinel is within this distance of the visible area.
 const LOAD_MARGIN = '200px 0px';
@@ -70,7 +76,13 @@ export default function Calendar() {
       )}
 
       {/* keyed so changing the start date or filter starts a fresh scroll */}
-      <CalendarScroll key={`${startDate}|${filterKey ?? ''}`} filterKey={filterKey} startDate={startDate} />
+      <CalendarScroll
+        key={`${startDate}|${filterKey ?? ''}`}
+        filterKey={filterKey}
+        startDate={startDate}
+        filtered={Boolean(hasActiveFilters)}
+        clearTo={clearQuery ? `/?${clearQuery}` : '/'}
+      />
     </div>
   );
 }
@@ -78,9 +90,12 @@ export default function Calendar() {
 interface CalendarScrollProps {
   filterKey?: string;
   startDate: string;
+  // a filter is narrowing the list, which decides what an empty calendar says
+  filtered: boolean;
+  clearTo: string;
 }
 
-function CalendarScroll({ filterKey, startDate }: CalendarScrollProps) {
+function CalendarScroll({ filterKey, startDate, filtered, clearTo }: CalendarScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -142,28 +157,46 @@ function CalendarScroll({ filterKey, startDate }: CalendarScrollProps) {
 
   if (!initialDone) {
     return (
-      <div className="flex-1 border-t border-border py-12 text-center">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent"></div>
-        <p className="mt-4 text-text-muted">Loading events...</p>
+      <div className="flex-1 border-t border-border">
+        <Skeleton variant="eventCard" count={6} label="Loading events" />
       </div>
     );
   }
 
   if (error && events.length === 0) {
     return (
-      <div className="m-4 rounded-control border border-danger/30 bg-danger-muted p-4">
-        <p className="text-danger">{error}</p>
-        <button type="button" onClick={retry} className="mt-2 text-sm text-accent hover:underline cursor-pointer">
-          Try again
-        </button>
+      <div className="flex-1 border-t border-border px-4">
+        <LoadFailed error={error} onRetry={retry} />
       </div>
     );
   }
 
   if (events.length === 0 && reachedStart && reachedEnd) {
     return (
-      <div className="flex-1 border-t border-border py-12 text-center">
-        <p className="text-text-muted">No events found.</p>
+      <div className="flex-1 border-t border-border">
+        {filtered ? (
+          <EmptyState
+            title="No events match your filters"
+            action={
+              <Link to={clearTo} className={primaryButtonClass}>
+                Clear filters
+              </Link>
+            }
+          >
+            Try removing a tag or venue.
+          </EmptyState>
+        ) : (
+          <EmptyState
+            title="No upcoming events"
+            action={
+              <Link to="/add-event" className={ghostButtonClass}>
+                Add event
+              </Link>
+            }
+          >
+            Check back soon, or add one.
+          </EmptyState>
+        )}
       </div>
     );
   }
@@ -177,7 +210,12 @@ function CalendarScroll({ filterKey, startDate }: CalendarScrollProps) {
       className="min-h-0 flex-1 overflow-y-auto border-t border-border"
     >
       <div ref={topRef} className="py-3 text-center text-[13px] text-text-faint">
-        {loadingEarlier && 'Loading earlier events...'}
+        {loadingEarlier && (
+          <span className="inline-flex items-center gap-2">
+            <Spinner size="sm" />
+            Loading earlier events
+          </span>
+        )}
         {reachedStart && 'No earlier events'}
       </div>
 
@@ -186,18 +224,16 @@ function CalendarScroll({ filterKey, startDate }: CalendarScrollProps) {
       ))}
 
       <div ref={bottomRef} className="px-4 pb-7 pt-5 text-center text-[13px] text-text-faint">
-        {loadingLater && 'Loading more events...'}
+        {loadingLater && (
+          <span className="inline-flex items-center gap-2">
+            <Spinner size="sm" />
+            Loading more events
+          </span>
+        )}
         {reachedEnd && 'No more events'}
       </div>
 
-      {error && (
-        <div className="m-4 rounded-control border border-danger/30 bg-danger-muted p-3 text-center">
-          <p className="text-danger text-sm">{error}</p>
-          <button type="button" onClick={retry} className="mt-1 text-sm text-accent hover:underline cursor-pointer">
-            Try again
-          </button>
-        </div>
-      )}
+      {error && <InlineError message={`${error.title}. ${error.message}`} onRetry={retry} className="m-4" />}
     </div>
   );
 }
