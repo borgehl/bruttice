@@ -43,7 +43,7 @@ func (h *APIHandler) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, cookie)
-	h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: true, Email: user.Email})
+	h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: true, Email: user.Email, Name: user.Name})
 }
 
 func (h *APIHandler) handleAdminLogout(w http.ResponseWriter, r *http.Request) {
@@ -85,8 +85,16 @@ func (h *APIHandler) handleAdminDashboard(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	unread, err := h.inbox.CountUnreadInboxThreads()
+	if err != nil {
+		// the dashboard is still useful without the count
+		h.logger.Errorf("failed to count unread inbox threads: %v", err)
+	}
+
 	h.writeJSON(w, http.StatusOK, dto.AdminDashboardResponse{
 		Email:            user.Email,
+		Name:             user.Name,
+		UnreadMessages:   unread,
 		AwaitingApproval: mapper.AdminEventDayResponses(awaitingApprovalEvents),
 		Upcoming:         mapper.AdminEventDayResponses(upcomingEvents),
 	})
@@ -131,11 +139,15 @@ func (h *APIHandler) handleAdminCheckSession(w http.ResponseWriter, r *http.Requ
 		h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: false})
 		return
 	}
-	h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: true, Email: user.Email})
+	h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: true, Email: user.Email, Name: user.Name})
 }
 
 // Helper to get authenticated user from request
 func (h *APIHandler) getAuthenticatedUser(r *http.Request) *models.User {
+	// tests stand in for the session cookie lookup, which needs a database
+	if h.authenticate != nil {
+		return h.authenticate(r)
+	}
 	tx := h.database.DB.Begin()
 	defer tx.Commit()
 	r, err := h.cookieSessions.RequestWithCookieUser(r, tx)

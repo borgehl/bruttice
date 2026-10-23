@@ -110,9 +110,15 @@ func main() {
 		From:     cfg.Site.ContactEmail,
 		SiteName: cfg.Site.Name,
 		Host:     os.Getenv("HOST"),
+		// only for testing against a stand-in for Resend, it is Resend's own address otherwise
+		BaseURL: os.Getenv("RESEND_BASE_URL"),
+		// signs the webhook that delivers mail sent to the site, without it nothing is received
+		WebhookSecret: os.Getenv("RESEND_WEBHOOK_SECRET"),
 	})
 	if !emailClient.Enabled() {
 		server.Logger.Infof("email is off: it needs RESEND_API_KEY and site.contact-email")
+	} else if !emailClient.InboundEnabled() {
+		server.Logger.Infof("incoming email is off: it needs RESEND_WEBHOOK_SECRET")
 	}
 	// the contact form is only offered if its messages can be delivered
 	site := mapper.SiteResponse(cfg.Site)

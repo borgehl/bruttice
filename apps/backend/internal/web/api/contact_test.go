@@ -1,95 +1,53 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 
-	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
-	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
+	"github.com/borgehl/bruttice/packages/go-pkg/models"
 )
-
-// fakeResend stands in for api.resend.com and records what was sent.
-type fakeResend struct {
-	mu     sync.Mutex
-	sent   []map[string]any
-	status int
-}
-
-func (f *fakeResend) handler(w http.ResponseWriter, r *http.Request) {
-	var body map[string]any
-	_ = json.NewDecoder(r.Body).Decode(&body)
-	f.mu.Lock()
-	f.sent = append(f.sent, body)
-	f.mu.Unlock()
-	if f.status != 0 {
-		w.WriteHeader(f.status)
-	}
-}
-
-func contactServer(t *testing.T, enabled bool) (*http.ServeMux, *fakeResend) {
-	t.Helper()
-	fake := &fakeResend{}
-	resend := httptest.NewServer(http.HandlerFunc(fake.handler))
-	t.Cleanup(resend.Close)
-
-	cfg := emailx.Config{Host: "https://events.example.com", SiteName: "Events", BaseURL: resend.URL}
-	if enabled {
-		cfg.APIKey, cfg.From = "re_key", "hello@example.com"
-	}
-	client := emailx.NewEmailClient(logx.NewLogger(nil, nil), cfg)
-
-	h := &APIHandler{logger: logx.NewLogger(nil, nil), email: client, contactLimit: newContactLimiter()}
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /api/contact", h.handleContact)
-	return mux, fake
-}
-
-func postContact(mux *http.ServeMux, body string) *httptest.ResponseRecorder {
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/contact", strings.NewReader(body))
-	req.RemoteAddr = "203.0.113.7:4000"
-	mux.ServeHTTP(rec, req)
-	return rec
-}
 
 const validContact = `{"name":"Sam","email":"sam@example.com","message":"Is the Friday show all ages?"}`
 
-func TestContactSendsToTheSiteWithTheVisitorAsReplyTo(t *testing.T) {
-	mux, fake := contactServer(t, true)
-	rec := postContact(mux, validContact)
+func TestContactIsSavedInTheInboxAndTheAdminIsTold(t *testing.T) {
+	hr := newHarness(t, true, true)
+	rec := hr.do(http.MethodPost, "/api/contact", validContact)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body)
 	}
-	if len(fake.sent) != 1 {
-		t.Fatalf("sent = %d messages", len(fake.sent))
+
+	saved := hr.inbox.all()
+	if len(saved) != 1 {
+		t.Fatalf("saved = %d messages", len(saved))
 	}
-	got := fake.sent[0]
-	to, _ := got["to"].([]any)
-	replyTo, _ := got["reply_to"].([]any)
-	if len(to) != 1 || to[0] != "hello@example.com" || len(replyTo) != 1 || replyTo[0] != "sam@example.com" {
-		t.Errorf("to = %v, reply_to = %v", to, replyTo)
+	m := saved[0]
+	if m.Source != models.InboxSourceContactForm || m.FromEmail != "sam@example.com" || m.Body != "Is the Friday show all ages?" || m.ThreadID == "" {
+		t.Errorf("message = %+v", m)
 	}
-	if !strings.Contains(got["text"].(string), "Is the Friday show all ages?") {
-		t.Errorf("text = %v", got["text"])
+
+	sent := hr.resend.waitForSent(t, 1)[0]
+	to, _ := sent["to"].([]any)
+	if len(to) != 1 || to[0] != "root@example.com" {
+		t.Errorf("the notice goes to the root admin, not the site's own address: %v", to)
+	}
+	if _, ok := sent["reply_to"]; ok {
+		t.Errorf("the notice has no reply-to: the answer is written in the inbox")
 	}
 }
 
 func TestContactIsUnavailableWithoutEmail(t *testing.T) {
-	mux, fake := contactServer(t, false)
-	if rec := postContact(mux, validContact); rec.Code != http.StatusServiceUnavailable {
+	hr := newHarness(t, false, false)
+	if rec := hr.do(http.MethodPost, "/api/contact", validContact); rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("status = %d", rec.Code)
 	}
-	if len(fake.sent) != 0 {
-		t.Error("nothing may be sent")
+	if len(hr.inbox.all()) != 0 {
+		t.Error("nothing may be saved")
 	}
 }
 
 func TestContactValidation(t *testing.T) {
-	mux, fake := contactServer(t, true)
+	hr := newHarness(t, true, true)
 	for name, body := range map[string]string{
 		"no name":       `{"name":"  ","email":"sam@example.com","message":"A long enough message"}`,
 		"long name":     `{"name":"` + strings.Repeat("a", 101) + `","email":"sam@example.com","message":"A long enough message"}`,
@@ -99,49 +57,61 @@ func TestContactValidation(t *testing.T) {
 		"long message":  `{"name":"Sam","email":"sam@example.com","message":"` + strings.Repeat("a", 5001) + `"}`,
 		"not json":      `nope`,
 	} {
-		if rec := postContact(mux, body); rec.Code != http.StatusBadRequest {
+		if rec := hr.do(http.MethodPost, "/api/contact", body); rec.Code != http.StatusBadRequest {
 			t.Errorf("%s: status = %d, want 400", name, rec.Code)
 		}
 	}
-	if len(fake.sent) != 0 {
-		t.Errorf("an invalid message must not be sent: %v", fake.sent)
+	if len(hr.inbox.all()) != 0 || len(hr.resend.messages()) != 0 {
+		t.Error("an invalid message must not be saved or announced")
 	}
 }
 
-func TestContactHoneypotLooksLikeSuccessButSendsNothing(t *testing.T) {
-	mux, fake := contactServer(t, true)
-	rec := postContact(mux, `{"name":"Bot","email":"bot@example.com","message":"Buy things now please","website":"http://spam.example"}`)
+func TestContactHoneypotLooksLikeSuccessButSavesNothing(t *testing.T) {
+	hr := newHarness(t, true, true)
+	rec := hr.do(http.MethodPost, "/api/contact", `{"name":"Bot","email":"bot@example.com","message":"Buy things now please","website":"http://spam.example"}`)
 	if rec.Code != http.StatusOK {
 		t.Errorf("status = %d", rec.Code)
 	}
-	if len(fake.sent) != 0 {
-		t.Error("a bot's message must not be sent")
+	if len(hr.inbox.all()) != 0 {
+		t.Error("a bot's message must not be saved")
 	}
 }
 
 func TestContactRateLimit(t *testing.T) {
-	mux, fake := contactServer(t, true)
+	hr := newHarness(t, true, true)
 	for i := 0; i < 5; i++ {
-		if rec := postContact(mux, validContact); rec.Code != http.StatusOK {
+		if rec := hr.do(http.MethodPost, "/api/contact", validContact); rec.Code != http.StatusOK {
 			t.Fatalf("message %d: status = %d", i+1, rec.Code)
 		}
 	}
-	if rec := postContact(mux, validContact); rec.Code != http.StatusTooManyRequests {
+	if rec := hr.do(http.MethodPost, "/api/contact", validContact); rec.Code != http.StatusTooManyRequests {
 		t.Errorf("status = %d, want 429", rec.Code)
 	}
-	if len(fake.sent) != 5 {
-		t.Errorf("sent = %d, want 5", len(fake.sent))
+	if len(hr.inbox.all()) != 5 {
+		t.Errorf("saved = %d, want 5", len(hr.inbox.all()))
 	}
 }
 
-func TestContactReportsAFailedSend(t *testing.T) {
-	mux, fake := contactServer(t, true)
-	fake.status = http.StatusForbidden
-	rec := postContact(mux, validContact)
-	if rec.Code != http.StatusBadGateway {
+// The notice is only a courtesy. A message must not be lost because Resend is down.
+func TestContactSurvivesAFailedNotice(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.resend.status = http.StatusInternalServerError
+	if rec := hr.do(http.MethodPost, "/api/contact", validContact); rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if len(hr.inbox.all()) != 1 {
+		t.Error("the message must be saved")
+	}
+}
+
+func TestContactReportsAFailedSave(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.inbox.failCreate = true
+	rec := hr.do(http.MethodPost, "/api/contact", validContact)
+	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d", rec.Code)
 	}
-	if strings.Contains(rec.Body.String(), "re_key") || strings.Contains(rec.Body.String(), "403") {
+	if strings.Contains(rec.Body.String(), "database") {
 		t.Errorf("the visitor must not see why: %s", rec.Body)
 	}
 }

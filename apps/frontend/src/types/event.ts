@@ -93,6 +93,35 @@ export interface AdminDashboard {
   email: string;
   awaitingApproval: AdminEventDay[];
   upcoming: AdminEventDay[];
+  // inbox conversations with a message nobody has read
+  unreadMessages: number;
+}
+
+export interface InboxMessage {
+  id: number;
+  // who wrote it: the contact form, an email to the site, or an admin from the inbox
+  source: 'contact_form' | 'email' | 'admin_reply';
+  fromName: string;
+  fromEmail: string;
+  // plain text
+  body: string;
+  // unix seconds
+  createdAt: number;
+  unread: boolean;
+}
+
+// A conversation, its messages oldest first.
+export interface InboxThread {
+  threadId: string;
+  subject: string;
+  // who it is with
+  fromName: string;
+  fromEmail: string;
+  unread: boolean;
+  archived: boolean;
+  // unix seconds of the latest message
+  lastAt: number;
+  messages: InboxMessage[];
 }
 
 export interface IngestSource {

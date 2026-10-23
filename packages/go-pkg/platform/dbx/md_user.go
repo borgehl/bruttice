@@ -32,3 +32,8 @@ func (d *DatabaseClient) SaveUser(user models.User, tx *gorm.DB) (models.User, e
 	}
 	return user, nil
 }
+
+// sets the name an admin is shown with
+func (d *DatabaseClient) SetUserName(userID int64, name string) error {
+	return d.DB.Model(&models.User{}).Where("id = ?", userID).Update("name", name).Error
+}

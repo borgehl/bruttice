@@ -73,5 +73,5 @@ func (h *APIHandler) emailRunErrors(runID int64, weeklyCheck bool) {
 	}
 
 	// Send says if it did, or why not
-	_ = h.email.Send(h.email.ErrorsMessage(errs))
+	_, _ = h.email.Send(h.email.ErrorsMessage(errs))
 }

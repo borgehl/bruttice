@@ -27,7 +27,7 @@ func SendApprovalNotification(emailClient *emailx.EmailClient) {
 
 	events, err := db.GetAwaitingApprovalEvents(tx)
 	if err != nil {
-		_ = emailClient.Send(emailClient.GenericMessage(
+		_, _ = emailClient.Send(emailClient.GenericMessage(
 			"Failed to get awaiting approval events",
 			fmt.Sprintf("Received database error: %s", err),
 		))
@@ -44,7 +44,7 @@ func SendApprovalNotification(emailClient *emailx.EmailClient) {
 		msg += fmt.Sprintf("%s at %s by %s\n", event.Title, event.Venue.Name, *event.VerificationEmail)
 	}
 
-	_ = emailClient.Send(emailClient.GenericMessage(
+	_, _ = emailClient.Send(emailClient.GenericMessage(
 		fmt.Sprintf("Events awaiting approval: %d", len(events)),
 		msg,
 	))

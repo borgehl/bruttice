@@ -7,7 +7,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
+	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
+	"github.com/google/uuid"
 )
 
 const (
@@ -17,8 +19,8 @@ const (
 	maxContactMessage = 5000
 )
 
-// handleContact sends a visitor's message to the site's contact address. The address itself is
-// never shown, a reply goes to the visitor because their address is the message's Reply-To.
+// handleContact saves a visitor's message in the admin inbox and tells the root admin about it.
+// The site's address is never shown. Answers are written in the inbox and emailed from there.
 func (h *APIHandler) handleContact(w http.ResponseWriter, r *http.Request) {
 	if !h.email.Enabled() {
 		h.writeError(w, http.StatusServiceUnavailable, "The contact form is not available")
@@ -38,7 +40,7 @@ func (h *APIHandler) handleContact(w http.ResponseWriter, r *http.Request) {
 
 	name := strings.TrimSpace(req.Name)
 	email := strings.TrimSpace(req.Email)
-	message := strings.TrimSpace(req.Message)
+	text := strings.TrimSpace(req.Message)
 	switch {
 	case name == "":
 		h.writeError(w, http.StatusBadRequest, "Name is required")
@@ -49,10 +51,10 @@ func (h *APIHandler) handleContact(w http.ResponseWriter, r *http.Request) {
 	case len(email) > maxContactEmail || !emailRegex.MatchString(email):
 		h.writeError(w, http.StatusBadRequest, "Invalid email address")
 		return
-	case utf8.RuneCountInString(message) < minContactMessage:
+	case utf8.RuneCountInString(text) < minContactMessage:
 		h.writeError(w, http.StatusBadRequest, "Message is too short")
 		return
-	case utf8.RuneCountInString(message) > maxContactMessage:
+	case utf8.RuneCountInString(text) > maxContactMessage:
 		h.writeError(w, http.StatusBadRequest, "Message is too long")
 		return
 	}
@@ -62,10 +64,21 @@ func (h *APIHandler) handleContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.email.Send(h.email.ContactMessage(name, email, message)); err != nil {
-		h.writeError(w, http.StatusBadGateway, "Your message could not be sent. Try again later")
+	// Keep it first: whatever happens to the notice, the message must not be lost.
+	saved := &models.InboxMessage{
+		ThreadID:  uuid.NewString(),
+		Source:    models.InboxSourceContactForm,
+		FromName:  name,
+		FromEmail: email,
+		Subject:   "Contact form message",
+		Body:      text,
+	}
+	if err := h.inbox.CreateInboxMessage(saved); err != nil {
+		h.logger.Errorf("failed to save contact message: %v", err)
+		h.writeError(w, http.StatusInternalServerError, "Your message could not be sent. Try again later")
 		return
 	}
+	go func() { _, _ = h.email.Send(h.email.InboxNoticeMessage(name, email, saved.Subject, saved.Body)) }()
 	h.writeJSON(w, http.StatusOK, dto.AddEventResponse{Success: true, Message: contactSent})
 }
 

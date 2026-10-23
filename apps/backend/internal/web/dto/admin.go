@@ -9,6 +9,7 @@ type LoginRequest struct {
 type LoginResponse struct {
 	Success bool   `json:"success"`
 	Email   string `json:"email,omitempty"`
+	Name    string `json:"name,omitempty"`
 	Message string `json:"message,omitempty"`
 }
 
@@ -39,8 +40,11 @@ type AdminEventDayResponse struct {
 
 type AdminDashboardResponse struct {
 	Email            string                  `json:"email"`
+	Name             string                  `json:"name,omitempty"`
 	AwaitingApproval []AdminEventDayResponse `json:"awaitingApproval"`
 	Upcoming         []AdminEventDayResponse `json:"upcoming"`
+	// UnreadMessages is how many inbox conversations have a message nobody has read.
+	UnreadMessages int64 `json:"unreadMessages"`
 }
 
 type VoteRequest struct {
@@ -122,4 +126,41 @@ type IngestRunResponse struct {
 type StartIngestResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message,omitempty"`
+}
+
+// InboxMessageResponse is one message of a conversation.
+type InboxMessageResponse struct {
+	ID int64 `json:"id"`
+	// Source is contact_form, email or admin_reply.
+	Source    string `json:"source"`
+	FromName  string `json:"fromName"`
+	FromEmail string `json:"fromEmail"`
+	// Body is plain text.
+	Body      string `json:"body"`
+	CreatedAt int64  `json:"createdAt"`
+	Unread    bool   `json:"unread"`
+}
+
+// InboxThreadResponse is a conversation, its messages oldest first.
+type InboxThreadResponse struct {
+	ThreadID string `json:"threadId"`
+	Subject  string `json:"subject"`
+	// FromName and FromEmail are who the conversation is with.
+	FromName  string `json:"fromName"`
+	FromEmail string `json:"fromEmail"`
+	Unread    bool   `json:"unread"`
+	Archived  bool   `json:"archived"`
+	// LastAt is the time of the latest message, as unix seconds.
+	LastAt   int64                  `json:"lastAt"`
+	Messages []InboxMessageResponse `json:"messages"`
+}
+
+// AdminSettingsRequest is what an admin can change about themself.
+type AdminSettingsRequest struct {
+	// Name is how other admins see them. Empty goes back to the email.
+	Name string `json:"name"`
+}
+
+type InboxReplyRequest struct {
+	Body string `json:"body"`
 }

@@ -49,7 +49,8 @@ Key values to set:
 | `HOST` | Public base URL, e.g. `https://events.example.com` |
 | `PORT` | Host port nginx binds on |
 | `FEED_TITLE` / `FEED_DESCRIPTION` / `FEED_AUTHOR` | RSS/Atom/JSON feed metadata |
-| `RESEND_API_KEY` | [Resend](https://resend.com) API key for outbound email: event verification, admin notifications, run reports and the contact form. Leave blank to disable all of them. Needs `site.contact-email` in `config.yaml` |
+| `RESEND_API_KEY` | [Resend](https://resend.com) API key for outbound email: event verification, admin notifications, run reports and the contact form. Leave blank to disable all of them. Needs `site.contact-email` in `config.yaml`. See [Email](#email) |
+| `RESEND_WEBHOOK_SECRET` | Signing secret of the Resend webhook that delivers received email to the admin inbox. Leave blank to turn receiving off |
 | `IP_GEOLOCATION_IO_API_KEY` | Optional — enables geo lookup for analytics |
 
 Create `apps/backend/config.yaml` from the example:
@@ -123,9 +124,25 @@ Bruttice has no scrapers built in. Anything that can POST JSON to `/internal/ing
 
 See **[docs/writing-scrapers.md](docs/writing-scrapers.md)** for the API, the payload format and what the server does with it. For Go, [`packages/go-pkg/ingest`](packages/go-pkg/ingest) has the payload types and a reference client, and [`packages/go-pkg/examples/scraper`](packages/go-pkg/examples/scraper/main.go) is a complete working scraper to copy.
 
+## Email
+
+Email goes through [Resend](https://resend.com). `site.contact-email` is the address the site sends from, and `RESEND_API_KEY` lets it. The site also receives mail, which is how the contact form and replies work:
+
+- A visitor writes through the contact form. The message lands in the **Inbox** tab of the admin dashboard, and the root admin gets an email saying so. The visitor's address is never shown anywhere else.
+- An admin replies from the inbox. The reply is emailed from `contact-email`, with a `Reply-To` of `reply-<conversation id>@<your domain>`.
+- When the visitor answers, Resend receives it, posts it to `POST /api/webhooks/resend`, and it joins the same conversation. Mail sent to `contact-email` itself starts a new conversation.
+
+To set it up:
+
+1. Pick a subdomain for the site's mail, such as `mail.example.com`, and use an address on it as `contact-email` (`hello@mail.example.com`). Receiving needs an MX record for the domain, and a subdomain keeps your main domain's mail where it is.
+2. In Resend, add that domain, add the DNS records it asks for (SPF and DKIM for sending), and turn on **Receiving** for it (the MX record).
+3. Add a webhook in Resend for the event `email.received` with the URL `https://<your host>/api/webhooks/resend`, and put its signing secret in `RESEND_WEBHOOK_SECRET`.
+
+The webhook is verified with that secret, requests older than five minutes are refused, and without the secret the endpoint is not served. Only mail to `contact-email` and to the conversation reply addresses is saved, other addresses on the domain are ignored. Messages are kept and shown as plain text.
+
 ## Admin dashboard
 
-Log in at `/admin` with the credentials from `admin-accounts` in `config.yaml`. From there you can approve or reject submitted events, edit event details, and manage the moderation queue.
+Log in at `/admin` with the credentials from `admin-accounts` in `config.yaml`. From there you can approve or reject submitted events, edit event details, and manage the moderation queue. The **Inbox** tab has the messages from the contact form and from email, with replies (see [Email](#email)). Each admin can set their own name at `/admin/settings`; it is shown to the other admins, for example on replies in the inbox, and falls back to the email.
 
 ## Event tags and flags
 

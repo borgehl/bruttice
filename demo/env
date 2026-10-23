@@ -19,6 +19,7 @@ PGTZ=America/Chicago
 
 # no outbound email, so no contact form either
 RESEND_API_KEY=""
+RESEND_WEBHOOK_SECRET=""
 
 IP_GEOLOCATION_IO_API_KEY=""
 

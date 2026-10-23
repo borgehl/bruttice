@@ -5,6 +5,7 @@ import (
 	"github.com/borgehl/bruttice/apps/backend/internal/web/controlcookie"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/middleware"
+	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/dbx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/geoipx"
@@ -30,6 +31,9 @@ type APIHandler struct {
 	site           dto.SiteResponse
 	pages          []pagesx.Page
 	contactLimit   *rateLimiter
+	inbox          inboxStore
+	authenticate   func(*http.Request) *models.User
+	users          userStore
 }
 
 func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSessions *controlcookie.CookieStore, ingestKey string, ingestTrigger IngestTrigger, site dto.SiteResponse, pages []pagesx.Page, email *emailx.EmailClient) *APIHandler {
@@ -44,6 +48,8 @@ func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSess
 		site:           site,
 		pages:          pages,
 		contactLimit:   newContactLimiter(),
+		inbox:          database,
+		users:          database,
 	}
 }
 
@@ -58,6 +64,7 @@ func (h *APIHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/submission-venues", h.handleGetSubmissionVenues)
 	mux.HandleFunc("POST /api/add-event", middleware.MiddlewareVisitorTracker(h.database, h.logger, h.geoClient, h.handleAddEvent))
 	mux.HandleFunc("POST /api/contact", h.handleContact)
+	mux.HandleFunc("POST /api/webhooks/resend", h.handleResendWebhook)
 	mux.HandleFunc("POST /api/visitor/consent", h.handleVisitorConsent)
 	mux.HandleFunc("POST /api/filter", h.handleCreateFilter)
 	mux.HandleFunc("GET /api/verify-event", h.handleVerifyEvent)
@@ -74,6 +81,12 @@ func (h *APIHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/admin/add-event", h.handleAdminAddEvent)
 	mux.HandleFunc("PATCH /api/admin/event", h.handleAdminUpdateEvent)
 	mux.HandleFunc("GET /api/admin/ages", h.handleAdminGetAges)
+	mux.HandleFunc("PATCH /api/admin/settings", h.handleAdminSettings)
+	mux.HandleFunc("GET /api/admin/inbox", h.handleAdminInbox)
+	mux.HandleFunc("POST /api/admin/inbox/{threadId}/reply", h.handleAdminInboxReply)
+	mux.HandleFunc("POST /api/admin/inbox/{threadId}/read", h.handleAdminInboxRead)
+	mux.HandleFunc("POST /api/admin/inbox/{threadId}/archive", h.handleAdminInboxArchive(true))
+	mux.HandleFunc("POST /api/admin/inbox/{threadId}/unarchive", h.handleAdminInboxArchive(false))
 
 	// Internal ingest route — only reachable on the internal docker network
 	mux.HandleFunc("POST /internal/ingest", h.handleIngest)

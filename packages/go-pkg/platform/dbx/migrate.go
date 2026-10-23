@@ -13,6 +13,7 @@ func (d *DatabaseClient) Migrate(cfg configx.Config) {
 		&models.CookieModel{},
 		&models.Event{},
 		&models.EventAdminJudgement{},
+		&models.InboxMessage{},
 		&models.IngestRun{},
 		&models.IngestRunSource{},
 		&models.MigrationFlag{},

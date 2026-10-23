@@ -1,6 +1,6 @@
 import { ApiError } from '../utils/loadError';
 import type { SiteConfig } from '../store/site';
-import type { Age, Event, FilterOptions, Venue, AdminDashboard, IngestRunsPage, PageSummary, SitePage } from '../types/event';
+import type { Age, Event, FilterOptions, Venue, AdminDashboard, IngestRunsPage, InboxThread, PageSummary, SitePage } from '../types/event';
 
 const API_BASE = '/api';
 
@@ -184,6 +184,8 @@ export interface LoginCredentials {
 export interface LoginResponse {
   success: boolean;
   email?: string;
+  // how the admin is shown to other admins, empty if they have not set one
+  name?: string;
   message?: string;
 }
 
@@ -200,6 +202,29 @@ export async function adminLogin(credentials: LoginCredentials): Promise<LoginRe
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Login failed');
+  }
+
+  return response.json();
+}
+
+// changes the signed in admin's own settings
+export async function updateAdminSettings(settings: { name: string }): Promise<LoginResponse> {
+  const response = await fetch(`${API_BASE}/admin/settings`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(settings),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new ApiError(response.status, 'Authentication required');
+    }
+    // the server's reason is meant for the admin, such as that the name is too long
+    const error = await response.json().catch(() => null);
+    throw new ApiError(response.status, error?.error || 'Failed to save the settings');
   }
 
   return response.json();
@@ -274,6 +299,57 @@ export async function startIngest(): Promise<void> {
       throw new ApiError(response.status, 'An ingestion is already running');
     }
     throw new ApiError(response.status, 'Failed to start ingestion');
+  }
+}
+
+export async function fetchInbox(includeArchived: boolean): Promise<InboxThread[]> {
+  const response = await fetch(`${API_BASE}/admin/inbox${includeArchived ? '?archived=true' : ''}`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new ApiError(response.status, 'Authentication required');
+    }
+    throw new ApiError(response.status, 'Failed to fetch the inbox');
+  }
+
+  return response.json();
+}
+
+// the action on a conversation: read, archive or unarchive
+export async function updateInboxThread(threadId: string, action: 'read' | 'archive' | 'unarchive'): Promise<void> {
+  const response = await fetch(`${API_BASE}/admin/inbox/${encodeURIComponent(threadId)}/${action}`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new ApiError(response.status, 'Authentication required');
+    }
+    throw new ApiError(response.status, 'Failed to update the conversation');
+  }
+}
+
+// emails the person the conversation is with, and keeps the reply in it
+export async function replyToInboxThread(threadId: string, body: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/admin/inbox/${encodeURIComponent(threadId)}/reply`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ body }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new ApiError(response.status, 'Authentication required');
+    }
+    // the server's reason is meant for the admin: what to fix, or that email is not set up
+    const error = await response.json().catch(() => null);
+    throw new ApiError(response.status, error?.error || 'The reply could not be sent');
   }
 }
 

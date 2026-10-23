@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import Page from '../components/ui/Page';
 import AdminDashboardDaySection from '../components/features/AdminDashboardDaySection';
 import AdminIngestRuns from '../components/features/AdminIngestRuns';
+import AdminInbox from '../components/features/AdminInbox';
 import { useAuthStore } from '../store/auth';
 import { fetchAdminDashboard, submitVote } from '../services/api';
 import Skeleton from '../components/ui/Skeleton';
@@ -13,7 +14,7 @@ import { toLoadError, type LoadError } from '../utils/loadError';
 import type { AdminDashboard } from '../types/event';
 
 export default function AdminDashboardPage() {
-  const { isAuthenticated, isLoading: authLoading, email, logout, checkSession } = useAuthStore();
+  const { isAuthenticated, isLoading: authLoading, email, name, logout, checkSession } = useAuthStore();
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   // the dashboard could not be loaded at all, or a later action failed while it is on screen
@@ -21,7 +22,7 @@ export default function AdminDashboardPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   // bumped by Try again to load the dashboard once more
   const [attempt, setAttempt] = useState(0);
-  const [tab, setTab] = useState<'events' | 'ingestion'>('events');
+  const [tab, setTab] = useState<'events' | 'inbox' | 'ingestion'>('events');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -126,8 +127,8 @@ export default function AdminDashboardPage() {
       flush
     >
       <p className="px-4 pt-3 text-sm text-text-muted">
-        <span className="font-medium text-text">{email}</span> ·{' '}
-        <Link to="/admin/add-event">add event</Link>
+        <span className="font-medium text-text">{name || email}</span> ·{' '}
+        <Link to="/admin/add-event">add event</Link> · <Link to="/admin/settings">settings</Link>
       </p>
 
       {actionError && <InlineError message={actionError} className="mx-4 mt-3" />}
@@ -135,6 +136,7 @@ export default function AdminDashboardPage() {
       <div role="tablist" className="mt-3 flex border-b border-border px-4">
         {([
           ['events', 'Events'],
+          ['inbox', 'Inbox'],
           ['ingestion', 'Ingestion'],
         ] as const).map(([key, label]) => (
           <button
@@ -148,11 +150,21 @@ export default function AdminDashboardPage() {
             }`}
           >
             {label}
+            {key === 'inbox' && (dashboard?.unreadMessages ?? 0) > 0 && (
+              <span className="font-data ml-1.5 rounded-full bg-accent px-1.5 py-0.5 text-xs text-accent-ink">
+                {dashboard?.unreadMessages}
+                <span className="sr-only"> unread</span>
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {tab === 'ingestion' ? (
+      {tab === 'inbox' ? (
+        <div className="p-4">
+          <AdminInbox onChange={refreshDashboard} />
+        </div>
+      ) : tab === 'ingestion' ? (
         <div className="p-4">
           <AdminIngestRuns />
         </div>

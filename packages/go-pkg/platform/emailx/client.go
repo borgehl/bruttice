@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,6 +19,8 @@ import (
 const (
 	resendURL   = "https://api.resend.com"
 	sendTimeout = 10 * time.Second
+	// the largest answer read, a received email with its inline images can be big
+	maxResponse = 16 << 20
 )
 
 type Config struct {
@@ -31,6 +34,9 @@ type Config struct {
 	Host string
 	// BaseURL is the API to send through, Resend's unless a test says otherwise.
 	BaseURL string
+	// WebhookSecret is the signing secret (whsec_...) of the Resend webhook that delivers
+	// received mail. Without it incoming mail is off.
+	WebhookSecret string
 }
 
 // Message is a plain text email. The sender is always the site's contact address.
@@ -40,6 +46,8 @@ type Message struct {
 	Text    string
 	// ReplyTo is where a reply goes, if not to the sender.
 	ReplyTo string
+	// Headers are extra email headers, such as In-Reply-To.
+	Headers map[string]string
 }
 
 type EmailClient struct {
@@ -67,25 +75,33 @@ func (e *EmailClient) Enabled() bool {
 	return e.cfg.APIKey != "" && e.cfg.From != ""
 }
 
+// InboundEnabled is true if mail sent to the site's domain can be received: sending works and the
+// webhook has a signing secret.
+func (e *EmailClient) InboundEnabled() bool {
+	return e.Enabled() && e.cfg.WebhookSecret != ""
+}
+
 // Contact is the site's contact address, empty if there is none.
 func (e *EmailClient) Contact() string {
 	return e.cfg.From
 }
 
 type sendRequest struct {
-	From    string   `json:"from"`
-	To      []string `json:"to"`
-	Subject string   `json:"subject"`
-	Text    string   `json:"text"`
-	ReplyTo []string `json:"reply_to,omitempty"`
+	From    string            `json:"from"`
+	To      []string          `json:"to"`
+	Subject string            `json:"subject"`
+	Text    string            `json:"text"`
+	ReplyTo []string          `json:"reply_to,omitempty"`
+	Headers map[string]string `json:"headers,omitempty"`
 }
 
-// Send delivers a message, and logs why if it could not. A site without a Resend key or a
-// contact address sends nothing and it is not an error, a deployment may have no email.
-func (e *EmailClient) Send(msg Message) error {
+// Send delivers a message and returns Resend's id for it, and logs why if it could not. A site
+// without a Resend key or a contact address sends nothing and it is not an error, a deployment
+// may have no email. The id is empty then.
+func (e *EmailClient) Send(msg Message) (string, error) {
 	if !e.Enabled() {
 		e.logger.Infof("email is not configured (RESEND_API_KEY and site.contact-email), not sending %q to %v", msg.Subject, msg.To)
-		return nil
+		return "", nil
 	}
 
 	body := sendRequest{
@@ -93,34 +109,50 @@ func (e *EmailClient) Send(msg Message) error {
 		To:      msg.To,
 		Subject: msg.Subject,
 		Text:    msg.Text,
+		Headers: msg.Headers,
 	}
 	if msg.ReplyTo != "" {
 		body.ReplyTo = []string{msg.ReplyTo}
 	}
 	payload, err := json.Marshal(body)
 	if err != nil {
-		return e.fail(msg, err)
+		return "", e.fail(msg, err)
 	}
 
+	var sent struct {
+		ID string `json:"id"`
+	}
+	if err := e.call(http.MethodPost, "/emails", payload, &sent); err != nil {
+		return "", e.fail(msg, err)
+	}
+	e.logger.Infof("sent %q to %v", msg.Subject, msg.To)
+	return sent.ID, nil
+}
+
+// call makes one request to the API and decodes the answer into out.
+func (e *EmailClient) call(method, path string, payload []byte, out any) error {
 	ctx, cancel := context.WithTimeout(context.Background(), sendTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.baseURL+"/emails", bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, method, e.baseURL+path, bytes.NewReader(payload))
 	if err != nil {
-		return e.fail(msg, err)
+		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+e.cfg.APIKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := e.http.Do(req)
 	if err != nil {
-		return e.fail(msg, err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return e.fail(msg, fmt.Errorf("resend answered %d: %s", resp.StatusCode, resendMessage(resp.Body)))
+		return fmt.Errorf("resend answered %d: %s", resp.StatusCode, resendMessage(resp.Body))
 	}
-	e.logger.Infof("sent %q to %v", msg.Subject, msg.To)
+	// an empty answer is fine, the caller has nothing to read from it
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponse)).Decode(out); err != nil && !errors.Is(err, io.EOF) {
+		return err
+	}
 	return nil
 }
 

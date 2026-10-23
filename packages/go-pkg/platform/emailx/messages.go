@@ -44,16 +44,30 @@ func (e *EmailClient) VerifyEventMessage(title string, to string, verificationCo
 	}
 }
 
-// ContactMessage is a visitor's message from the contact form, to the site's contact address.
-// A reply goes to the visitor.
-func (e *EmailClient) ContactMessage(name, email, text string) Message {
+// InboxNoticeMessage tells the root admin that a message is waiting in the admin inbox. It points
+// to the inbox and has no Reply-To: the answer is written there, so it is kept with the thread.
+func (e *EmailClient) InboxNoticeMessage(name, email, subject, text string) Message {
 	name = oneLine(name)
-	return Message{
-		To:      []string{e.cfg.From},
-		Subject: fmt.Sprintf("Message from %s", name),
-		ReplyTo: email,
-		Text:    fmt.Sprintf("From: %s <%s>\nSent from the contact form on %s\n\n%s\n", name, email, e.baseHost(), text),
+	if name == "" {
+		name = email
 	}
+	return Message{
+		To:      []string{configs.RootUser.Email},
+		Subject: fmt.Sprintf("New message from %s", name),
+		Text: fmt.Sprintf("%s <%s>\nSubject: %s\n\n%s\n\nRead it and reply in the admin inbox: %s/admin\n",
+			name, email, oneLine(subject), preview(text), e.baseHost()),
+	}
+}
+
+// ReplyMessage is the admin's answer to a thread, to the visitor. The visitor's reply to it goes
+// to the thread's reply address, so it lands in the same conversation. inReplyTo is the Message-ID
+// of the message answered, if it had one.
+func (e *EmailClient) ReplyMessage(to, subject, text, threadID, inReplyTo string) Message {
+	msg := Message{To: []string{to}, Subject: subject, Text: text, ReplyTo: e.ReplyAddress(threadID)}
+	if inReplyTo != "" {
+		msg.Headers = map[string]string{"In-Reply-To": inReplyTo, "References": inReplyTo}
+	}
+	return msg
 }
 
 // baseHost is the site's public URL with a scheme, http if the configured one has none.
@@ -63,6 +77,16 @@ func (e *EmailClient) baseHost() string {
 		return secureProtocol + host
 	}
 	return unsecureProtocol + host
+}
+
+// preview is the start of a message, enough to know what it is about.
+func preview(text string) string {
+	const max = 500
+	text = strings.TrimSpace(text)
+	if r := []rune(text); len(r) > max {
+		return string(r[:max]) + "..."
+	}
+	return text
 }
 
 // oneLine keeps a visitor's text from breaking out of the line it is shown on.
