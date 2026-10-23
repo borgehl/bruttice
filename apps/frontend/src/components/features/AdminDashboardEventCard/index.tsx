@@ -17,9 +17,11 @@ function EditableField({ value, onChange, className = '', multiline = false, pla
   const [localValue, setLocalValue] = useState(value);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     setLocalValue(value);
-  }, [value]);
+  }
 
   const handleChange = (newValue: string) => {
     setLocalValue(newValue);

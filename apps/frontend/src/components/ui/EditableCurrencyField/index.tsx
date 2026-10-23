@@ -13,10 +13,12 @@ export default function EditableCurrencyField({ value, onChange, className = '',
   const [validationError, setValidationError] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     setLocalValue(value);
     setValidationError(null);
-  }, [value]);
+  }
 
   const validate = (val: string): boolean => {
     if (val === '') return true;

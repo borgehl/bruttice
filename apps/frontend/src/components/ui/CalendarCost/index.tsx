@@ -2,7 +2,7 @@ interface CalendarCostProps {
   cost: string;
 }
 
-export function formatCost(cost: string): string {
+function formatCost(cost: string): string {
   const num = Number(cost);
   if (!isNaN(num) && cost.trim() !== '') {
     return num === 0 ? 'Free' : `$${num.toFixed(2)}`;
