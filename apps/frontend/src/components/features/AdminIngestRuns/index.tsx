@@ -50,7 +50,7 @@ function SourceRow({ source }: { source: IngestSource }) {
           </summary>
           <ul className="mt-1 space-y-1 break-words">
             {source.errors.map((err, i) => (
-              <li key={i}>{err}</li>
+              <li key={i} className="whitespace-pre-wrap">{err}</li>
             ))}
           </ul>
         </details>

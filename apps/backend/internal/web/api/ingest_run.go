@@ -3,8 +3,8 @@ package api
 import (
 	"fmt"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
+	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -57,21 +57,22 @@ func (h *APIHandler) emailRunErrors(runID int64, weeklyCheck bool) {
 		return
 	}
 
-	errs := make([]error, 0)
+	report := emailx.ErrorsReport{RunID: runID, DedupeError: run.DedupeError}
 	for _, source := range run.Sources {
-		for _, msg := range source.Errors {
-			if !strings.HasPrefix(msg, source.Source) {
-				msg = fmt.Sprintf("%s: %s", source.Source, msg)
-			}
-			errs = append(errs, fmt.Errorf("%s", msg))
-		}
+		report.Sources = append(report.Sources, emailx.SourceReport{
+			Name:    source.Source,
+			Scraped: source.ScrapedCount,
+			Saved:   source.SavedCount,
+			Failed:  source.FailedCount,
+			Errors:  source.Errors,
+		})
 	}
 
-	if len(errs) == 0 && !(weeklyCheck && time.Now().Weekday() == time.Monday) {
+	if report.Total() == 0 && report.DedupeError == "" && !(weeklyCheck && time.Now().Weekday() == time.Monday) {
 		h.logger.Infof("no email: no errors in ingest run %d", runID)
 		return
 	}
 
 	// Send says if it did, or why not
-	_, _ = h.email.Send(h.email.ErrorsMessage(errs))
+	_, _ = h.email.Send(h.email.ErrorsMessage(report))
 }

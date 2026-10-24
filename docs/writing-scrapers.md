@@ -2,7 +2,7 @@
 
 A scraper is any program that collects event listings and POSTs them to the bruttice backend. Bruttice ships no scrapers. It defines an HTTP API, and a scraper can be written in any language.
 
-For Go there is a reference client and the payload types in [`packages/go-pkg/ingest`](../packages/go-pkg/ingest), and a complete runnable example in [`packages/go-pkg/examples/scraper`](../packages/go-pkg/examples/scraper/main.go). Read the example first, it is about 100 lines.
+For Go there is a reference client and the payload types in [`packages/go-pkg/ingest`](../packages/go-pkg/ingest), and a complete runnable example in [`packages/go-pkg/examples/scraper`](../packages/go-pkg/examples/scraper/main.go). For Python there is [`packages/py-ingest`](../packages/py-ingest), see [The Python client](#the-python-client). Read an example first, each is about 100 lines.
 
 ## How it fits together
 
@@ -127,7 +127,7 @@ Don't crash, and don't exit quietly. Put the failure in `errors` and send the pa
 out.AppendError(fmt.Errorf("fetching calendar: %w", err))
 ```
 
-The server logs it, records it under the run, and emails it when the run finishes. In Go, `AppendError` prefixes the venue name. A scraper that dies without sending anything shows up as nothing, which is the one failure nobody is told about.
+The server logs it, records it under the run, and emails it when the run finishes. The email is formatted, grouped by source, and an event the server refused or could not save comes with what the scraper sent for it (its link, guid, venue, times, age, region, cost and tags), so it can be found at the source. In Go, `AppendError` prefixes the venue name. A scraper that dies without sending anything shows up as nothing, which is the one failure nobody is told about.
 
 `errors` and `events` are independent. A scraper that parsed 40 of 41 rows sends the 40 events and an error for the 41st, and the 40 are saved. A scraper that failed outright sends no events and one error.
 
@@ -153,6 +153,32 @@ err = client.FinishRun(ctx, runID)
 ```
 
 The client uses only the standard library. Its `HTTP` field can be replaced to change the timeout (default two minutes) or transport.
+
+## The Python client
+
+[`packages/py-ingest`](../packages/py-ingest) is a client and the payload types for Python 3.9 and later, with no dependencies. Install it from a checkout of the repo with `pip install ./packages/py-ingest`, or copy the `bruttice_ingest` folder next to your scraper.
+
+```python
+from bruttice_ingest import Client, Event, IngestionOutput, VenueInfo, parse_local
+
+client = Client("http://bruttice-backend:8080", key)
+
+with client.run() as run:        # starts a run, and always finishes it
+    out = IngestionOutput(VenueInfo(name="The Venue", default_region="tulsa"))
+    out.events.append(Event(
+        title="Open Mic Night",
+        start_at=parse_local("2030-01-10 07:00PM", "%Y-%m-%d %I:%M%p", "America/Chicago"),
+        age="all-ages",
+        cover_cost="free",
+    ))
+    result = run.send(out)       # result.saved, result.errors
+```
+
+- A time without a timezone is refused when the payload is built. `parse_local` reads a wall-clock time in the venue's zone, which is what the checklist below asks for.
+- `with client.run()` finishes the run even if your scrape raises, which is what sends the error email. Without it, call `start_run`, `send` and `finish_run` yourself.
+- Report a failure with `out.append_error(...)` and send the payload anyway, as in Go.
+- `event.update_guid(source_id)` gives the same `"<Venue>-<id>"` identity as the Go client. Without an id the server derives one.
+- The server's refusals come as `IngestError`, with the HTTP `status` (`None` if the server can't be reached) and the server's reason.
 
 ## Other languages
 

@@ -157,15 +157,6 @@ func TestReplyMessage(t *testing.T) {
 	}
 }
 
-func TestErrorsMessageGoesToTheRootAdmin(t *testing.T) {
-	configs.SetRootEmail("root@example.com")
-	c := NewEmailClient(logx.NewLogger(nil, nil), Config{})
-	m := c.ErrorsMessage([]error{errString("a: boom")})
-	if m.To[0] != "root@example.com" || !strings.Contains(m.Text, "0: a: boom") || !strings.Contains(m.Subject, "Errors: 1") {
-		t.Errorf("message = %+v", m)
-	}
-}
-
 type errString string
 
 func (e errString) Error() string { return string(e) }

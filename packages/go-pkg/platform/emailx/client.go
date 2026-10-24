@@ -39,13 +39,16 @@ type Config struct {
 	WebhookSecret string
 }
 
-// Message is a plain text email. The sender is always the site's contact address.
+// Message is an email, plain text and optionally formatted. The sender is always the site's contact address.
 type Message struct {
 	To []string
 	// FromName is the sender's display name, the site's name if empty.
 	FromName string
 	Subject  string
 	Text     string
+	// HTML is a formatted version of Text. Mail clients that show it use it, the rest show Text, so
+	// both have to say the same.
+	HTML string
 	// ReplyTo is where a reply goes, if not to the sender.
 	ReplyTo string
 	// Headers are extra email headers, such as In-Reply-To.
@@ -93,6 +96,7 @@ type sendRequest struct {
 	To      []string          `json:"to"`
 	Subject string            `json:"subject"`
 	Text    string            `json:"text"`
+	HTML    string            `json:"html,omitempty"`
 	ReplyTo []string          `json:"reply_to,omitempty"`
 	Headers map[string]string `json:"headers,omitempty"`
 }
@@ -115,6 +119,7 @@ func (e *EmailClient) Send(msg Message) (string, error) {
 		To:      msg.To,
 		Subject: msg.Subject,
 		Text:    msg.Text,
+		HTML:    msg.HTML,
 		Headers: msg.Headers,
 	}
 	if msg.ReplyTo != "" {

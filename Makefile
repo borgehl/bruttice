@@ -1,7 +1,7 @@
 # None of these produce a file of their own name. Without this, a directory or
 # file that happens to match one, like `demo`, makes the target "up to date" and
 # the recipe silently stops running.
-.PHONY: up up-demo down-demo clean test test-backend test-frontend
+.PHONY: up up-demo down-demo clean test test-backend test-frontend test-python
 
 # The demo is its own compose project: its own database volume, env file and config.
 # Container names are fixed in docker-compose.yaml, so stop one stack before starting the other.
@@ -30,7 +30,7 @@ clean:
 	$(DEMO) down -v --remove-orphans
 	docker compose --env-file $(LOCAL_ENV) down -v --remove-orphans
 
-test: test-backend test-frontend
+test: test-backend test-frontend test-python
 
 # No database or containers needed.
 test-backend:
@@ -39,3 +39,7 @@ test-backend:
 
 test-frontend:
 	cd apps/frontend && pnpm install --frozen-lockfile && pnpm test
+
+# The Python ingest client, standard library only.
+test-python:
+	cd packages/py-ingest && python3 -m unittest discover -s tests -t .

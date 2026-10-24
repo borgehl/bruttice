@@ -122,7 +122,7 @@ The example data is loaded through the ingest API by `packages/go-pkg/examples/d
 
 Bruttice has no scrapers built in. Anything that can POST JSON to `/internal/ingest` can feed it, in any language, and the admin dashboard's "run ingestion" button can start yours through `ingest-trigger-url`.
 
-See **[docs/writing-scrapers.md](docs/writing-scrapers.md)** for the API, the payload format and what the server does with it. For Go, [`packages/go-pkg/ingest`](packages/go-pkg/ingest) has the payload types and a reference client, and [`packages/go-pkg/examples/scraper`](packages/go-pkg/examples/scraper/main.go) is a complete working scraper to copy.
+See **[docs/writing-scrapers.md](docs/writing-scrapers.md)** for the API, the payload format and what the server does with it. For Go, [`packages/go-pkg/ingest`](packages/go-pkg/ingest) has the payload types and a reference client, and [`packages/go-pkg/examples/scraper`](packages/go-pkg/examples/scraper/main.go) is a complete working scraper to copy. For Python, [`packages/py-ingest`](packages/py-ingest) is a client with no dependencies, and [`examples/scraper.py`](packages/py-ingest/examples/scraper.py) is the same example scraper.
 
 ## Email
 

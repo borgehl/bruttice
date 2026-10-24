@@ -2,7 +2,6 @@ package api
 
 import (
 	"crypto/subtle"
-	"fmt"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/mapper"
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
@@ -109,7 +108,7 @@ func (h *APIHandler) ingestPayload(payload ingest.IngestionOutput) (models.Inges
 		if err := scraped.Validate(payload.VenueInfo.Name); err != nil {
 			h.logger.Errorf("invalid event %d (%q) from %s: %s", i, scraped.Title, payload.VenueInfo.Name, err)
 			source.FailedCount++
-			source.Errors = append(source.Errors, fmt.Sprintf("event %d (%q): %s", i, scraped.Title, err))
+			source.Errors = append(source.Errors, eventError(i, scraped, payload.VenueInfo.Name, err))
 			continue
 		}
 		event := mapper.IngestEvent(scraped, payload.VenueInfo, now)
@@ -118,9 +117,9 @@ func (h *APIHandler) ingestPayload(payload ingest.IngestionOutput) (models.Inges
 			return h.saveIngestedEvent(event, payload.VenueInfo.IsAutoIngest, eventTx)
 		})
 		if err != nil {
-			h.logger.Errorf("failed to save event %s: %s", event.Title, err)
+			h.logger.Errorf("failed to save event %d (%q) from %s: %s", i, event.Title, payload.VenueInfo.Name, err)
 			source.FailedCount++
-			source.Errors = append(source.Errors, err.Error())
+			source.Errors = append(source.Errors, eventError(i, scraped, payload.VenueInfo.Name, err))
 			continue
 		}
 		source.SavedCount++

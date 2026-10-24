@@ -43,3 +43,9 @@ apps/frontend/*.local
 
 # Postgres data volume
 pg_data/
+
+# Python (packages/py-ingest)
+__pycache__/
+*.egg-info/
+build/
+.venv/

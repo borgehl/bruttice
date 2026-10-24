@@ -3,29 +3,14 @@ package emailx
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 )
 
 const (
-	errDateFmt       = "Mon Jan _2"
 	secureProtocol   = "https://"
 	unsecureProtocol = "http://"
 )
-
-// ErrorsMessage tells the root admin about the errors of an ingest run.
-func (e *EmailClient) ErrorsMessage(errs []error) Message {
-	text := "Please see recorded errors below\n"
-	for i, err := range errs {
-		text += fmt.Sprintf("%d: %s\n", i, err)
-	}
-	return Message{
-		To:      []string{configs.RootUser.Email},
-		Subject: fmt.Sprintf("%s Scraping Errors: %d", time.Now().Format(errDateFmt), len(errs)),
-		Text:    text,
-	}
-}
 
 // GenericMessage is a note to the root admin.
 func (e *EmailClient) GenericMessage(subject string, text string) Message {
