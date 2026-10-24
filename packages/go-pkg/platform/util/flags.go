@@ -11,9 +11,11 @@ const (
 	flagAge  = "bruttice-ages"
 )
 
-var ageRegexp = regexp.MustCompile(`(bruttice-ages[:|\w+]+)[:\s]?`)
-var locRegexp = regexp.MustCompile(`(bruttice-loc[:|\w]+)[:\s]?`)
-var tagRegexp = regexp.MustCompile(`(bruttice-tags[:|\w]+)[:\s]?`)
+// A value is letters, digits, "_" and "-" ("live-music", "all-ages"), and for an age also "+". Values
+// are separated by ":".
+var ageRegexp = regexp.MustCompile(`(bruttice-ages[:|\w+-]+)[:\s]?`)
+var locRegexp = regexp.MustCompile(`(bruttice-loc[:|\w-]+)[:\s]?`)
+var tagRegexp = regexp.MustCompile(`(bruttice-tags[:|\w-]+)[:\s]?`)
 
 func parseValues(s string, prefix string, reg *regexp.Regexp) []string {
 	return strings.Split(

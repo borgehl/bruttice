@@ -1,31 +1,15 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchVenues } from '../services/api';
-import type { Venue } from '../types/event';
 import Page from '../components/ui/Page';
 import Markdown from '../components/ui/Markdown';
 import EmbedFrame from '../components/ui/EmbedFrame';
 import { usePageOverride } from '../hooks/usePageOverride';
 import { useSiteStore } from '../store/site';
 
-// The introduction is the deployment's own about page if it has one. How to add an event, the
-// contact address and the venues are the site's and stay either way.
+// The introduction is the deployment's own about page if it has one. How to add an event and the
+// contact link are the site's and stay either way.
 export default function AboutPage() {
   const { site } = useSiteStore();
   const { page: own, ready } = usePageOverride('about');
-  const [venues, setVenues] = useState<Venue[]>([]);
-
-  useEffect(() => {
-    async function loadVenues() {
-      try {
-        setVenues(await fetchVenues());
-      } catch {
-        // Venues are optional here.
-      }
-    }
-
-    loadVenues();
-  }, []);
 
   return (
     <Page title="About">
@@ -63,29 +47,6 @@ export default function AboutPage() {
             <p>
               Questions, corrections, suggestions? <Link to="/contact">Send us a message</Link>.
             </p>
-          </>
-        )}
-
-        {venues.length > 0 && (
-          <>
-            <h2 className="font-label flex items-baseline gap-2 pt-2 text-lg font-semibold text-text">
-              Featured venues
-              <span className="font-data text-xs font-normal text-text-faint">{venues.length} venues</span>
-            </h2>
-            <ul className="flex flex-wrap gap-2">
-              {venues.map((venue) => (
-                <li key={venue.slug}>
-                  <a
-                    href={venue.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-9 items-center rounded-control border border-border px-3 text-sm"
-                  >
-                    {venue.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
           </>
         )}
       </div>

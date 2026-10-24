@@ -97,3 +97,23 @@ func TestParseTagsFromStr(t *testing.T) {
 		}
 	}
 }
+
+func TestFlagValuesMayHaveDashes(t *testing.T) {
+	tags := ParseTagsFromStr("Doors at 7\n" + flagTags + ":rock:live-music:all-ages-friendly\nmore text")
+	if len(tags) != 3 || tags[0] != "rock" || tags[1] != "live-music" || tags[2] != "all-ages-friendly" {
+		t.Errorf("tags = %v", tags)
+	}
+	if got := ParseAge(flagAge + ":all-ages "); got != "all-ages" {
+		t.Errorf("age = %q", got)
+	}
+	if got := ParseAge(flagAge + ":21+"); got != "21+" {
+		t.Errorf("age = %q", got)
+	}
+	if got := ParseLocationFromStr(flagLoc + ":some-place"); got != "some-place" {
+		t.Errorf("location = %q", got)
+	}
+	// a dash that starts the next sentence is not part of the last value
+	if tags := ParseTagsFromStr(flagTags + ":rock - and more"); len(tags) != 1 || tags[0] != "rock" {
+		t.Errorf("tags = %v", tags)
+	}
+}

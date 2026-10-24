@@ -66,7 +66,7 @@ A page whose slug is one of these replaces that page's own text, and is not list
 
 | Slug | Replaces |
 |---|---|
-| `about` | The introduction on About. How to add an event, the contact address and the featured venues stay, they come from the site |
+| `about` | The introduction on About. How to add an event and the contact link stay, they come from the site |
 | `privacy-policy` | The whole privacy policy text. Check it still describes what your deployment collects |
 
 ## Mistakes
