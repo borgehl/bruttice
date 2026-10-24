@@ -6,14 +6,14 @@ import (
 )
 
 const (
-	ditTags = "dit-tags"
-	ditLoc  = "dit-loc"
-	ditAge  = "dit-ages"
+	flagTags = "bruttice-tags"
+	flagLoc  = "bruttice-loc"
+	flagAge  = "bruttice-ages"
 )
 
-var ageRegexp = regexp.MustCompile(`(dit-ages[:|\w+]+)[:\s]?`)
-var locRegexp = regexp.MustCompile(`(dit-loc[:|\w]+)[:\s]?`)
-var tagRegexp = regexp.MustCompile(`(dit-tags[:|\w]+)[:\s]?`)
+var ageRegexp = regexp.MustCompile(`(bruttice-ages[:|\w+]+)[:\s]?`)
+var locRegexp = regexp.MustCompile(`(bruttice-loc[:|\w]+)[:\s]?`)
+var tagRegexp = regexp.MustCompile(`(bruttice-tags[:|\w]+)[:\s]?`)
 
 func parseValues(s string, prefix string, reg *regexp.Regexp) []string {
 	return strings.Split(
@@ -24,7 +24,7 @@ func parseValues(s string, prefix string, reg *regexp.Regexp) []string {
 }
 
 func ParseTagsFromStr(s string) []string {
-	tags := parseValues(s, ditTags, tagRegexp)
+	tags := parseValues(s, flagTags, tagRegexp)
 	ret := make([]string, 0)
 	for _, tag := range tags {
 		tag = strings.TrimSpace(tag)
@@ -50,9 +50,9 @@ func parseSingularFlag(s string, prefix string, reg *regexp.Regexp) string {
 }
 
 func ParseLocationFromStr(s string) string {
-	return parseSingularFlag(s, ditLoc, locRegexp)
+	return parseSingularFlag(s, flagLoc, locRegexp)
 }
 
 func ParseAge(s string) string {
-	return parseSingularFlag(s, ditAge, ageRegexp)
+	return parseSingularFlag(s, flagAge, ageRegexp)
 }

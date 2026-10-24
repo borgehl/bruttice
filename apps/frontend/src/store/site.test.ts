@@ -8,8 +8,8 @@ describe('mergeSiteConfig', () => {
   })
 
   it('overrides the fields it gets', () => {
-    const site = mergeSiteConfig({ name: 'Do It Together', region: 'Tulsa' })
-    expect(site.name).toBe('Do It Together')
+    const site = mergeSiteConfig({ name: 'Example Events', region: 'Tulsa' })
+    expect(site.name).toBe('Example Events')
     expect(site.region).toBe('Tulsa')
     expect(site.description).toBe(defaultSiteConfig.description)
   })

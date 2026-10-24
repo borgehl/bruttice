@@ -75,7 +75,7 @@ Key fields:
 | `regions` | Geographic regions available for events |
 | `venues` | Venues seeded on first run — include `"Unlisted (see link)"` to enable that feature |
 
-All seed data (`tags`, `age-groups`, `regions`, `venues`) is upserted on every startup, so adding new entries to the config takes effect on the next restart without manual database changes.
+The seed data (`tags`, `age-groups`, `regions`, `venues`) is saved into the database on the first start only. After that the admin dashboard owns it (see [Admin dashboard](#admin-dashboard)), and editing these lists in the config has no effect: the backend logs a reminder at startup. This is so a region or tag an admin retired is not brought back by a restart. A database that was set up before this change gets one last save of the config on its next start.
 
 ### 3. Start
 
@@ -142,17 +142,17 @@ The webhook is verified with that secret, requests older than five minutes are r
 
 ## Admin dashboard
 
-Log in at `/admin` with the credentials from `admin-accounts` in `config.yaml`. From there you can approve or reject submitted events, edit event details, and manage the moderation queue. The **Inbox** tab has the messages from the contact form and from email, with replies (see [Email](#email)). Each admin can set their own name at `/admin/settings`; it is shown to the other admins, for example on replies in the inbox, and falls back to the email.
+Log in at `/admin` with the credentials from `admin-accounts` in `config.yaml`. From there you can approve or reject submitted events, edit event details, and manage the moderation queue. The **Inbox** tab has the messages from the contact form and from email, with replies (see [Email](#email)). The **Site lists** page (`/admin/config`) manages regions, tags, age groups and venues: add, rename and delete them, and retire a region. A retired region's events either move to another region, together with the venues that default to it and the old name (a scraper that still sends it lands in the new region), or they are deleted; at least one region has to stay, and a region can't be retired by deleting its events while a venue still defaults to it. Naming a retired region again restores it. Deleting a tag removes it from its events; deleting an age group moves its events to another one. Scraped venues are kept up to date by their scraper and can't be edited, and a venue with events can't be deleted. Each admin can set their own name at `/admin/settings`; it is shown to the other admins, for example on replies in the inbox, and falls back to the email.
 
 ## Event tags and flags
 
-Event descriptions can embed structured flags that the backend parses automatically:
+Event descriptions can embed structured flags. The helpers in `packages/go-pkg/platform/util` (`ParseTagsFromStr`, `ParseLocationFromStr`, `ParseAge`) read them, so a scraper turns them into tags, a region and an age group:
 
 | Flag syntax | Effect |
 |---|---|
-| `dit-tags:rock:live-music` | Attaches tags `rock` and `live-music` to the event |
-| `dit-loc:downtown` | Sets the event's region |
-| `dit-ages:18+` | Sets the age restriction |
+| `bruttice-tags:rock:live-music` | Attaches tags `rock` and `live-music` to the event |
+| `bruttice-loc:downtown` | Sets the event's region |
+| `bruttice-ages:18+` | Sets the age restriction |
 
 These are useful when scraping venues whose event pages embed this metadata in the description field.
 

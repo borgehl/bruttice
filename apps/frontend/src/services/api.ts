@@ -1,5 +1,6 @@
 import { ApiError } from '../utils/loadError';
 import type { SiteConfig } from '../store/site';
+import type { AdminConfig, ConfigChange } from '../types/config';
 import type { Age, Event, FilterOptions, Venue, AdminDashboard, IngestRunsPage, InboxThread, PageSummary, SitePage } from '../types/event';
 
 const API_BASE = '/api';
@@ -520,6 +521,40 @@ export async function fetchPage(slug: string): Promise<SitePage | null> {
   if (response.status === 404) return null;
   if (!response.ok) {
     throw new ApiError(response.status, 'Failed to fetch page');
+  }
+
+  return response.json();
+}
+
+export async function fetchAdminConfig(): Promise<AdminConfig> {
+  const response = await fetch(`${API_BASE}/admin/config`, { credentials: 'include' });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new ApiError(response.status, 'Authentication required');
+    }
+    throw new ApiError(response.status, 'Failed to fetch the settings');
+  }
+
+  return response.json();
+}
+
+// one change to the lists: add, rename, retire or delete something under /admin/config
+export async function changeAdminConfig(method: 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<ConfigChange> {
+  const response = await fetch(`${API_BASE}/admin/config/${path}`, {
+    method,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new ApiError(response.status, 'Authentication required');
+    }
+    // the server's reason is meant for the admin: what is in the way, or what to fix
+    const error = await response.json().catch(() => null);
+    throw new ApiError(response.status, error?.error || 'The change could not be saved');
   }
 
   return response.json();

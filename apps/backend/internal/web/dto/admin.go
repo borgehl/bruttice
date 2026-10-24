@@ -178,3 +178,73 @@ type InboxComposeRequest struct {
 type InboxComposeResponse struct {
 	ThreadID string `json:"threadId"`
 }
+
+// ConfigRegion is a region as the admin settings list it.
+type ConfigRegion struct {
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	Events int64  `json:"events"`
+	Venues int64  `json:"venues"`
+	// Retired regions are no longer offered. MergedInto is where their events and old name went.
+	Retired    bool   `json:"retired"`
+	MergedInto string `json:"mergedInto,omitempty"`
+}
+
+type ConfigTag struct {
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	Events int64  `json:"events"`
+}
+
+type ConfigAge struct {
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	Value  uint8  `json:"value"`
+	Events int64  `json:"events"`
+}
+
+type ConfigVenue struct {
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	Link   string `json:"link"`
+	Region string `json:"region"`
+	// Scraped venues are kept up to date by their scraper and can't be edited here.
+	Scraped bool  `json:"scraped"`
+	Events  int64 `json:"events"`
+}
+
+// ConfigResponse is every list an admin can change.
+type ConfigResponse struct {
+	Regions []ConfigRegion `json:"regions"`
+	Tags    []ConfigTag    `json:"tags"`
+	Ages    []ConfigAge    `json:"ages"`
+	Venues  []ConfigVenue  `json:"venues"`
+}
+
+type ConfigNameRequest struct {
+	Name string `json:"name"`
+}
+
+type ConfigAgeRequest struct {
+	Name  string `json:"name"`
+	Value int    `json:"value"`
+}
+
+type ConfigVenueRequest struct {
+	Name   string `json:"name"`
+	Link   string `json:"link"`
+	Region string `json:"region"`
+}
+
+// ConfigRetireRegionRequest says what happens to the events of a retired region: they move to
+// MoveToID, or they are deleted. Exactly one of the two.
+type ConfigRetireRegionRequest struct {
+	MoveToID     *int64 `json:"moveToId"`
+	DeleteEvents bool   `json:"deleteEvents"`
+}
+
+// ConfigChangeResponse tells what a change did to events.
+type ConfigChangeResponse struct {
+	EventsMoved   int64 `json:"eventsMoved"`
+	EventsDeleted int64 `json:"eventsDeleted"`
+}

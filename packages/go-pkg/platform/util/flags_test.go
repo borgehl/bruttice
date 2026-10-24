@@ -10,12 +10,12 @@ func TestParseLocationFromStr(t *testing.T) {
 	}{
 		{
 			name:  "parses location value",
-			input: "dit-loc:tulsa",
+			input: "bruttice-loc:tulsa",
 			want:  "tulsa",
 		},
 		{
 			name:  "parses location embedded in longer string",
-			input: "some text dit-loc:downtown more text",
+			input: "some text bruttice-loc:downtown more text",
 			want:  "downtown",
 		},
 		{
@@ -43,12 +43,12 @@ func TestParseAge(t *testing.T) {
 	}{
 		{
 			name:  "parses age value",
-			input: "dit-ages:18+",
+			input: "bruttice-ages:18+",
 			want:  "18+",
 		},
 		{
 			name:  "parses 21+ age",
-			input: "dit-ages:21+",
+			input: "bruttice-ages:21+",
 			want:  "21+",
 		},
 		{
@@ -71,14 +71,14 @@ func TestParseAge(t *testing.T) {
 func TestParseTagsFromStr(t *testing.T) {
 	testCases := []string{
 		// last line of file
-		"other chars\n" + ditTags + ":tag1:tag2",
-		"other chars\n" + ditTags + ":tag1:tag2:",
+		"other chars\n" + flagTags + ":tag1:tag2",
+		"other chars\n" + flagTags + ":tag1:tag2:",
 		// newline after tags
-		ditTags + ":tag1:tag2\n",
-		ditTags + ":tag1:tag2:\n",
+		flagTags + ":tag1:tag2\n",
+		flagTags + ":tag1:tag2:\n",
 		// space after tags
-		ditTags + ":tag1:tag2 ",
-		ditTags + ":tag1:tag2: ",
+		flagTags + ":tag1:tag2 ",
+		flagTags + ":tag1:tag2: ",
 	}
 
 	var testOutput []string

@@ -23,7 +23,7 @@ func testClient(t *testing.T, cfg Config, handler http.HandlerFunc) *EmailClient
 func TestSend(t *testing.T) {
 	var got sendRequest
 	var auth, path string
-	c := testClient(t, Config{APIKey: "re_key", From: "hello@example.com", SiteName: "Do It Together"}, func(w http.ResponseWriter, r *http.Request) {
+	c := testClient(t, Config{APIKey: "re_key", From: "hello@example.com", SiteName: "Example Events"}, func(w http.ResponseWriter, r *http.Request) {
 		auth, path = r.Header.Get("Authorization"), r.URL.Path
 		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
 			t.Error(err)
@@ -45,7 +45,7 @@ func TestSend(t *testing.T) {
 	if auth != "Bearer re_key" || path != "/emails" {
 		t.Errorf("auth = %q, path = %q", auth, path)
 	}
-	if got.From != `"Do It Together" <hello@example.com>` {
+	if got.From != `"Example Events" <hello@example.com>` {
 		t.Errorf("from = %q", got.From)
 	}
 	if got.Subject != "Hi" || got.Text != "Body" || len(got.To) != 1 || got.To[0] != "you@example.com" {
@@ -128,7 +128,7 @@ func TestInboxNoticeMessage(t *testing.T) {
 
 func TestSendUsesTheSendersName(t *testing.T) {
 	var got sendRequest
-	c := testClient(t, Config{APIKey: "k", From: "hello@example.com", SiteName: "Do It Together"}, func(w http.ResponseWriter, r *http.Request) {
+	c := testClient(t, Config{APIKey: "k", From: "hello@example.com", SiteName: "Example Events"}, func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewDecoder(r.Body).Decode(&got)
 		_, _ = w.Write([]byte(`{"id":"abc"}`))
 	})

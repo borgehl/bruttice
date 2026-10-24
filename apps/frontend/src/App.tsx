@@ -22,6 +22,7 @@ import VerifyEventPage from './pages/VerifyEventPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import ContactPage from './pages/ContactPage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
+import AdminConfigPage from './pages/AdminConfigPage';
 
 function App() {
   const loadSite = useSiteStore((state) => state.load);
@@ -52,6 +53,7 @@ function App() {
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/add-event" element={<AdminAddEventPage />} />
             <Route path="/admin/settings" element={<AdminSettingsPage />} />
+            <Route path="/admin/config" element={<AdminConfigPage />} />
             <Route path="/verify-event" element={<VerifyEventPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           </Routes>

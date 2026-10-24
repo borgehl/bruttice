@@ -21,7 +21,7 @@ timezone: America/Chicago
 admin-accounts:
   - "a@example.com;pw"
 site:
-  name: "Do It Together"
+  name: "Example Events"
   region: "Tulsa"
   contact-email: "info@example.com"
   description: "A calendar."
@@ -29,7 +29,7 @@ pages-dir: /srv/pages
 `)
 	cfg := ParseConfig(&path)
 	want := ConfigRawSite{
-		Name: "Do It Together", Region: "Tulsa", ContactEmail: "info@example.com",
+		Name: "Example Events", Region: "Tulsa", ContactEmail: "info@example.com",
 		Description: "A calendar.",
 	}
 	if cfg.Site != want {

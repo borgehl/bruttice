@@ -34,6 +34,7 @@ type APIHandler struct {
 	inbox          inboxStore
 	authenticate   func(*http.Request) *models.User
 	users          userStore
+	config         configStore
 }
 
 func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSessions *controlcookie.CookieStore, ingestKey string, ingestTrigger IngestTrigger, site dto.SiteResponse, pages []pagesx.Page, email *emailx.EmailClient) *APIHandler {
@@ -50,6 +51,7 @@ func NewAPIHandler(logger *logx.Logger, database *dbx.DatabaseClient, cookieSess
 		contactLimit:   newContactLimiter(),
 		inbox:          database,
 		users:          database,
+		config:         database,
 	}
 }
 
@@ -82,6 +84,19 @@ func (h *APIHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/admin/event", h.handleAdminUpdateEvent)
 	mux.HandleFunc("GET /api/admin/ages", h.handleAdminGetAges)
 	mux.HandleFunc("PATCH /api/admin/settings", h.handleAdminSettings)
+	mux.HandleFunc("GET /api/admin/config", h.handleAdminConfig)
+	mux.HandleFunc("POST /api/admin/config/regions", h.handleAdminConfigRegionCreate)
+	mux.HandleFunc("PATCH /api/admin/config/regions/{id}", h.handleAdminConfigRegionRename)
+	mux.HandleFunc("POST /api/admin/config/regions/{id}/retire", h.handleAdminConfigRegionRetire)
+	mux.HandleFunc("POST /api/admin/config/tags", h.handleAdminConfigTagCreate)
+	mux.HandleFunc("PATCH /api/admin/config/tags/{id}", h.handleAdminConfigTagRename)
+	mux.HandleFunc("DELETE /api/admin/config/tags/{id}", h.handleAdminConfigTagDelete)
+	mux.HandleFunc("POST /api/admin/config/ages", h.handleAdminConfigAgeCreate)
+	mux.HandleFunc("PATCH /api/admin/config/ages/{id}", h.handleAdminConfigAgeUpdate)
+	mux.HandleFunc("DELETE /api/admin/config/ages/{id}", h.handleAdminConfigAgeDelete)
+	mux.HandleFunc("POST /api/admin/config/venues", h.handleAdminConfigVenueCreate)
+	mux.HandleFunc("PATCH /api/admin/config/venues/{id}", h.handleAdminConfigVenueUpdate)
+	mux.HandleFunc("DELETE /api/admin/config/venues/{id}", h.handleAdminConfigVenueDelete)
 	mux.HandleFunc("GET /api/admin/inbox", h.handleAdminInbox)
 	mux.HandleFunc("POST /api/admin/inbox", h.handleAdminInboxCompose)
 	mux.HandleFunc("POST /api/admin/inbox/{threadId}/reply", h.handleAdminInboxReply)

@@ -202,7 +202,7 @@ services:
     depends_on: [bruttice-backend]
 ```
 
-A real-world layout (registry of scrapers, concurrent runner with panic recovery, daily schedule, trigger endpoint) is the private `dit-tulsa-scrapers` service described in [`open-source-split.md`](../open-source-split.md).
+A real-world layout (registry of scrapers, concurrent runner with panic recovery, daily schedule, trigger endpoint) is the `scrapers/` directory of the private deployment repo, which you can use as a model.
 
 ## Shared helpers
 

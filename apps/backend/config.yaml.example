@@ -17,6 +17,10 @@ admin-accounts:
 #   contact-email: "hello@events.example.com"
 #   description: "Upcoming local events."
 
+# The tags, age-groups, regions and venues below are saved into the database on the first
+# start only. After that they are managed in the admin dashboard (Site lists, /admin/config),
+# and changing them here has no effect.
+
 # Tags available for events. The "free" tag is applied automatically to events
 # with a zero cover cost — include it here if you want it usable.
 tags:

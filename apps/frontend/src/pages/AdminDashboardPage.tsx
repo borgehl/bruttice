@@ -128,7 +128,7 @@ export default function AdminDashboardPage() {
     >
       <p className="px-4 pt-3 text-sm text-text-muted">
         <span className="font-medium text-text">{name || email}</span> ·{' '}
-        <Link to="/admin/add-event">add event</Link> · <Link to="/admin/settings">settings</Link>
+        <Link to="/admin/add-event">add event</Link> · <Link to="/admin/config">site lists</Link> · <Link to="/admin/settings">settings</Link>
       </p>
 
       {actionError && <InlineError message={actionError} className="mx-4 mt-3" />}
