@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { senderLabel, sourceLabel, threadPreview } from './inbox'
+import { deliveryLabel, senderLabel, sourceLabel, threadPreview } from './inbox'
 import type { InboxMessage, InboxThread } from '../types/event'
 
 function message(overrides: Partial<InboxMessage> = {}): InboxMessage {
-  return { id: 1, source: 'contact_form', fromName: 'Sam', fromEmail: 'sam@example.com', body: 'Hi', createdAt: 1, unread: true, ...overrides }
+  return { id: 1, source: 'contact_form', fromName: 'Sam', fromEmail: 'sam@example.com', body: 'Hi', createdAt: 1, unread: true, deliveredAt: 0, ...overrides }
 }
 
 function thread(messages: InboxMessage[]): InboxThread {
@@ -46,5 +46,21 @@ describe('threadPreview', () => {
 
   it('is empty for a thread without messages', () => {
     expect(threadPreview(thread([]))).toBe('')
+  })
+})
+
+describe('deliveryLabel', () => {
+  const at = (unix: number) => `t${unix}`
+
+  it('says when an email was delivered', () => {
+    expect(deliveryLabel(message({ source: 'admin_reply', deliveredAt: 10 }), at)).toBe('Delivered t10')
+  })
+
+  it('is empty until it is known', () => {
+    expect(deliveryLabel(message({ source: 'admin_reply' }), at)).toBe('')
+  })
+
+  it('is nothing for a message that was received', () => {
+    expect(deliveryLabel(message({ deliveredAt: 10 }), at)).toBe('')
   })
 })

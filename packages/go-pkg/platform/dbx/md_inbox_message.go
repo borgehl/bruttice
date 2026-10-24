@@ -22,6 +22,15 @@ func (d *DatabaseClient) InboxProviderIDSeen(providerID string) (bool, error) {
 	return count > 0, err
 }
 
+// MarkInboxDelivered records when an email an admin sent reached the recipient's server. A
+// repeated or late event changes nothing, the first time stays. An id that is not a message of the
+// inbox (the site sends other emails too) matches nothing and is not an error.
+func (d *DatabaseClient) MarkInboxDelivered(sentID string, at int64) error {
+	return d.DB.Model(&models.InboxMessage{}).
+		Where("sent_id = ? AND delivered_at = 0", sentID).
+		Update("delivered_at", at).Error
+}
+
 // the message with this Message-ID, or nil if there is none
 func (d *DatabaseClient) FindInboxMessageByMessageID(messageID string) (*models.InboxMessage, error) {
 	var message models.InboxMessage

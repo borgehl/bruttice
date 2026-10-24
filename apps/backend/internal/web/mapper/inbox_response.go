@@ -17,6 +17,8 @@ func InboxMessageResponse(message models.InboxMessage) dto.InboxMessageResponse 
 		Body:      message.Body,
 		CreatedAt: message.CreatedAt,
 		Unread:    message.NeedsReading(),
+
+		DeliveredAt: message.DeliveredAt,
 	}
 }
 
@@ -26,6 +28,7 @@ func InboxThreadResponses(messages []models.InboxMessage) []dto.InboxThreadRespo
 	byThread := map[string]*dto.InboxThreadResponse{}
 	order := make([]string, 0)
 	archived := map[string]bool{}
+	heard := map[string]bool{}
 
 	for _, message := range messages {
 		thread, ok := byThread[message.ThreadID]
@@ -44,8 +47,12 @@ func InboxThreadResponses(messages []models.InboxMessage) []dto.InboxThreadRespo
 		thread.LastAt = max(thread.LastAt, message.CreatedAt)
 		archived[message.ThreadID] = archived[message.ThreadID] && message.ArchivedAt > 0
 		// who it is with: the latest person who wrote, not the admins who answered
+		// an outreach has nobody else yet: it is with whoever the admin wrote to
 		if message.Source != models.InboxSourceAdminReply {
 			thread.FromName, thread.FromEmail = message.FromName, message.FromEmail
+			heard[message.ThreadID] = true
+		} else if !heard[message.ThreadID] {
+			thread.FromName, thread.FromEmail = "", message.ToEmail
 		}
 	}
 

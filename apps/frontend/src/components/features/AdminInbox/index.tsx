@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import type { InboxThread } from '../../../types/event';
-import { fetchInbox, replyToInboxThread, updateInboxThread } from '../../../services/api';
-import { senderLabel, sourceLabel, threadPreview } from '../../../utils/inbox';
+import { composeInboxMessage, fetchInbox, replyToInboxThread, updateInboxThread } from '../../../services/api';
+import { deliveryLabel, senderLabel, sourceLabel, threadPreview } from '../../../utils/inbox';
 import { describeSubmitError, toLoadError, type LoadError } from '../../../utils/loadError';
 import Skeleton from '../../ui/Skeleton';
 import EmptyState from '../../ui/EmptyState';
 import InlineError from '../../ui/InlineError';
 import LoadFailed from '../../ui/LoadFailed';
 import Spinner from '../../ui/Spinner';
-import { fieldClass, primaryButtonClass } from '../../ui/Field';
+import Field, { fieldClass, primaryButtonClass } from '../../ui/Field';
 
 interface AdminInboxProps {
   // called when a conversation was read, archived or answered, so the unread count can follow
@@ -20,7 +20,8 @@ function formatTime(unix: number): string {
 }
 
 // The messages visitors write through the contact form and the mail people send to the site,
-// grouped into conversations, with a reply that is emailed and kept in the conversation.
+// grouped into conversations, with a reply that is emailed and kept in the conversation. An admin
+// can also write to someone first.
 export default function AdminInbox({ onChange }: AdminInboxProps) {
   const [threads, setThreads] = useState<InboxThread[] | null>(null);
   const [loadError, setLoadError] = useState<LoadError | null>(null);
@@ -29,6 +30,10 @@ export default function AdminInbox({ onChange }: AdminInboxProps) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [composing, setComposing] = useState(false);
+  const [compose, setCompose] = useState({ to: '', subject: '', body: '' });
+  const [composeSending, setComposeSending] = useState(false);
+  const [composeError, setComposeError] = useState<string | null>(null);
   // bumped to load the inbox again, by Try again and after every change
   const [attempt, setAttempt] = useState(0);
 
@@ -103,19 +108,117 @@ export default function AdminInbox({ onChange }: AdminInboxProps) {
     }
   };
 
-  const archivedToggle = (
-    <label className="mb-3 flex min-h-11 cursor-pointer items-center gap-2 text-sm text-text-muted">
-      <input
-        type="checkbox"
-        checked={showArchived}
-        onChange={(e) => {
-          setThreads(null);
-          setShowArchived(e.target.checked);
-        }}
-        className="h-[18px] w-[18px] accent-[var(--color-accent)]"
-      />
-      Show archived
-    </label>
+  const sendCompose = async (event: FormEvent) => {
+    event.preventDefault();
+    const to = compose.to.trim();
+    const subject = compose.subject.trim();
+    const body = compose.body.trim();
+    if (!to || !subject || !body) return;
+    setComposeSending(true);
+    setComposeError(null);
+    try {
+      const threadId = await composeInboxMessage(to, subject, body);
+      setCompose({ to: '', subject: '', body: '' });
+      setComposing(false);
+      setShowArchived(false);
+      setOpenId(threadId);
+      reload();
+    } catch (err) {
+      console.error(err);
+      setComposeError(describeSubmitError(err));
+    } finally {
+      setComposeSending(false);
+    }
+  };
+
+  const toolbar = (
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4">
+      <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-text-muted">
+        <input
+          type="checkbox"
+          checked={showArchived}
+          onChange={(e) => {
+            setThreads(null);
+            setShowArchived(e.target.checked);
+          }}
+          className="h-[18px] w-[18px] accent-[var(--color-accent)]"
+        />
+        Show archived
+      </label>
+      {!composing && (
+        <button
+          type="button"
+          onClick={() => setComposing(true)}
+          className="font-label h-11 cursor-pointer rounded-control border border-border px-4 text-sm font-semibold text-text-muted hover:text-text"
+        >
+          New email
+        </button>
+      )}
+    </div>
+  );
+
+  const composeForm = composing && (
+    <form onSubmit={(e) => void sendCompose(e)} className="mb-4 space-y-3 rounded-control border border-border bg-surface p-4">
+      <Field label="To *" htmlFor="compose-to" hint="Their answer comes back here, in this conversation.">
+        <input
+          id="compose-to"
+          type="email"
+          required
+          autoComplete="off"
+          value={compose.to}
+          onChange={(e) => setCompose((c) => ({ ...c, to: e.target.value }))}
+          className={fieldClass}
+        />
+      </Field>
+      <Field label="Subject *" htmlFor="compose-subject">
+        <input
+          id="compose-subject"
+          type="text"
+          required
+          maxLength={200}
+          value={compose.subject}
+          onChange={(e) => setCompose((c) => ({ ...c, subject: e.target.value }))}
+          className={fieldClass}
+        />
+      </Field>
+      <Field label="Message *" htmlFor="compose-body">
+        <textarea
+          id="compose-body"
+          required
+          rows={6}
+          maxLength={10000}
+          value={compose.body}
+          onChange={(e) => setCompose((c) => ({ ...c, body: e.target.value }))}
+          className={`${fieldClass} h-auto resize-y py-3`}
+        />
+      </Field>
+      {composeError && <InlineError message={composeError} />}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={composeSending || !compose.to.trim() || !compose.subject.trim() || !compose.body.trim()}
+          className={`${primaryButtonClass} h-11 flex-1`}
+        >
+          {composeSending ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="sm" /> Sending
+            </span>
+          ) : (
+            'Send email'
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setComposing(false);
+            setComposeError(null);
+          }}
+          className="font-label h-11 cursor-pointer rounded-control border border-border px-4 text-sm font-semibold text-text-muted hover:text-text"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 
   if (loadError && !threads) return <LoadFailed error={loadError} onRetry={retry} />;
@@ -123,7 +226,8 @@ export default function AdminInbox({ onChange }: AdminInboxProps) {
 
   return (
     <div>
-      {archivedToggle}
+      {toolbar}
+      {composeForm}
       {actionError && <InlineError message={actionError} className="mb-3" />}
       {loadError && <InlineError message={`${loadError.title}. ${loadError.message}`} onRetry={retry} className="mb-3" />}
 
@@ -131,7 +235,7 @@ export default function AdminInbox({ onChange }: AdminInboxProps) {
         <EmptyState title={showArchived ? 'Nothing here' : 'No messages'}>
           {showArchived
             ? 'No conversation has been archived.'
-            : 'Messages from the contact form and email sent to the site show up here.'}
+            : 'Messages from the contact form and email sent to the site show up here. Use New email to write to someone first.'}
         </EmptyState>
       ) : (
         <ul className="rounded-control border border-border bg-surface">
@@ -183,6 +287,9 @@ export default function AdminInbox({ onChange }: AdminInboxProps) {
                         </p>
                         {/* plain text only: what people send is never shown as markup */}
                         <p className="whitespace-pre-wrap break-words text-sm text-text-muted">{message.body}</p>
+                        {deliveryLabel(message, formatTime) && (
+                          <p className="font-data mt-2 text-xs text-text-faint">{deliveryLabel(message, formatTime)}</p>
+                        )}
                       </div>
                     ))}
 

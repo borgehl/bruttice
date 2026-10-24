@@ -5,7 +5,7 @@ const (
 	InboxSourceContactForm = "contact_form"
 	// someone emailed the site's domain, usually answering one of its messages
 	InboxSourceEmail = "email"
-	// an admin answered from the dashboard
+	// an admin wrote from the dashboard: an answer, or a first message to someone (outreach)
 	InboxSourceAdminReply = "admin_reply"
 )
 
@@ -17,7 +17,9 @@ type InboxMessage struct {
 	Source    string `gorm:"not null"`
 	FromName  string
 	FromEmail string
-	Subject   string
+	// who an admin's message was sent to, empty for messages that were received
+	ToEmail string
+	Subject string
 	// plain text, never markup: it comes from outside and is shown as it is
 	Body string `gorm:"type:text"`
 	// the RFC 5322 Message-ID of a received email, the In-Reply-To of its answer
@@ -26,6 +28,11 @@ type InboxMessage struct {
 	// Resend's id of a received email. A webhook can be delivered more than once, this is
 	// how the second delivery is recognised. Empty (NULL) for messages that were not received.
 	ProviderID *string `gorm:"uniqueIndex"`
+	// Resend's id of an email an admin sent, how its delivery events are matched to this message.
+	// NULL for messages that were not sent.
+	SentID *string `gorm:"index"`
+	// unix time Resend reported the email delivered (the first time), 0 if it has not
+	DeliveredAt int64
 	// unix time the message was read or its thread archived, 0 if it was not
 	ReadAt     int64
 	ArchivedAt int64

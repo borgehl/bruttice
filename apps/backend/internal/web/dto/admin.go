@@ -139,6 +139,8 @@ type InboxMessageResponse struct {
 	Body      string `json:"body"`
 	CreatedAt int64  `json:"createdAt"`
 	Unread    bool   `json:"unread"`
+	// DeliveredAt is unix seconds for an email an admin sent, 0 if Resend has not said it was delivered.
+	DeliveredAt int64 `json:"deliveredAt"`
 }
 
 // InboxThreadResponse is a conversation, its messages oldest first.
@@ -163,4 +165,16 @@ type AdminSettingsRequest struct {
 
 type InboxReplyRequest struct {
 	Body string `json:"body"`
+}
+
+// InboxComposeRequest is a new email to someone, starting a conversation.
+type InboxComposeRequest struct {
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Body    string `json:"body"`
+}
+
+// InboxComposeResponse names the conversation the email started.
+type InboxComposeResponse struct {
+	ThreadID string `json:"threadId"`
 }

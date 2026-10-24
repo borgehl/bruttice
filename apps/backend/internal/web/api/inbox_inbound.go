@@ -19,10 +19,13 @@ const (
 )
 
 // resendEvent is what Resend posts for every event of its webhook. For email.received the data
-// has who the email is from and for, but not its body or its headers.
+// has who the email is from and for, but not its body or its headers. For events about an email
+// the site sent, such as email.delivered, EmailID is the id Send returned.
 type resendEvent struct {
 	Type string `json:"type"`
-	Data struct {
+	// when the event happened, not when the email was made (that is Data.CreatedAt)
+	CreatedAt string `json:"created_at"`
+	Data      struct {
 		EmailID   string   `json:"email_id"`
 		From      string   `json:"from"`
 		To        []string `json:"to"`
@@ -56,8 +59,19 @@ func (h *APIHandler) handleResendWebhook(w http.ResponseWriter, r *http.Request)
 		h.writeError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
-	// delivery events for sent mail come here too, they aren't needed
-	if event.Type != "email.received" {
+	switch event.Type {
+	case "email.received":
+	case "email.delivered":
+		// An error makes Resend deliver the event again later, and the update allows that.
+		if err := h.recordSentEvent(event); err != nil {
+			h.logger.Errorf("failed to record %s for %s: %v", event.Type, event.Data.EmailID, err)
+			h.writeError(w, http.StatusInternalServerError, "Failed to save the event")
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		return
+	default:
+		// the other events aren't needed
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -69,6 +83,20 @@ func (h *APIHandler) handleResendWebhook(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+// recordSentEvent notes on a message of the inbox that its email was delivered. The site
+// sends other emails too, notices to the admin for one, and Resend reports on those as well: they
+// match no message and are ignored, as is an event without an id.
+func (h *APIHandler) recordSentEvent(event resendEvent) error {
+	if event.Data.EmailID == "" {
+		return nil
+	}
+	at := time.Now().Unix()
+	if t, err := time.Parse(time.RFC3339Nano, event.CreatedAt); err == nil {
+		at = t.Unix()
+	}
+	return h.inbox.MarkInboxDelivered(event.Data.EmailID, at)
 }
 
 // receiveEmail saves an email sent to the site as a message in the inbox. It is safe to call

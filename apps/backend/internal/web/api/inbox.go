@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"net/mail"
 	"strings"
 	"unicode/utf8"
 
@@ -16,6 +17,7 @@ type inboxStore interface {
 	CreateInboxMessage(message *models.InboxMessage) error
 	InboxProviderIDSeen(providerID string) (bool, error)
 	FindInboxMessageByMessageID(messageID string) (*models.InboxMessage, error)
+	MarkInboxDelivered(sentID string, at int64) error
 	GetInboxThread(threadID string) ([]models.InboxMessage, error)
 	ListInboxMessages(includeArchived bool) ([]models.InboxMessage, error)
 	CountUnreadInboxThreads() (int64, error)
@@ -128,7 +130,14 @@ func (h *APIHandler) handleAdminInboxReply(w http.ResponseWriter, r *http.Reques
 			break
 		}
 	}
-	if target == nil || target.FromEmail == "" {
+	// an outreach nobody has answered yet: write to the person it was sent to
+	to, inReplyTo := "", ""
+	if target != nil {
+		to, inReplyTo = target.FromEmail, target.MessageID
+	} else {
+		to = messages[0].ToEmail
+	}
+	if to == "" {
 		h.writeError(w, http.StatusConflict, "There is nobody to reply to")
 		return
 	}
@@ -137,7 +146,8 @@ func (h *APIHandler) handleAdminInboxReply(w http.ResponseWriter, r *http.Reques
 	if strings.HasPrefix(strings.ToLower(messages[0].Subject), "re:") {
 		subject = messages[0].Subject
 	}
-	if _, err := h.email.Send(h.email.ReplyMessage(target.FromEmail, subject, body, threadID, target.MessageID)); err != nil {
+	sentID, err := h.email.Send(h.email.ReplyMessage(to, user.Name, subject, body, threadID, inReplyTo))
+	if err != nil {
 		h.writeError(w, http.StatusBadGateway, "The reply could not be sent. Try again later")
 		return
 	}
@@ -147,9 +157,11 @@ func (h *APIHandler) handleAdminInboxReply(w http.ResponseWriter, r *http.Reques
 		Source:    models.InboxSourceAdminReply,
 		FromName:  user.DisplayName(),
 		FromEmail: h.email.Contact(),
+		ToEmail:   to,
 		Subject:   subject,
 		Body:      body,
-		InReplyTo: target.MessageID,
+		InReplyTo: inReplyTo,
+		SentID:    optionalID(sentID),
 	}
 	if err := h.inbox.CreateInboxMessage(reply); err != nil {
 		// it was sent, so say so: a second try would send it twice
@@ -162,4 +174,82 @@ func (h *APIHandler) handleAdminInboxReply(w http.ResponseWriter, r *http.Reques
 		h.logger.Errorf("failed to mark inbox thread %s read: %v", threadID, err)
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+const maxComposeSubject = 200
+
+// handleAdminInboxCompose emails someone who hasn't written to the site, and starts a conversation
+// with them. Their answer comes back to the conversation's reply address, like any reply.
+func (h *APIHandler) handleAdminInboxCompose(w http.ResponseWriter, r *http.Request) {
+	user := h.getAuthenticatedUser(r)
+	if user == nil {
+		h.writeError(w, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+	var req dto.InboxComposeRequest
+	if !h.decodeJSON(w, r, &req) {
+		return
+	}
+	to := strings.TrimSpace(req.To)
+	subject := strings.TrimSpace(req.Subject)
+	body := strings.TrimSpace(req.Body)
+
+	// one plain address: no display name, no list, nothing that could add recipients or headers
+	parsed, err := mail.ParseAddress(to)
+	switch {
+	case err != nil || parsed.Address != to || strings.ContainsAny(to, "\r\n"):
+		h.writeError(w, http.StatusBadRequest, "Enter one email address")
+		return
+	case strings.EqualFold(to, h.email.Contact()):
+		h.writeError(w, http.StatusBadRequest, "That is the site's own address")
+		return
+	case subject == "" || strings.ContainsAny(subject, "\r\n"):
+		h.writeError(w, http.StatusBadRequest, "Write a subject on one line")
+		return
+	case utf8.RuneCountInString(subject) > maxComposeSubject:
+		h.writeError(w, http.StatusBadRequest, "The subject is too long")
+		return
+	case body == "":
+		h.writeError(w, http.StatusBadRequest, "Write a message first")
+		return
+	case utf8.RuneCountInString(body) > maxReply:
+		h.writeError(w, http.StatusBadRequest, "The message is too long")
+		return
+	}
+	if !h.email.Enabled() {
+		h.writeError(w, http.StatusServiceUnavailable, "Email is not set up, the message can't be sent")
+		return
+	}
+
+	threadID := uuid.NewString()
+	sentID, err := h.email.Send(h.email.ReplyMessage(to, user.Name, subject, body, threadID, ""))
+	if err != nil {
+		h.writeError(w, http.StatusBadGateway, "The message could not be sent. Try again later")
+		return
+	}
+	message := &models.InboxMessage{
+		ThreadID:  threadID,
+		Source:    models.InboxSourceAdminReply,
+		FromName:  user.DisplayName(),
+		FromEmail: h.email.Contact(),
+		ToEmail:   to,
+		Subject:   subject,
+		Body:      body,
+		SentID:    optionalID(sentID),
+	}
+	if err := h.inbox.CreateInboxMessage(message); err != nil {
+		// it was sent, so say so: a second try would send it twice
+		h.logger.Errorf("outreach %s was sent but not saved: %v", threadID, err)
+		h.writeError(w, http.StatusInternalServerError, "The message was sent but could not be saved")
+		return
+	}
+	h.writeJSON(w, http.StatusCreated, dto.InboxComposeResponse{ThreadID: threadID})
+}
+
+// optionalID is nil for an empty id, so a column that is unique or looked up never holds "".
+func optionalID(id string) *string {
+	if id == "" {
+		return nil
+	}
+	return &id
 }

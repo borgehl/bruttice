@@ -129,14 +129,14 @@ See **[docs/writing-scrapers.md](docs/writing-scrapers.md)** for the API, the pa
 Email goes through [Resend](https://resend.com). `site.contact-email` is the address the site sends from, and `RESEND_API_KEY` lets it. The site also receives mail, which is how the contact form and replies work:
 
 - A visitor writes through the contact form. The message lands in the **Inbox** tab of the admin dashboard, and the root admin gets an email saying so. The visitor's address is never shown anywhere else.
-- An admin replies from the inbox. The reply is emailed from `contact-email`, with a `Reply-To` of `reply-<conversation id>@<your domain>`.
+- An admin replies from the inbox, or starts a conversation with **New email**. The message is emailed from `contact-email`, with a `Reply-To` of `reply-<conversation id>@<your domain>`.
 - When the visitor answers, Resend receives it, posts it to `POST /api/webhooks/resend`, and it joins the same conversation. Mail sent to `contact-email` itself starts a new conversation.
 
 To set it up:
 
 1. Pick a subdomain for the site's mail, such as `mail.example.com`, and use an address on it as `contact-email` (`hello@mail.example.com`). Receiving needs an MX record for the domain, and a subdomain keeps your main domain's mail where it is.
 2. In Resend, add that domain, add the DNS records it asks for (SPF and DKIM for sending), and turn on **Receiving** for it (the MX record).
-3. Add a webhook in Resend for the event `email.received` with the URL `https://<your host>/api/webhooks/resend`, and put its signing secret in `RESEND_WEBHOOK_SECRET`.
+3. Add a webhook in Resend for the events `email.received` and `email.delivered` with the URL `https://<your host>/api/webhooks/resend`, and put its signing secret in `RESEND_WEBHOOK_SECRET`. The second shows a "Delivered" time on the emails admins send, in the inbox.
 
 The webhook is verified with that secret, requests older than five minutes are refused, and without the secret the endpoint is not served. Only mail to `contact-email` and to the conversation reply addresses is saved, other addresses on the domain are ignored. Messages are kept and shown as plain text.
 

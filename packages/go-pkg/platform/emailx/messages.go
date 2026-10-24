@@ -61,9 +61,9 @@ func (e *EmailClient) InboxNoticeMessage(name, email, subject, text string) Mess
 
 // ReplyMessage is the admin's answer to a thread, to the visitor. The visitor's reply to it goes
 // to the thread's reply address, so it lands in the same conversation. inReplyTo is the Message-ID
-// of the message answered, if it had one.
-func (e *EmailClient) ReplyMessage(to, subject, text, threadID, inReplyTo string) Message {
-	msg := Message{To: []string{to}, Subject: subject, Text: text, ReplyTo: e.ReplyAddress(threadID)}
+// of the message answered, if it had one. fromName is the admin's name, the site's if empty.
+func (e *EmailClient) ReplyMessage(to, fromName, subject, text, threadID, inReplyTo string) Message {
+	msg := Message{To: []string{to}, FromName: fromName, Subject: subject, Text: text, ReplyTo: e.ReplyAddress(threadID)}
 	if inReplyTo != "" {
 		msg.Headers = map[string]string{"In-Reply-To": inReplyTo, "References": inReplyTo}
 	}

@@ -83,6 +83,7 @@ func (h *APIHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/admin/ages", h.handleAdminGetAges)
 	mux.HandleFunc("PATCH /api/admin/settings", h.handleAdminSettings)
 	mux.HandleFunc("GET /api/admin/inbox", h.handleAdminInbox)
+	mux.HandleFunc("POST /api/admin/inbox", h.handleAdminInboxCompose)
 	mux.HandleFunc("POST /api/admin/inbox/{threadId}/reply", h.handleAdminInboxReply)
 	mux.HandleFunc("POST /api/admin/inbox/{threadId}/read", h.handleAdminInboxRead)
 	mux.HandleFunc("POST /api/admin/inbox/{threadId}/archive", h.handleAdminInboxArchive(true))

@@ -68,6 +68,25 @@ func (f *fakeInbox) FindInboxMessageByMessageID(id string) (*models.InboxMessage
 	return nil, nil
 }
 
+func (f *fakeInbox) mark(sentID string, at int64, field func(*models.InboxMessage) *int64) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failCreate {
+		return fmt.Errorf("database is down")
+	}
+	for i := range f.messages {
+		m := &f.messages[i]
+		if m.SentID != nil && *m.SentID == sentID && *field(m) == 0 {
+			*field(m) = at
+		}
+	}
+	return nil
+}
+
+func (f *fakeInbox) MarkInboxDelivered(sentID string, at int64) error {
+	return f.mark(sentID, at, func(m *models.InboxMessage) *int64 { return &m.DeliveredAt })
+}
+
 func (f *fakeInbox) GetInboxThread(id string) ([]models.InboxMessage, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -246,6 +265,7 @@ func newHarness(t *testing.T, enabled, inbound bool) *harness {
 	hr.mux.HandleFunc("POST /api/webhooks/resend", h.handleResendWebhook)
 	hr.mux.HandleFunc("PATCH /api/admin/settings", h.handleAdminSettings)
 	hr.mux.HandleFunc("GET /api/admin/inbox", h.handleAdminInbox)
+	hr.mux.HandleFunc("POST /api/admin/inbox", h.handleAdminInboxCompose)
 	hr.mux.HandleFunc("POST /api/admin/inbox/{threadId}/reply", h.handleAdminInboxReply)
 	hr.mux.HandleFunc("POST /api/admin/inbox/{threadId}/read", h.handleAdminInboxRead)
 	hr.mux.HandleFunc("POST /api/admin/inbox/{threadId}/archive", h.handleAdminInboxArchive(true))

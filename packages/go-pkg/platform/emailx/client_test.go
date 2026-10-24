@@ -126,16 +126,33 @@ func TestInboxNoticeMessage(t *testing.T) {
 	}
 }
 
+func TestSendUsesTheSendersName(t *testing.T) {
+	var got sendRequest
+	c := testClient(t, Config{APIKey: "k", From: "hello@example.com", SiteName: "Do It Together"}, func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		_, _ = w.Write([]byte(`{"id":"abc"}`))
+	})
+	if _, err := c.Send(Message{To: []string{"you@example.com"}, FromName: "Pat Lee", Subject: "Hi", Text: "Body"}); err != nil {
+		t.Fatal(err)
+	}
+	if got.From != `"Pat Lee" <hello@example.com>` {
+		t.Errorf("from = %q", got.From)
+	}
+}
+
 func TestReplyMessage(t *testing.T) {
 	c := NewEmailClient(logx.NewLogger(nil, nil), Config{From: "hello@mail.example.com"})
-	m := c.ReplyMessage("sam@example.com", "Re: Hi", "Yes", "0b8c1f3e-4d6a-4e1b-9f3a-2c7d8e9f0a1b", "<abc@x>")
+	m := c.ReplyMessage("sam@example.com", "Pat", "Re: Hi", "Yes", "0b8c1f3e-4d6a-4e1b-9f3a-2c7d8e9f0a1b", "<abc@x>")
 	if m.ReplyTo != "reply-0b8c1f3e-4d6a-4e1b-9f3a-2c7d8e9f0a1b@mail.example.com" {
 		t.Errorf("reply-to = %q", m.ReplyTo)
+	}
+	if m.FromName != "Pat" {
+		t.Errorf("from name = %q", m.FromName)
 	}
 	if m.Headers["In-Reply-To"] != "<abc@x>" || m.Headers["References"] != "<abc@x>" {
 		t.Errorf("headers = %v", m.Headers)
 	}
-	if c.ReplyMessage("a@b.c", "s", "t", "id", "").Headers != nil {
+	if c.ReplyMessage("a@b.c", "", "s", "t", "id", "").Headers != nil {
 		t.Error("no headers without a Message-ID to answer")
 	}
 }

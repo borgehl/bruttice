@@ -332,6 +332,30 @@ export async function updateInboxThread(threadId: string, action: 'read' | 'arch
   }
 }
 
+// emails someone who hasn't written to the site, and returns the conversation it started
+export async function composeInboxMessage(to: string, subject: string, body: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/admin/inbox`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ to, subject, body }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new ApiError(response.status, 'Authentication required');
+    }
+    // the server's reason is meant for the admin: what to fix, or that email is not set up
+    const error = await response.json().catch(() => null);
+    throw new ApiError(response.status, error?.error || 'The message could not be sent');
+  }
+
+  const created: { threadId: string } = await response.json();
+  return created.threadId;
+}
+
 // emails the person the conversation is with, and keeps the reply in it
 export async function replyToInboxThread(threadId: string, body: string): Promise<void> {
   const response = await fetch(`${API_BASE}/admin/inbox/${encodeURIComponent(threadId)}/reply`, {

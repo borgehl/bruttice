@@ -145,3 +145,42 @@ func TestInboxFindByMessageID(t *testing.T) {
 		t.Errorf("an unknown Message-ID must give nil: %+v, %v", got, err)
 	}
 }
+
+func TestInboxDeliveredKeepsTheFirstTime(t *testing.T) {
+	d := testInboxDB(t)
+	thread, sentID := uuid.NewString(), uuid.NewString()
+	other := models.InboxMessage{ThreadID: thread, Source: models.InboxSourceAdminReply, SentID: &[]string{uuid.NewString()}[0]}
+	m := models.InboxMessage{ThreadID: thread, Source: models.InboxSourceAdminReply, SentID: &sentID}
+	for _, x := range []*models.InboxMessage{&other, &m} {
+		if err := d.CreateInboxMessage(x); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Cleanup(func() { d.DB.Unscoped().Where("thread_id = ?", thread).Delete(&models.InboxMessage{}) })
+
+	for _, at := range []int64{100, 200} {
+		if err := d.MarkInboxDelivered(sentID, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := d.MarkInboxDelivered("unknown-id", 5); err != nil {
+		t.Errorf("an id that is not ours is not an error: %v", err)
+	}
+
+	got, err := d.GetInboxThread(thread)
+	if err != nil || len(got) != 2 {
+		t.Fatalf("got = %+v, err = %v", got, err)
+	}
+	for _, g := range got {
+		switch *g.SentID {
+		case sentID:
+			if g.DeliveredAt != 100 {
+				t.Errorf("the first time must stay: %+v", g)
+			}
+		default:
+			if g.DeliveredAt != 0 {
+				t.Errorf("another email must not change: %+v", g)
+			}
+		}
+	}
+}

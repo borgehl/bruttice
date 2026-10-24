@@ -37,7 +37,7 @@ func TestWebhookRefusesUnsignedAndOldRequests(t *testing.T) {
 
 func TestWebhookIgnoresOtherEvents(t *testing.T) {
 	hr := newHarness(t, true, true)
-	rec := hr.signedWebhook(`{"type":"email.delivered","data":{"email_id":"e1"}}`, time.Now())
+	rec := hr.signedWebhook(`{"type":"email.bounced","data":{"email_id":"e1"}}`, time.Now())
 	if rec.Code != http.StatusOK || len(hr.inbox.all()) != 0 {
 		t.Errorf("status = %d, saved = %d", rec.Code, len(hr.inbox.all()))
 	}
@@ -296,5 +296,165 @@ func TestAdminReadAndArchive(t *testing.T) {
 	}
 	if rec := hr.do(http.MethodPost, base+"/unarchive", ""); rec.Code != http.StatusNoContent || hr.inbox.all()[0].ArchivedAt != 0 {
 		t.Errorf("unarchive: status = %d", rec.Code)
+	}
+}
+
+func TestAdminComposeStartsAThreadAndIsAnswerable(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.signedIn = true
+
+	rec := hr.do(http.MethodPost, "/api/admin/inbox", `{"to":"venue@example.org","subject":"Booking","body":"  Hello!  "}`)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body)
+	}
+	var created struct{ ThreadID string }
+	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil || created.ThreadID == "" {
+		t.Fatalf("response = %s", rec.Body)
+	}
+
+	sent := hr.resend.messages()
+	if len(sent) != 1 {
+		t.Fatalf("sent = %d", len(sent))
+	}
+	to, _ := sent[0]["to"].([]any)
+	replyTo, _ := sent[0]["reply_to"].([]any)
+	if len(to) != 1 || to[0] != "venue@example.org" || sent[0]["subject"] != "Booking" || sent[0]["text"] != "Hello!" {
+		t.Errorf("sent = %+v", sent[0])
+	}
+	if len(replyTo) != 1 || !strings.HasPrefix(replyTo[0].(string), "reply-"+created.ThreadID+"@") {
+		t.Errorf("their answer must come back to the thread: %v", replyTo)
+	}
+
+	saved := hr.inbox.all()
+	if len(saved) != 1 || saved[0].ThreadID != created.ThreadID || saved[0].ToEmail != "venue@example.org" || saved[0].Source != models.InboxSourceAdminReply {
+		t.Fatalf("saved = %+v", saved)
+	}
+
+	// before they answer, a second message goes to the same person
+	rec = hr.do(http.MethodPost, "/api/admin/inbox/"+created.ThreadID+"/reply", `{"body":"Following up"}`)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("reply status = %d, body = %s", rec.Code, rec.Body)
+	}
+	sent = hr.resend.messages()
+	to, _ = sent[1]["to"].([]any)
+	if len(to) != 1 || to[0] != "venue@example.org" || sent[1]["subject"] != "Re: Booking" {
+		t.Errorf("follow-up = %+v", sent[1])
+	}
+}
+
+func TestAdminComposeValidation(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.signedIn = true
+	long := strings.Repeat("a", maxReply+1)
+	cases := map[string]string{
+		"no address":      `{"to":"","subject":"s","body":"b"}`,
+		"not an address":  `{"to":"nobody","subject":"s","body":"b"}`,
+		"display name":    `{"to":"Sam <sam@example.org>","subject":"s","body":"b"}`,
+		"two addresses":   `{"to":"a@example.org, b@example.org","subject":"s","body":"b"}`,
+		"the site itself": `{"to":"` + "HELLO@MAIL.EXAMPLE.COM" + `","subject":"s","body":"b"}`,
+		"no subject":      `{"to":"a@example.org","subject":" ","body":"b"}`,
+		"subject lines":   `{"to":"a@example.org","subject":"s\nBcc: x@example.org","body":"b"}`,
+		"long subject":    `{"to":"a@example.org","subject":"` + strings.Repeat("s", maxComposeSubject+1) + `","body":"b"}`,
+		"no body":         `{"to":"a@example.org","subject":"s","body":"  "}`,
+		"long body":       `{"to":"a@example.org","subject":"s","body":"` + long + `"}`,
+	}
+	for name, body := range cases {
+		if rec := hr.do(http.MethodPost, "/api/admin/inbox", body); rec.Code != http.StatusBadRequest {
+			t.Errorf("%s: status = %d", name, rec.Code)
+		}
+	}
+	if len(hr.resend.messages()) != 0 || len(hr.inbox.all()) != 0 {
+		t.Error("nothing may be sent or saved")
+	}
+}
+
+func TestAdminComposeNeedsSignInAndEmail(t *testing.T) {
+	hr := newHarness(t, true, true)
+	body := `{"to":"a@example.org","subject":"s","body":"b"}`
+	if rec := hr.do(http.MethodPost, "/api/admin/inbox", body); rec.Code != http.StatusUnauthorized {
+		t.Errorf("signed out: status = %d", rec.Code)
+	}
+	off := newHarness(t, false, false)
+	off.signedIn = true
+	if rec := off.do(http.MethodPost, "/api/admin/inbox", body); rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("no email: status = %d", rec.Code)
+	}
+}
+
+func TestAdminComposeThatFailsToSendIsNotSaved(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.signedIn = true
+	hr.resend.status = http.StatusInternalServerError
+	rec := hr.do(http.MethodPost, "/api/admin/inbox", `{"to":"a@example.org","subject":"s","body":"b"}`)
+	if rec.Code != http.StatusBadGateway || len(hr.inbox.all()) != 0 {
+		t.Errorf("status = %d, saved = %d", rec.Code, len(hr.inbox.all()))
+	}
+}
+
+// an outreach sent through the stand-in Resend, whose id for it is sent_1
+func (hr *harness) sendOutreach(t *testing.T) {
+	t.Helper()
+	hr.signedIn = true
+	if rec := hr.do(http.MethodPost, "/api/admin/inbox", `{"to":"venue@example.org","subject":"Booking","body":"Hello"}`); rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body)
+	}
+	if got := hr.inbox.all(); len(got) != 1 || got[0].SentID == nil || *got[0].SentID != "sent_1" {
+		t.Fatalf("the id Resend gave must be kept: %+v", got)
+	}
+}
+
+func TestDeliveredIsKeptOnTheMessage(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.sendOutreach(t)
+
+	delivered := `{"type":"email.delivered","created_at":"2026-02-22T23:41:12.126Z","data":{"email_id":"sent_1","to":["venue@example.org"]}}`
+	later := `{"type":"email.delivered","created_at":"2026-02-23T08:00:00Z","data":{"email_id":"sent_1"}}`
+	for _, body := range []string{delivered, later} {
+		if rec := hr.signedWebhook(body, time.Now()); rec.Code != http.StatusOK {
+			t.Fatalf("status = %d", rec.Code)
+		}
+	}
+	if want := time.Date(2026, 2, 22, 23, 41, 12, 0, time.UTC).Unix(); hr.inbox.all()[0].DeliveredAt != want {
+		t.Errorf("only the first delivery counts: delivered at = %d (want %d)", hr.inbox.all()[0].DeliveredAt, want)
+	}
+
+	rec := hr.do(http.MethodGet, "/api/admin/inbox", "")
+	var threads []struct{ Messages []struct{ DeliveredAt int64 } }
+	if err := json.Unmarshal(rec.Body.Bytes(), &threads); err != nil || len(threads) != 1 || threads[0].Messages[0].DeliveredAt == 0 {
+		t.Errorf("the thread must show it: %s", rec.Body)
+	}
+}
+
+func TestOpenedIsIgnored(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.sendOutreach(t)
+	if rec := hr.signedWebhook(`{"type":"email.opened","data":{"email_id":"sent_1"}}`, time.Now()); rec.Code != http.StatusOK {
+		t.Errorf("status = %d", rec.Code)
+	}
+}
+
+func TestEventsOfOtherEmailsAreAccepted(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.sendOutreach(t)
+	// the site's own notices are reported too, and so is an event without an id
+	for _, body := range []string{
+		`{"type":"email.delivered","data":{"email_id":"some-notice"}}`,
+		`{"type":"email.delivered","data":{}}`,
+	} {
+		if rec := hr.signedWebhook(body, time.Now()); rec.Code != http.StatusOK {
+			t.Errorf("%s: status = %d", body, rec.Code)
+		}
+	}
+	if m := hr.inbox.all()[0]; m.DeliveredAt != 0 {
+		t.Errorf("message = %+v", m)
+	}
+}
+
+func TestDeliveredFailsSoResendTriesAgain(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.sendOutreach(t)
+	hr.inbox.failCreate = true
+	if rec := hr.signedWebhook(`{"type":"email.delivered","data":{"email_id":"sent_1"}}`, time.Now()); rec.Code != http.StatusInternalServerError {
+		t.Errorf("status = %d", rec.Code)
 	}
 }

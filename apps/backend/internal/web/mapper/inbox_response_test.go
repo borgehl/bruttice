@@ -71,3 +71,18 @@ func TestBaseSubject(t *testing.T) {
 		}
 	}
 }
+
+func TestInboxThreadWithOnlyOutreachIsWithTheRecipient(t *testing.T) {
+	sent := message(1, "a", models.InboxSourceAdminReply, "hello@example.com", "Booking", 100, 0, 0)
+	sent.ToEmail = "venue@example.org"
+	threads := InboxThreadResponses([]models.InboxMessage{sent})
+	if len(threads) != 1 || threads[0].FromEmail != "venue@example.org" || threads[0].FromName != "" || threads[0].Unread {
+		t.Fatalf("threads = %+v", threads)
+	}
+
+	answer := message(2, "a", models.InboxSourceEmail, "venue@example.org", "Re: Booking", 200, 0, 0)
+	threads = InboxThreadResponses([]models.InboxMessage{sent, answer})
+	if threads[0].FromEmail != "venue@example.org" || !threads[0].Unread {
+		t.Errorf("once they answer it is with them: %+v", threads[0])
+	}
+}

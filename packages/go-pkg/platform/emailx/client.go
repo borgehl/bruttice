@@ -41,9 +41,11 @@ type Config struct {
 
 // Message is a plain text email. The sender is always the site's contact address.
 type Message struct {
-	To      []string
-	Subject string
-	Text    string
+	To []string
+	// FromName is the sender's display name, the site's name if empty.
+	FromName string
+	Subject  string
+	Text     string
 	// ReplyTo is where a reply goes, if not to the sender.
 	ReplyTo string
 	// Headers are extra email headers, such as In-Reply-To.
@@ -104,8 +106,12 @@ func (e *EmailClient) Send(msg Message) (string, error) {
 		return "", nil
 	}
 
+	fromName := msg.FromName
+	if fromName == "" {
+		fromName = e.cfg.SiteName
+	}
 	body := sendRequest{
-		From:    (&mail.Address{Name: e.cfg.SiteName, Address: e.cfg.From}).String(),
+		From:    (&mail.Address{Name: fromName, Address: e.cfg.From}).String(),
 		To:      msg.To,
 		Subject: msg.Subject,
 		Text:    msg.Text,

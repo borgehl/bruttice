@@ -99,7 +99,8 @@ export interface AdminDashboard {
 
 export interface InboxMessage {
   id: number;
-  // who wrote it: the contact form, an email to the site, or an admin from the inbox
+  // who wrote it: the contact form, an email to the site, or an admin from the inbox (an answer or
+  // a first message to someone)
   source: 'contact_form' | 'email' | 'admin_reply';
   fromName: string;
   fromEmail: string;
@@ -108,6 +109,8 @@ export interface InboxMessage {
   // unix seconds
   createdAt: number;
   unread: boolean;
+  // unix seconds Resend said an email an admin sent was delivered; 0 if it has not
+  deliveredAt: number;
 }
 
 // A conversation, its messages oldest first.
