@@ -105,6 +105,10 @@ type sendRequest struct {
 // without a Resend key or a contact address sends nothing and it is not an error, a deployment
 // may have no email. The id is empty then.
 func (e *EmailClient) Send(msg Message) (string, error) {
+	if len(msg.To) == 0 {
+		e.logger.Infof("not sending %q: no recipient", msg.Subject)
+		return "", nil
+	}
 	if !e.Enabled() {
 		e.logger.Infof("email is not configured (RESEND_API_KEY and site.contact-email), not sending %q to %v", msg.Subject, msg.To)
 		return "", nil

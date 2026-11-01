@@ -6,7 +6,6 @@ import (
 	"github.com/borgehl/bruttice/apps/backend/internal/web/api"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/ingesttrigger"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/mapper"
-	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/configx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/dbx"
@@ -58,8 +57,8 @@ func (s Server) HandleConfigs(cfg configx.Config) {
 			tx.Rollback()
 			panic(err)
 		}
-		// the root user is created without a password by Migrate, so an existing
-		// user only counts as saved once it has one
+		// an existing user only counts as saved once it has a password, so listing an
+		// account that was created without one gives it a password
 		if user.ID != 0 && len(user.PasswordHash) > 0 {
 			// already saved
 			continue
@@ -83,9 +82,6 @@ func main() {
 
 	cfg := configx.ParseConfig(nil)
 	util.SetTZLocation(cfg.TZLocation)
-	if len(cfg.AdminAccounts) > 0 {
-		configs.SetRootEmail(cfg.AdminAccounts[0].Email)
-	}
 
 	server.Database = dbx.NewDatabaseClient(server.Logger)
 	server.Database.Migrate(cfg)

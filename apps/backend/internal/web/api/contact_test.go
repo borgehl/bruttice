@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 )
@@ -28,8 +29,8 @@ func TestContactIsSavedInTheInboxAndTheAdminIsTold(t *testing.T) {
 
 	sent := hr.resend.waitForSent(t, 1)[0]
 	to, _ := sent["to"].([]any)
-	if len(to) != 1 || to[0] != "root@example.com" {
-		t.Errorf("the notice goes to the root admin, not the site's own address: %v", to)
+	if len(to) != 1 || to[0] != "admin@example.com" {
+		t.Errorf("the notice goes to the admin who chose it, not the site's own address: %v", to)
 	}
 	if _, ok := sent["reply_to"]; ok {
 		t.Errorf("the notice has no reply-to: the answer is written in the inbox")
@@ -113,5 +114,35 @@ func TestContactReportsAFailedSave(t *testing.T) {
 	}
 	if strings.Contains(rec.Body.String(), "database") {
 		t.Errorf("the visitor must not see why: %s", rec.Body)
+	}
+}
+
+func TestContactNoticeGoesToTheAdminsWhoChoseIt(t *testing.T) {
+	hr := newHarness(t, true, false)
+	hr.users.recipients = map[string][]string{models.SettingNotifyInbox: {"a@example.com", "b@example.com"}}
+	rec := hr.do(http.MethodPost, "/api/contact", `{"name":"Sam","email":"sam@example.com","message":"Is the Friday show all ages?"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body)
+	}
+	sent := hr.resend.waitForSent(t, 1)[0]
+	to, _ := sent["to"].([]any)
+	if len(to) != 2 || to[0] != "a@example.com" || to[1] != "b@example.com" {
+		t.Errorf("to = %v", to)
+	}
+}
+
+func TestContactNoticeIsNotSentWhenNoAdminChoseIt(t *testing.T) {
+	for name, fail := range map[string]bool{"nobody chose it": false, "lookup fails": true} {
+		hr := newHarness(t, true, false)
+		hr.users.recipients = nil
+		hr.users.recipientsFail = fail
+		rec := hr.do(http.MethodPost, "/api/contact", validContact)
+		if rec.Code != http.StatusOK || len(hr.inbox.all()) != 1 {
+			t.Fatalf("%s: the message is saved anyway: status = %d", name, rec.Code)
+		}
+		time.Sleep(100 * time.Millisecond)
+		if sent := hr.resend.messages(); len(sent) != 0 {
+			t.Errorf("%s: nothing may be sent: %v", name, sent)
+		}
 	}
 }

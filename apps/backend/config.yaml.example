@@ -4,6 +4,11 @@ cookie-salt: "replace-with-a-random-secret"
 
 ingest-key: "replace-with-a-secret-key-for-ingestors"
 
+# Every admin chooses at /admin/settings which emails they get (new events awaiting approval,
+# system errors, inbox messages). Until someone does, none is sent.
+# The ADMIN_ACCOUNTS environment variable ("email1;pw1,email2;pw2") replaces this list when set.
+# Passwords must not contain "," or ";" there. A password set here or there only applies when
+# the account is created; it does not change an existing admin's password.
 admin-accounts:
   - "admin@example.com;replace-with-a-strong-password"
 

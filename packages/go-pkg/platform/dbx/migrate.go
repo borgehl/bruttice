@@ -1,7 +1,6 @@
 package dbx
 
 import (
-	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/configx"
 
@@ -30,18 +29,12 @@ func (d *DatabaseClient) Migrate(cfg configx.Config) {
 
 	tx := d.DB.Begin()
 	defer tx.Commit()
-	var err error
 
-	_, err = d.GetSaveUser(configs.RootUser, tx)
-	if err != nil {
+	if err := d.seedLists(cfg, tx); err != nil {
 		panic(err)
 	}
 
-	if err = d.seedLists(cfg, tx); err != nil {
-		panic(err)
-	}
-
-	err = d.MigrateViews(
+	err := d.MigrateViews(
 		[]ViewModel{
 			&models.Visitors{},
 			&models.VisitorsDaily{},

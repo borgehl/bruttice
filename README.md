@@ -67,7 +67,7 @@ Key fields:
 | `cookie-salt` | Random secret used to sign session cookies |
 | `ingest-key` | Secret shared with scrapers posting events (see [docs/writing-scrapers.md](docs/writing-scrapers.md)) |
 | `ingest-trigger-url` | Optional. Endpoint of your scraper service that starts a run, used by the admin dashboard's "run ingestion" button (see [Triggering a run](#triggering-a-run-from-the-admin-dashboard)) |
-| `admin-accounts` | `email;password` pairs — first entry is the root admin |
+| `admin-accounts` | `email;password` pairs. Order does not matter. The `ADMIN_ACCOUNTS` environment variable (`email1;pw1,email2;pw2`) replaces this list when set, so passwords need not be in the file; passwords can't contain `,` or `;` there. An existing admin's password is not changed by config |
 | `site` | What shows on the pages of your deployment: `name`, `region`, `contact-email` and `description`. All optional, see `GET /api/site`. `contact-email` is the address all mail is sent from and the contact form's messages go to. It is never shown to visitors, and has to be on a domain verified in Resend |
 | `pages-dir` | Optional. Directory of your own pages, as Markdown files (default `/app/pages`). See [docs/custom-pages.md](docs/custom-pages.md) |
 | `tags` | Tags seeded into the database on first run |
@@ -128,7 +128,7 @@ See **[docs/writing-scrapers.md](docs/writing-scrapers.md)** for the API, the pa
 
 Email goes through [Resend](https://resend.com). `site.contact-email` is the address the site sends from, and `RESEND_API_KEY` lets it. The site also receives mail, which is how the contact form and replies work:
 
-- A visitor writes through the contact form. The message lands in the **Inbox** tab of the admin dashboard, and the root admin gets an email saying so. The visitor's address is never shown anywhere else.
+- A visitor writes through the contact form. The message lands in the **Inbox** tab of the admin dashboard, and the admins who turned on the inbox email in their settings get an email saying so. The visitor's address is never shown anywhere else.
 - An admin replies from the inbox, or starts a conversation with **New email**. The message is emailed from `contact-email`, with a `Reply-To` of `reply-<conversation id>@<your domain>`.
 - When the visitor answers, Resend receives it, posts it to `POST /api/webhooks/resend`, and it joins the same conversation. Mail sent to `contact-email` itself starts a new conversation.
 
@@ -142,7 +142,7 @@ The webhook is verified with that secret, requests older than five minutes are r
 
 ## Admin dashboard
 
-Log in at `/admin` with the credentials from `admin-accounts` in `config.yaml`. From there you can approve or reject submitted events, edit event details, and manage the moderation queue. The **Inbox** tab has the messages from the contact form and from email, with replies (see [Email](#email)). The **Site lists** page (`/admin/config`) manages regions, tags, age groups and venues: add, rename and delete them, and retire a region. A retired region's events either move to another region, together with the venues that default to it and the old name (a scraper that still sends it lands in the new region), or they are deleted; at least one region has to stay, and a region can't be retired by deleting its events while a venue still defaults to it. Naming a retired region again restores it. Deleting a tag removes it from its events; deleting an age group moves its events to another one. Scraped venues are kept up to date by their scraper and can't be edited, and a venue with events can't be deleted. Each admin can set their own name at `/admin/settings`; it is shown to the other admins, for example on replies in the inbox, and falls back to the email.
+Log in at `/admin` with the credentials from `admin-accounts` in `config.yaml`. From there you can approve or reject submitted events, edit event details, and manage the moderation queue. The **Inbox** tab has the messages from the contact form and from email, with replies (see [Email](#email)). The **Site lists** page (`/admin/config`) manages regions, tags, age groups and venues: add, rename and delete them, and retire a region. A retired region's events either move to another region, together with the venues that default to it and the old name (a scraper that still sends it lands in the new region), or they are deleted; at least one region has to stay, and a region can't be retired by deleting its events while a venue still defaults to it. Naming a retired region again restores it. Deleting a tag removes it from its events; deleting an age group moves its events to another one. Scraped venues are kept up to date by their scraper and can't be edited, and a venue with events can't be deleted. Each admin can set their own name at `/admin/settings`; it is shown to the other admins, for example on replies in the inbox, and falls back to the email. There each admin also chooses which emails they get: new events awaiting approval (an hourly note), system errors (the report of an ingest run's errors, and database errors) and new inbox messages. Nothing is sent to an admin who has not turned it on, and a mail nobody chose is not sent (a log line says so).
 
 ## Event tags and flags
 

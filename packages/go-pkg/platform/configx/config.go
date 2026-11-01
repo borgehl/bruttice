@@ -12,6 +12,23 @@ import (
 // DefaultPagesDir is where pages are read from unless config.yaml says otherwise.
 const DefaultPagesDir = "/app/pages"
 
+// AdminAccountsEnv, when set, replaces the admin-accounts list of config.yaml. It holds
+// "email1;password1,email2;password2": accounts are separated by "," and the email from the
+// password by ";", so neither may appear in a password.
+const AdminAccountsEnv = "ADMIN_ACCOUNTS"
+
+// splitAdminAccountsEnv splits the value of AdminAccountsEnv into email;password entries,
+// trimming whitespace and skipping empty ones such as after a trailing comma.
+func splitAdminAccountsEnv(value string) []string {
+	var accounts []string
+	for _, entry := range strings.Split(value, ",") {
+		if entry = strings.TrimSpace(entry); entry != "" {
+			accounts = append(accounts, entry)
+		}
+	}
+	return accounts
+}
+
 type ConfigRawVenue struct {
 	Name   string `yaml:"name"`
 	Link   string `yaml:"link"`
@@ -110,10 +127,15 @@ func ParseConfig(configFilename *string) Config {
 		},
 	}
 
-	for _, account := range raw.AdminAccounts {
+	accounts := raw.AdminAccounts
+	if env := os.Getenv(AdminAccountsEnv); strings.TrimSpace(env) != "" {
+		accounts = splitAdminAccountsEnv(env)
+	}
+	for i, account := range accounts {
 		split := strings.Split(account, ";")
 		if len(split) != 2 {
-			panic(fmt.Errorf("malformed admin account: %s", account))
+			// no value in the message: it holds a password
+			panic(fmt.Errorf("malformed admin account #%d, want email;password", i+1))
 		}
 		ret.AdminAccounts = append(ret.AdminAccounts, AdminAccount{
 			Email:    split[0],

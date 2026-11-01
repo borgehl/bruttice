@@ -164,7 +164,7 @@ func (h *APIHandler) receiveEmail(event resendEvent) error {
 			h.logger.Errorf("failed to reopen inbox thread %s: %v", threadID, err)
 		}
 	}
-	go func() { _, _ = h.email.Send(h.email.InboxNoticeMessage(fromName, fromEmail, subject, body)) }()
+	go h.notify(models.SettingNotifyInbox, h.email.InboxNoticeMessage(fromName, fromEmail, subject, body))
 	return nil
 }
 

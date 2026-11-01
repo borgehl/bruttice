@@ -8,14 +8,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
@@ -195,18 +193,50 @@ func (f *fakeResend) waitForSent(t *testing.T, n int) []map[string]any {
 	return nil
 }
 
-// The root admin's address is a global read by the notices handlers send in the background, so
-// it is set once before any test runs.
-func TestMain(m *testing.M) {
-	configs.SetRootEmail("root@example.com")
-	os.Exit(m.Run())
-}
-
-// fakeUsers remembers the names set.
+// fakeUsers remembers the names and settings set, and who chose each notification.
 type fakeUsers struct {
 	mu    sync.Mutex
 	names map[int64]string
 	fail  bool
+	// patches are the settings patches merged, in order
+	patches []map[string]any
+	// settings are the settings after the merges
+	settings models.UserSettings
+	// recipients maps a notification kind to the emails of the admins who chose it
+	recipients     map[string][]string
+	recipientsFail bool
+}
+
+func (f *fakeUsers) MergeUserSettings(id int64, patch map[string]any) (models.UserSettings, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.fail {
+		return models.UserSettings{}, fmt.Errorf("database is down")
+	}
+	if len(patch) > 0 {
+		f.patches = append(f.patches, patch)
+	}
+	for key, value := range patch {
+		on := value.(bool)
+		switch key {
+		case models.SettingNotifyNewEvents:
+			f.settings.NotifyNewEvents = on
+		case models.SettingNotifySystemErrors:
+			f.settings.NotifySystemErrors = on
+		case models.SettingNotifyInbox:
+			f.settings.NotifyInbox = on
+		}
+	}
+	return f.settings, nil
+}
+
+func (f *fakeUsers) NotificationRecipients(kind string) ([]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.recipientsFail {
+		return nil, fmt.Errorf("database is down")
+	}
+	return f.recipients[kind], nil
 }
 
 func (f *fakeUsers) SetUserName(id int64, name string) error {
@@ -236,7 +266,10 @@ type harness struct {
 // whether the webhook has a signing secret.
 func newHarness(t *testing.T, enabled, inbound bool) *harness {
 	t.Helper()
-	hr := &harness{resend: &fakeResend{received: map[string]emailx.Received{}}, inbox: &fakeInbox{}, users: &fakeUsers{}}
+	hr := &harness{resend: &fakeResend{received: map[string]emailx.Received{}}, inbox: &fakeInbox{}, users: &fakeUsers{
+		// one admin chose the inbox notice, as most tests need it sent
+		recipients: map[string][]string{models.SettingNotifyInbox: {"admin@example.com"}},
+	}}
 	server := httptest.NewServer(http.HandlerFunc(hr.resend.handler))
 	t.Cleanup(server.Close)
 

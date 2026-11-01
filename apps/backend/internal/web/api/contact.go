@@ -19,7 +19,7 @@ const (
 	maxContactMessage = 5000
 )
 
-// handleContact saves a visitor's message in the admin inbox and tells the root admin about it.
+// handleContact saves a visitor's message in the admin inbox and tells the admins who chose it about it.
 // The site's address is never shown. Answers are written in the inbox and emailed from there.
 func (h *APIHandler) handleContact(w http.ResponseWriter, r *http.Request) {
 	if !h.email.Enabled() {
@@ -78,7 +78,7 @@ func (h *APIHandler) handleContact(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, http.StatusInternalServerError, "Your message could not be sent. Try again later")
 		return
 	}
-	go func() { _, _ = h.email.Send(h.email.InboxNoticeMessage(name, email, saved.Subject, saved.Body)) }()
+	go h.notify(models.SettingNotifyInbox, h.email.InboxNoticeMessage(name, email, saved.Subject, saved.Body))
 	h.writeJSON(w, http.StatusOK, dto.AddEventResponse{Success: true, Message: contactSent})
 }
 
