@@ -53,7 +53,7 @@ func (c *Client) StartRun(ctx context.Context) (int64, error) {
 	return resp.ID, nil
 }
 
-// FinishRun marks a run as finished. The server then emails the root admin any
+// FinishRun marks a run as finished. The server then emails the admins who chose it any
 // errors the run recorded.
 func (c *Client) FinishRun(ctx context.Context, runID int64) error {
 	return c.post(ctx, fmt.Sprintf("/internal/ingest/runs/%d/finish", runID), nil, nil)

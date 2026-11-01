@@ -188,6 +188,21 @@ export interface LoginResponse {
   // how the admin is shown to other admins, empty if they have not set one
   name?: string;
   message?: string;
+  // the emails the signed in admin chose, set once they are signed in
+  notifications?: AdminNotifications;
+}
+
+// the emails an admin gets: whether they chose each one
+export interface AdminNotifications {
+  new_events: boolean;
+  system_errors: boolean;
+  inbox: boolean;
+}
+
+// what a settings request changes: a field that is left out stays as it is
+export interface AdminSettingsPatch {
+  name?: string;
+  notifications?: Partial<AdminNotifications>;
 }
 
 export async function adminLogin(credentials: LoginCredentials): Promise<LoginResponse> {
@@ -209,7 +224,7 @@ export async function adminLogin(credentials: LoginCredentials): Promise<LoginRe
 }
 
 // changes the signed in admin's own settings
-export async function updateAdminSettings(settings: { name: string }): Promise<LoginResponse> {
+export async function updateAdminSettings(settings: AdminSettingsPatch): Promise<LoginResponse> {
   const response = await fetch(`${API_BASE}/admin/settings`, {
     method: 'PATCH',
     headers: {

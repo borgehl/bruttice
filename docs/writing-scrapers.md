@@ -40,7 +40,7 @@ A run groups the payloads of one scrape in the admin dashboard's ingestion log, 
 
 Rules:
 
-- Always finish a run, even after a failure. Finishing sends the error email: the root admin is emailed any errors the run recorded, and every Monday even if there were none, so a silent inbox means ingestion is broken. Email is skipped when the server has no `RESEND_API_KEY` or `site.contact-email`.
+- Always finish a run, even after a failure. Finishing sends the error email: the admins who turned on the system errors email in their settings are emailed any errors the run recorded, and every Monday even if there were none, so a silent inbox means ingestion is broken. Email is skipped when the server has no `RESEND_API_KEY` or `site.contact-email`.
 - Runs are optional. A payload without `run_id` is recorded, and emailed on, as a run of its own.
 
 ### `POST /internal/ingest`

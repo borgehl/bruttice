@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/borgehl/bruttice/packages/go-pkg/platform/util"
+
 // Admin login request/response types
 type LoginRequest struct {
 	Email    string `json:"email"`
@@ -11,6 +13,15 @@ type LoginResponse struct {
 	Email   string `json:"email,omitempty"`
 	Name    string `json:"name,omitempty"`
 	Message string `json:"message,omitempty"`
+	// Notifications are the emails the signed in admin chose, set once they are signed in
+	Notifications *AdminNotifications `json:"notifications,omitempty"`
+}
+
+// AdminNotifications are the emails an admin gets: whether they chose each one.
+type AdminNotifications struct {
+	NewEvents    bool `json:"new_events"`
+	SystemErrors bool `json:"system_errors"`
+	Inbox        bool `json:"inbox"`
 }
 
 // Admin event with score info for dashboard
@@ -157,10 +168,19 @@ type InboxThreadResponse struct {
 	Messages []InboxMessageResponse `json:"messages"`
 }
 
-// AdminSettingsRequest is what an admin can change about themself.
+// AdminSettingsRequest is what an admin can change about themself. A field that is absent is
+// left as it is.
 type AdminSettingsRequest struct {
 	// Name is how other admins see them. Empty goes back to the email.
-	Name string `json:"name"`
+	Name          util.Optional[string]   `json:"name"`
+	Notifications AdminNotificationsPatch `json:"notifications"`
+}
+
+// AdminNotificationsPatch holds the notifications a request changes; absent fields are not written.
+type AdminNotificationsPatch struct {
+	NewEvents    util.Optional[bool] `json:"new_events"`
+	SystemErrors util.Optional[bool] `json:"system_errors"`
+	Inbox        util.Optional[bool] `json:"inbox"`
 }
 
 type InboxReplyRequest struct {

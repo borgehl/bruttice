@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
 )
 
@@ -45,12 +44,11 @@ func TestSplitErrorDetails(t *testing.T) {
 	}
 }
 
-func TestErrorsMessageGoesToTheRootAdminGroupedBySource(t *testing.T) {
-	configs.SetRootEmail("root@example.com")
+func TestErrorsMessageIsGroupedBySource(t *testing.T) {
 	c := NewEmailClient(logx.NewLogger(nil, nil), Config{Host: "https://events.example.com"})
 	m := c.ErrorsMessage(sampleReport())
 
-	if m.To[0] != "root@example.com" || !strings.HasSuffix(m.Subject, "Scraping Errors: 3") {
+	if len(m.To) != 0 || !strings.HasSuffix(m.Subject, "Scraping Errors: 3") {
 		t.Errorf("to = %v, subject = %q", m.To, m.Subject)
 	}
 	for _, want := range []string{

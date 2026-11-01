@@ -5,8 +5,6 @@ import (
 	"html"
 	"strings"
 	"time"
-
-	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 )
 
 const errDateFmt = "Mon Jan _2"
@@ -23,7 +21,7 @@ type SourceReport struct {
 	Errors []string
 }
 
-// ErrorsReport is an ingest run, for the email to the root admin about its errors.
+// ErrorsReport is an ingest run, for the email to the admins about its errors.
 type ErrorsReport struct {
 	RunID   int64
 	Sources []SourceReport
@@ -91,11 +89,10 @@ func (r ErrorsReport) summary() string {
 	return fmt.Sprintf("%s in %s%s. %d events scraped, %d saved.", plural(r.Total(), "error"), plural(withErrors, "source"), run, scraped, saved)
 }
 
-// ErrorsMessage tells the root admin about the errors of an ingest run, grouped by source, with the
+// ErrorsMessage tells the admins about the errors of an ingest run (the caller sets To), grouped by source, with the
 // details of each event that failed.
 func (e *EmailClient) ErrorsMessage(report ErrorsReport) Message {
 	return Message{
-		To:      []string{configs.RootUser.Email},
 		Subject: fmt.Sprintf("%s Scraping Errors: %d", time.Now().Format(errDateFmt), report.Total()),
 		Text:    report.text(e.baseHost() + "/admin"),
 		HTML:    report.html(e.baseHost() + "/admin"),

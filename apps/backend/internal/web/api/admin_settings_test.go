@@ -90,3 +90,60 @@ func TestAdminReplyIsSignedWithTheAdminsName(t *testing.T) {
 		t.Errorf("saved = %+v", saved)
 	}
 }
+
+func TestSettingsMergeOnlyTheNotificationsInTheRequest(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.signedIn = true
+	hr.adminName = "Sam"
+	rec := hr.do(http.MethodPatch, "/api/admin/settings", `{"notifications":{"inbox":true}}`)
+	var got dto.LoginResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if rec.Code != http.StatusOK || got.Notifications == nil || !got.Notifications.Inbox || got.Notifications.NewEvents {
+		t.Fatalf("status = %d, response = %s", rec.Code, rec.Body)
+	}
+	if got.Name != "Sam" || len(hr.users.names) != 0 {
+		t.Errorf("a request without a name leaves it: response name %q, saved %v", got.Name, hr.users.names)
+	}
+	// a second request for another one keeps the first
+	rec = hr.do(http.MethodPatch, "/api/admin/settings", `{"notifications":{"system_errors":true}}`)
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if !got.Notifications.Inbox || !got.Notifications.SystemErrors {
+		t.Errorf("notifications = %+v", got.Notifications)
+	}
+	if len(hr.users.patches) != 2 || len(hr.users.patches[0]) != 1 || len(hr.users.patches[1]) != 1 {
+		t.Errorf("only the keys of each request may be sent: %v", hr.users.patches)
+	}
+}
+
+func TestSettingsCanTurnANotificationOff(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.signedIn = true
+	hr.do(http.MethodPatch, "/api/admin/settings", `{"notifications":{"new_events":true}}`)
+	hr.do(http.MethodPatch, "/api/admin/settings", `{"notifications":{"new_events":false}}`)
+	if got := hr.users.patches[1]["notify_new_events"]; got != false {
+		t.Errorf("off must be written, not left out: %v", hr.users.patches)
+	}
+}
+
+func TestSettingsNameAndNotificationsTogether(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.signedIn = true
+	rec := hr.do(http.MethodPatch, "/api/admin/settings", `{"name":"Sam","notifications":{"inbox":true}}`)
+	if rec.Code != http.StatusOK || hr.users.names[7] != "Sam" || len(hr.users.patches) != 1 {
+		t.Errorf("status = %d, names = %v, patches = %v", rec.Code, hr.users.names, hr.users.patches)
+	}
+}
+
+func TestSettingsReportAFailedNotificationSave(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.signedIn = true
+	hr.users.fail = true
+	rec := hr.do(http.MethodPatch, "/api/admin/settings", `{"notifications":{"inbox":true}}`)
+	if rec.Code != http.StatusInternalServerError || strings.Contains(rec.Body.String(), "database") {
+		t.Errorf("status = %d, body = %s", rec.Code, rec.Body)
+	}
+}

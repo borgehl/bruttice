@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
+	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
 	"net/http"
 	"time"
@@ -46,7 +47,7 @@ func (h *APIHandler) handleFinishIngestRun(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// emailRunErrors emails the root admin the errors a run recorded.
+// emailRunErrors emails the admins who chose it the errors a run recorded.
 //
 // With weeklyCheck, a run with no errors is still reported on Mondays, so a
 // silent inbox means ingestion is broken rather than healthy.
@@ -74,5 +75,5 @@ func (h *APIHandler) emailRunErrors(runID int64, weeklyCheck bool) {
 	}
 
 	// Send says if it did, or why not
-	_, _ = h.email.Send(h.email.ErrorsMessage(report))
+	h.notify(models.SettingNotifySystemErrors, h.email.ErrorsMessage(report))
 }

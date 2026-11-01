@@ -1,8 +1,10 @@
 package configx
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -60,4 +62,44 @@ func TestDemoConfigParses(t *testing.T) {
 	if cfg.Site.Name == "" {
 		t.Error("demo config has no site name")
 	}
+}
+
+const adminFile = "timezone: America/Chicago\nadmin-accounts:\n  - \"file@example.com;filepw\"\n"
+
+func TestAdminAccountsEnvReplacesFile(t *testing.T) {
+	t.Setenv(AdminAccountsEnv, " root@example.com;pw1 , second@example.com;pw2,")
+	path := writeConfig(t, adminFile)
+	got := ParseConfig(&path).AdminAccounts
+	want := []AdminAccount{{"root@example.com", "pw1"}, {"second@example.com", "pw2"}}
+	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+		t.Errorf("accounts = %+v, want %+v", got, want)
+	}
+}
+
+func TestAdminAccountsEnvUnsetKeepsFile(t *testing.T) {
+	for _, value := range []string{"", "  "} {
+		t.Setenv(AdminAccountsEnv, value)
+		path := writeConfig(t, adminFile)
+		got := ParseConfig(&path).AdminAccounts
+		if len(got) != 1 || got[0].Email != "file@example.com" {
+			t.Errorf("env %q: accounts = %+v, want the file's", value, got)
+		}
+	}
+}
+
+func TestAdminAccountsEnvMalformedHidesPassword(t *testing.T) {
+	// a comma in a password leaves a piece without ";"
+	t.Setenv(AdminAccountsEnv, "a@example.com;pw,secret-tail")
+	path := writeConfig(t, adminFile)
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("want a panic for a malformed account")
+		}
+		msg := fmt.Sprint(r)
+		if strings.Contains(msg, "secret-tail") || strings.Contains(msg, "pw") {
+			t.Errorf("error leaks the account: %s", msg)
+		}
+	}()
+	ParseConfig(&path)
 }

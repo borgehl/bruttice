@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/borgehl/bruttice/packages/go-pkg/configs"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/logx"
 )
 
@@ -112,10 +111,9 @@ func TestVerifyEventMessage(t *testing.T) {
 }
 
 func TestInboxNoticeMessage(t *testing.T) {
-	configs.SetRootEmail("root@example.com")
 	c := NewEmailClient(logx.NewLogger(nil, nil), Config{From: "hello@example.com", Host: "https://events.example.com"})
 	m := c.InboxNoticeMessage("Sam\r\nBcc: x@example.com", "sam@example.com", "Hi", "Hello there")
-	if m.To[0] != "root@example.com" || m.ReplyTo != "" {
+	if len(m.To) != 0 || m.ReplyTo != "" {
 		t.Errorf("message = %+v", m)
 	}
 	if strings.ContainsAny(m.Subject, "\r\n") || m.Subject != "New message from Sam Bcc: x@example.com" {

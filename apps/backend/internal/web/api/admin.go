@@ -43,7 +43,7 @@ func (h *APIHandler) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, cookie)
-	h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: true, Email: user.Email, Name: user.Name})
+	h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: true, Email: user.Email, Name: user.Name, Notifications: mapper.Notifications(user.Settings)})
 }
 
 func (h *APIHandler) handleAdminLogout(w http.ResponseWriter, r *http.Request) {
@@ -139,7 +139,7 @@ func (h *APIHandler) handleAdminCheckSession(w http.ResponseWriter, r *http.Requ
 		h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: false})
 		return
 	}
-	h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: true, Email: user.Email, Name: user.Name})
+	h.writeJSON(w, http.StatusOK, dto.LoginResponse{Success: true, Email: user.Email, Name: user.Name, Notifications: mapper.Notifications(user.Settings)})
 }
 
 // Helper to get authenticated user from request
