@@ -6,7 +6,8 @@ import { usePageOverride } from '../hooks/usePageOverride';
 import { useSiteStore } from '../store/site';
 
 // The introduction is the deployment's own about page if it has one. How to add an event and the
-// contact link are the site's and stay either way.
+// contact link are the site's and stay either way. The link to the bruttice repo is always last,
+// after anything a deployment adds.
 export default function AboutPage() {
   const { site } = useSiteStore();
   const { page: own, ready } = usePageOverride('about');
@@ -49,6 +50,14 @@ export default function AboutPage() {
             </p>
           </>
         )}
+
+        <p className="pt-2 text-sm text-text-faint">
+          This site runs on{' '}
+          <a href="https://github.com/borgehl/bruttice" target="_blank" rel="noopener noreferrer">
+            bruttice
+          </a>
+          , an open source event calendar.
+        </p>
       </div>
     </Page>
   );

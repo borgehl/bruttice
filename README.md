@@ -1,17 +1,18 @@
 # Bruttice
 
-An open-source event calendar with a moderation queue, RSS/Atom/JSON feeds, and an HTTP ingest API for posting events from custom scrapers or integrations.
+Bruttice is an open-source calendar supporting an API for adding scrapers and feeds as events. It's a claude assisted rebuild of a
+previous manual calendar I built but tied scrapers too tightly to open source.
 
 ## Overview
 
 Bruttice runs four Docker services:
 
-| Service | Role |
-|---|---|
-| `bruttice-backend` | Go HTTP API |
-| `bruttice-frontend` | React SPA |
-| `bruttice-db` | PostgreSQL |
-| `bruttice-nginx` | Reverse proxy (public entry point) |
+| Service             | Role                               |
+| ------------------- | ---------------------------------- |
+| `bruttice-backend`  | Go HTTP API                        |
+| `bruttice-frontend` | React SPA                          |
+| `bruttice-db`       | PostgreSQL                         |
+| `bruttice-nginx`    | Reverse proxy (public entry point) |
 
 Nginx exposes `/api/` and `/` to the public. The `/internal/` path — used by scrapers — is blocked at nginx and only reachable from within the Docker network.
 
@@ -43,15 +44,15 @@ cp .env.example .env
 
 Key values to set:
 
-| Variable | Description |
-|---|---|
-| `POSTGRES_PASSWORD` | Database password |
-| `HOST` | Public base URL, e.g. `https://events.example.com` |
-| `PORT` | Host port nginx binds on |
-| `FEED_TITLE` / `FEED_DESCRIPTION` / `FEED_AUTHOR` | RSS/Atom/JSON feed metadata |
-| `RESEND_API_KEY` | [Resend](https://resend.com) API key for outbound email: event verification, admin notifications, run reports and the contact form. Leave blank to disable all of them. Needs `site.contact-email` in `config.yaml`. See [Email](#email) |
-| `RESEND_WEBHOOK_SECRET` | Signing secret of the Resend webhook that delivers received email to the admin inbox. Leave blank to turn receiving off |
-| `IP_GEOLOCATION_IO_API_KEY` | Optional — enables geo lookup for analytics |
+| Variable                                          | Description                                                                                                                                                                                                                              |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD`                               | Database password                                                                                                                                                                                                                        |
+| `HOST`                                            | Public base URL, e.g. `https://events.example.com`                                                                                                                                                                                       |
+| `PORT`                                            | Host port nginx binds on                                                                                                                                                                                                                 |
+| `FEED_TITLE` / `FEED_DESCRIPTION` / `FEED_AUTHOR` | RSS/Atom/JSON feed metadata                                                                                                                                                                                                              |
+| `RESEND_API_KEY`                                  | [Resend](https://resend.com) API key for outbound email: event verification, admin notifications, run reports and the contact form. Leave blank to disable all of them. Needs `site.contact-email` in `config.yaml`. See [Email](#email) |
+| `RESEND_WEBHOOK_SECRET`                           | Signing secret of the Resend webhook that delivers received email to the admin inbox. Leave blank to turn receiving off                                                                                                                  |
+| `IP_GEOLOCATION_IO_API_KEY`                       | Optional — enables geo lookup for analytics                                                                                                                                                                                              |
 
 Create `apps/backend/config.yaml` from the example:
 
@@ -61,19 +62,19 @@ cp apps/backend/config.yaml.example apps/backend/config.yaml
 
 Key fields:
 
-| Key | Description |
-|---|---|
-| `timezone` | Server timezone (any tz database name, e.g. `America/Chicago`) |
-| `cookie-salt` | Random secret used to sign session cookies |
-| `ingest-key` | Secret shared with scrapers posting events (see [docs/writing-scrapers.md](docs/writing-scrapers.md)) |
-| `ingest-trigger-url` | Optional. Endpoint of your scraper service that starts a run, used by the admin dashboard's "run ingestion" button (see [Triggering a run](#triggering-a-run-from-the-admin-dashboard)) |
-| `admin-accounts` | `email;password` pairs. Order does not matter. The `ADMIN_ACCOUNTS` environment variable (`email1;pw1,email2;pw2`) replaces this list when set, so passwords need not be in the file; passwords can't contain `,` or `;` there. An existing admin's password is not changed by config |
-| `site` | What shows on the pages of your deployment: `name`, `region`, `contact-email` and `description`. All optional, see `GET /api/site`. `contact-email` is the address all mail is sent from and the contact form's messages go to. It is never shown to visitors, and has to be on a domain verified in Resend |
-| `pages-dir` | Optional. Directory of your own pages, as Markdown files (default `/app/pages`). See [docs/custom-pages.md](docs/custom-pages.md) |
-| `tags` | Tags seeded into the database on first run |
-| `age-groups` | Age restriction tiers (`name` + numeric `value`; 1 = all-ages, 255 = unknown) |
-| `regions` | Geographic regions available for events |
-| `venues` | Venues seeded on first run — include `"Unlisted (see link)"` to enable that feature |
+| Key                  | Description                                                                                                                                                                                                                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `timezone`           | Server timezone (any tz database name, e.g. `America/Chicago`)                                                                                                                                                                                                                                              |
+| `cookie-salt`        | Random secret used to sign session cookies                                                                                                                                                                                                                                                                  |
+| `ingest-key`         | Secret shared with scrapers posting events (see [docs/writing-scrapers.md](docs/writing-scrapers.md))                                                                                                                                                                                                       |
+| `ingest-trigger-url` | Optional. Endpoint of your scraper service that starts a run, used by the admin dashboard's "run ingestion" button (see [Triggering a run](#triggering-a-run-from-the-admin-dashboard))                                                                                                                     |
+| `admin-accounts`     | `email;password` pairs. Order does not matter. The `ADMIN_ACCOUNTS` environment variable (`email1;pw1,email2;pw2`) replaces this list when set, so passwords need not be in the file; passwords can't contain `,` or `;` there. An existing admin's password is not changed by config                       |
+| `site`               | What shows on the pages of your deployment: `name`, `region`, `contact-email` and `description`. All optional, see `GET /api/site`. `contact-email` is the address all mail is sent from and the contact form's messages go to. It is never shown to visitors, and has to be on a domain verified in Resend |
+| `pages-dir`          | Optional. Directory of your own pages, as Markdown files (default `/app/pages`). See [docs/custom-pages.md](docs/custom-pages.md)                                                                                                                                                                           |
+| `tags`               | Tags seeded into the database on first run                                                                                                                                                                                                                                                                  |
+| `age-groups`         | Age restriction tiers (`name` + numeric `value`; 1 = all-ages, 255 = unknown)                                                                                                                                                                                                                               |
+| `regions`            | Geographic regions available for events                                                                                                                                                                                                                                                                     |
+| `venues`             | Venues seeded on first run — include `"Unlisted (see link)"` to enable that feature                                                                                                                                                                                                                         |
 
 The seed data (`tags`, `age-groups`, `regions`, `venues`) is saved into the database on the first start only. After that the admin dashboard owns it (see [Admin dashboard](#admin-dashboard)), and editing these lists in the config has no effect: the backend logs a reminder at startup. This is so a region or tag an admin retired is not brought back by a restart. A database that was set up before this change gets one last save of the config on its next start.
 
@@ -106,15 +107,15 @@ The site is available at `http://localhost:${PORT}`.
 
 ## Development
 
-| Command | What it does |
-|---|---|
-| `make up-demo` | Builds and starts the stack with example venues and events at http://localhost:8080. Admin: `admin@example.com` / `demo-password`. Uses `demo/env` and `demo/config.yaml`, so your own `.env` and `config.yaml` are not read |
-| `make up` | Builds and starts the stack from your own `.env` and `apps/backend/config.yaml` |
-| `make down-demo` | Stops the demo and keeps its data |
-| `make clean` | Removes the containers and database volumes of the demo and of `make up`. Nothing else in Docker is touched |
-| `make test-backend` | Go tests for `apps/backend` and `packages/go-pkg`. No database needed |
-| `make test-frontend` | Typecheck and tests for `apps/frontend` |
-| `make test` | Both |
+| Command              | What it does                                                                                                                                                                                                                 |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `make up-demo`       | Builds and starts the stack with example venues and events at http://localhost:8080. Admin: `admin@example.com` / `demo-password`. Uses `demo/env` and `demo/config.yaml`, so your own `.env` and `config.yaml` are not read |
+| `make up`            | Builds and starts the stack from your own `.env` and `apps/backend/config.yaml`                                                                                                                                              |
+| `make down-demo`     | Stops the demo and keeps its data                                                                                                                                                                                            |
+| `make clean`         | Removes the containers and database volumes of the demo and of `make up`. Nothing else in Docker is touched                                                                                                                  |
+| `make test-backend`  | Go tests for `apps/backend` and `packages/go-pkg`. No database needed                                                                                                                                                        |
+| `make test-frontend` | Typecheck and tests for `apps/frontend`                                                                                                                                                                                      |
+| `make test`          | Both                                                                                                                                                                                                                         |
 
 The example data is loaded through the ingest API by `packages/go-pkg/examples/demo`, so it also shows what a scraper's payload looks like. It includes a venue whose events wait in the admin moderation queue. Container names are fixed, so stop one stack before starting the other.
 
@@ -148,14 +149,14 @@ Log in at `/admin` with the credentials from `admin-accounts` in `config.yaml`. 
 
 Event descriptions can embed structured flags. The helpers in `packages/go-pkg/platform/util` (`ParseTagsFromStr`, `ParseLocationFromStr`, `ParseAge`) read them, so a scraper turns them into tags, a region and an age group:
 
-| Flag syntax | Effect |
-|---|---|
+| Flag syntax                     | Effect                                             |
+| ------------------------------- | -------------------------------------------------- |
 | `bruttice-tags:rock:live-music` | Attaches tags `rock` and `live-music` to the event |
-| `bruttice-loc:downtown` | Sets the event's region |
-| `bruttice-ages:18+` | Sets the age restriction |
+| `bruttice-loc:downtown`         | Sets the event's region                            |
+| `bruttice-ages:18+`             | Sets the age restriction                           |
 
 These are useful when scraping venues whose event pages embed this metadata in the description field.
 
 ## Feeds
 
-Authenticated RSS, Atom, and JSON feeds are available at `/api/feeds`. Feed metadata is controlled by `FEED_TITLE`, `FEED_DESCRIPTION`, and `FEED_AUTHOR` in `.env`.
+The upcoming events are also available as a public feed, with no sign-in, at `/api/feeds`. It is RSS by default; add `?feedType=atom` or `?feedType=json` for the others. Each event is one item, linking to the event, and the feed takes the same filters as the calendar. The feed's title, description and author are set by `FEED_TITLE`, `FEED_DESCRIPTION` and `FEED_AUTHOR` in the backend's environment (`.env` here, or the deployment's config).
