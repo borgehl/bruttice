@@ -156,7 +156,7 @@ The client uses only the standard library. Its `HTTP` field can be replaced to c
 
 ## The Python client
 
-[`packages/py-ingest`](../packages/py-ingest) is a client and the payload types for Python 3.9 and later, with no dependencies. Install it from a checkout of the repo with `pip install ./packages/py-ingest`, or copy the `bruttice_ingest` folder next to your scraper.
+[`packages/py-ingest`](../packages/py-ingest) is a client and the payload types for Python 3.10 and later, with no dependencies. Install it from a checkout of the repo with `pip install ./packages/py-ingest`, or copy the `bruttice_ingest` folder next to your scraper.
 
 ```python
 from bruttice_ingest import Client, Event, IngestionOutput, VenueInfo, parse_local

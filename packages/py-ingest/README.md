@@ -1,6 +1,6 @@
 # bruttice-ingest
 
-A small client for the bruttice ingest API, so scrapers can be written in Python. It has no dependencies (Python 3.9 or later, standard library only) and mirrors the Go client in [`packages/go-pkg/ingest`](../go-pkg/ingest). The API itself is described in [docs/writing-scrapers.md](../../docs/writing-scrapers.md).
+A small client for the bruttice ingest API, so scrapers can be written in Python. It has no dependencies (Python 3.10 or later, standard library only) and mirrors the Go client in [`packages/go-pkg/ingest`](../go-pkg/ingest). The API itself is described in [docs/writing-scrapers.md](../../docs/writing-scrapers.md).
 
 ## Install
 
