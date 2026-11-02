@@ -184,3 +184,55 @@ func TestInboxDeliveredKeepsTheFirstTime(t *testing.T) {
 		}
 	}
 }
+
+func TestInboxDeleteThread(t *testing.T) {
+	d := testInboxDB(t)
+	thread, other := uuid.NewString(), uuid.NewString()
+	provider := uuid.NewString()
+	addInbox(t, d, thread, models.InboxSourceEmail, &provider)
+	addInbox(t, d, thread, models.InboxSourceAdminReply, nil)
+	addInbox(t, d, other, models.InboxSourceContactForm, nil)
+
+	if err := d.DeleteInboxThread(thread); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := d.GetInboxThread(thread); len(got) != 0 {
+		t.Errorf("the conversation is still there: %+v", got)
+	}
+	if got, _ := d.GetInboxThread(other); len(got) != 1 {
+		t.Errorf("another conversation was touched: %+v", got)
+	}
+	// the rows are gone, not soft-deleted: the provider id is free again and nothing is left behind
+	var left int64
+	d.DB.Unscoped().Model(&models.InboxMessage{}).Where("thread_id = ?", thread).Count(&left)
+	if left != 0 {
+		t.Errorf("%d rows are still stored", left)
+	}
+	addInbox(t, d, uuid.NewString(), models.InboxSourceEmail, &provider)
+}
+
+// This one removes every archived conversation in the database, so only run it on a throwaway one.
+func TestInboxDeleteArchivedKeepsConversationsWithANewMessage(t *testing.T) {
+	d := testInboxDB(t)
+	archived, mixed, open := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	addInbox(t, d, archived, models.InboxSourceContactForm, nil)
+	addInbox(t, d, archived, models.InboxSourceAdminReply, nil)
+	addInbox(t, d, mixed, models.InboxSourceContactForm, nil)
+	addInbox(t, d, open, models.InboxSourceContactForm, nil)
+	for _, id := range []string{archived, mixed} {
+		if err := d.SetInboxThreadArchived(id, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// a message that came after the archiving
+	addInbox(t, d, mixed, models.InboxSourceEmail, nil)
+
+	if _, err := d.DeleteArchivedInboxThreads(); err != nil {
+		t.Fatal(err)
+	}
+	for id, want := range map[string]int{archived: 0, mixed: 2, open: 1} {
+		if got, _ := d.GetInboxThread(id); len(got) != want {
+			t.Errorf("thread %s has %d messages, want %d", id, len(got), want)
+		}
+	}
+}

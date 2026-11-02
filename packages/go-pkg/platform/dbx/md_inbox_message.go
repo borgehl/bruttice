@@ -86,3 +86,22 @@ func (d *DatabaseClient) SetInboxThreadArchived(threadID string, archived bool) 
 	return d.DB.Model(&models.InboxMessage{}).Where("thread_id = ?", threadID).
 		Updates(map[string]any{"archived_at": now, "read_at": gorm.Expr("CASE WHEN read_at = 0 THEN ? ELSE read_at END", now)}).Error
 }
+
+// DeleteInboxThread removes every message of a conversation for good, in any state. The rows are
+// not soft-deleted: the point is to be rid of them, and a soft-deleted row would still hold its
+// provider_id in the unique index. A reply to a deleted conversation starts a new one, because
+// neither its reply address nor its In-Reply-To finds a message any more.
+func (d *DatabaseClient) DeleteInboxThread(threadID string) error {
+	return d.DB.Unscoped().Where("thread_id = ?", threadID).Delete(&models.InboxMessage{}).Error
+}
+
+// DeleteArchivedInboxThreads removes every archived conversation for good and says how many
+// messages went. A conversation is archived when all of its messages are, as in the inbox list, so
+// one that got a new message since is kept.
+func (d *DatabaseClient) DeleteArchivedInboxThreads() (int64, error) {
+	result := d.DB.Unscoped().
+		Where("thread_id NOT IN (?)", d.DB.Model(&models.InboxMessage{}).Select("thread_id").Where("archived_at = 0")).
+		Where("archived_at > 0").
+		Delete(&models.InboxMessage{})
+	return result.RowsAffected, result.Error
+}

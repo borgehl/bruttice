@@ -103,6 +103,8 @@ func (h *APIHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/admin/inbox/{threadId}/read", h.handleAdminInboxRead)
 	mux.HandleFunc("POST /api/admin/inbox/{threadId}/archive", h.handleAdminInboxArchive(true))
 	mux.HandleFunc("POST /api/admin/inbox/{threadId}/unarchive", h.handleAdminInboxArchive(false))
+	mux.HandleFunc("DELETE /api/admin/inbox/archived", h.handleAdminInboxDeleteArchived)
+	mux.HandleFunc("DELETE /api/admin/inbox/{threadId}", h.handleAdminInboxDelete)
 
 	// Internal ingest route — only reachable on the internal docker network
 	mux.HandleFunc("POST /internal/ingest", h.handleIngest)

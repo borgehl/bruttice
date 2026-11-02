@@ -137,6 +137,42 @@ func (f *fakeInbox) SetInboxThreadArchived(id string, archived bool) error {
 	return nil
 }
 
+func (f *fakeInbox) DeleteInboxThread(id string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	kept := f.messages[:0]
+	for _, m := range f.messages {
+		if m.ThreadID != id {
+			kept = append(kept, m)
+		}
+	}
+	f.messages = kept
+	return nil
+}
+
+// like the database: a conversation is archived when all of its messages are
+func (f *fakeInbox) DeleteArchivedInboxThreads() (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	open := map[string]bool{}
+	for _, m := range f.messages {
+		if m.ArchivedAt == 0 {
+			open[m.ThreadID] = true
+		}
+	}
+	var deleted int64
+	kept := f.messages[:0]
+	for _, m := range f.messages {
+		if open[m.ThreadID] {
+			kept = append(kept, m)
+		} else {
+			deleted++
+		}
+	}
+	f.messages = kept
+	return deleted, nil
+}
+
 func (f *fakeInbox) all() []models.InboxMessage {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -302,6 +338,8 @@ func newHarness(t *testing.T, enabled, inbound bool) *harness {
 	hr.mux.HandleFunc("POST /api/admin/inbox/{threadId}/reply", h.handleAdminInboxReply)
 	hr.mux.HandleFunc("POST /api/admin/inbox/{threadId}/read", h.handleAdminInboxRead)
 	hr.mux.HandleFunc("POST /api/admin/inbox/{threadId}/archive", h.handleAdminInboxArchive(true))
+	hr.mux.HandleFunc("DELETE /api/admin/inbox/archived", h.handleAdminInboxDeleteArchived)
+	hr.mux.HandleFunc("DELETE /api/admin/inbox/{threadId}", h.handleAdminInboxDelete)
 	hr.mux.HandleFunc("POST /api/admin/inbox/{threadId}/unarchive", h.handleAdminInboxArchive(false))
 	return hr
 }

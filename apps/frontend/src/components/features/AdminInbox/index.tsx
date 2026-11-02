@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import type { InboxThread } from '../../../types/event';
-import { composeInboxMessage, fetchInbox, replyToInboxThread, updateInboxThread } from '../../../services/api';
+import {
+  composeInboxMessage,
+  deleteArchivedInbox,
+  deleteInboxThread,
+  fetchInbox,
+  replyToInboxThread,
+  updateInboxThread,
+} from '../../../services/api';
 import { deliveryLabel, senderLabel, sourceLabel, threadPreview } from '../../../utils/inbox';
 import { describeSubmitError, toLoadError, type LoadError } from '../../../utils/loadError';
 import Skeleton from '../../ui/Skeleton';
@@ -11,7 +18,7 @@ import Spinner from '../../ui/Spinner';
 import Field, { fieldClass, primaryButtonClass } from '../../ui/Field';
 
 interface AdminInboxProps {
-  // called when a conversation was read, archived or answered, so the unread count can follow
+  // called when a conversation was read, archived, deleted or answered, so the unread count can follow
   onChange?: () => void;
 }
 
@@ -30,6 +37,9 @@ export default function AdminInbox({ onChange }: AdminInboxProps) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // what the next click on a delete button removes: one conversation's id, 'archived', or nothing
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [composing, setComposing] = useState(false);
   const [compose, setCompose] = useState({ to: '', subject: '', body: '' });
   const [composeSending, setComposeSending] = useState(false);
@@ -90,6 +100,31 @@ export default function AdminInbox({ onChange }: AdminInboxProps) {
     }
   };
 
+  // the first click on a delete button asks, the second one deletes
+  const remove = async (target: string) => {
+    if (confirmDelete !== target) {
+      setConfirmDelete(target);
+      return;
+    }
+    setDeleting(true);
+    setActionError(null);
+    try {
+      if (target === 'archived') {
+        await deleteArchivedInbox();
+      } else {
+        await deleteInboxThread(target);
+      }
+      setConfirmDelete(null);
+      setOpenId(null);
+      reload();
+    } catch (err) {
+      console.error(err);
+      setActionError('Nothing was deleted. Try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const send = async (event: FormEvent, thread: InboxThread) => {
     event.preventDefault();
     const body = (drafts[thread.threadId] ?? '').trim();
@@ -145,6 +180,19 @@ export default function AdminInbox({ onChange }: AdminInboxProps) {
         />
         Show archived
       </label>
+      {showArchived && threads?.some((thread) => thread.archived) && (
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={() => void remove('archived')}
+          onBlur={() => setConfirmDelete((c) => (c === 'archived' ? null : c))}
+          className={`font-label h-11 cursor-pointer rounded-control border px-4 text-sm font-semibold ${
+            confirmDelete === 'archived' ? 'border-danger text-danger' : 'border-border text-text-muted hover:text-text'
+          }`}
+        >
+          {confirmDelete === 'archived' ? 'Really delete all archived?' : 'Delete all archived'}
+        </button>
+      )}
       {!composing && (
         <button
           type="button"
@@ -326,6 +374,17 @@ export default function AdminInbox({ onChange }: AdminInboxProps) {
                           className="font-label h-11 cursor-pointer rounded-control border border-border px-4 text-sm font-semibold text-text-muted hover:text-text"
                         >
                           {thread.archived ? 'Unarchive' : 'Archive'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deleting}
+                          onClick={() => void remove(thread.threadId)}
+                          onBlur={() => setConfirmDelete((c) => (c === thread.threadId ? null : c))}
+                          className={`font-label h-11 cursor-pointer rounded-control border px-4 text-sm font-semibold ${
+                            confirmDelete === thread.threadId ? 'border-danger text-danger' : 'border-border text-text-muted hover:text-text'
+                          }`}
+                        >
+                          {confirmDelete === thread.threadId ? 'Really delete?' : 'Delete'}
                         </button>
                       </div>
                     </form>

@@ -54,6 +54,28 @@ func (e *EmailClient) ReplyMessage(to, fromName, subject, text, threadID, inRepl
 	return msg
 }
 
+// maxQuoted keeps a quoted message from doubling the length of the email: the messages answered
+// may already quote what came before them.
+const maxQuoted = 3000
+
+// QuoteReply is the text of a reply with the message it answers quoted under it, the way mail
+// clients do: a line saying who wrote it and when, then each line of it behind "> ". attribution
+// is that first line without the trailing colon, such as "On Mon 2 Jan 2006 at 15:04, Sam wrote".
+func QuoteReply(reply, attribution, original string) string {
+	original = strings.TrimSpace(strings.ReplaceAll(original, "\r\n", "\n"))
+	if original == "" {
+		return reply
+	}
+	if r := []rune(original); len(r) > maxQuoted {
+		original = strings.TrimSpace(string(r[:maxQuoted])) + "\n[...]"
+	}
+	lines := strings.Split(original, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimRight("> "+line, " ")
+	}
+	return reply + "\n\n" + oneLine(attribution) + ":\n" + strings.Join(lines, "\n")
+}
+
 // baseHost is the site's public URL with a scheme, http if the configured one has none.
 func (e *EmailClient) baseHost() string {
 	host := strings.TrimPrefix(strings.TrimPrefix(e.cfg.Host, secureProtocol), unsecureProtocol)

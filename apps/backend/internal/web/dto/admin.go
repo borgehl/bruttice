@@ -268,3 +268,8 @@ type ConfigChangeResponse struct {
 	EventsMoved   int64 `json:"eventsMoved"`
 	EventsDeleted int64 `json:"eventsDeleted"`
 }
+
+// InboxDeleteArchivedResponse says how many messages the removal of the archived conversations deleted.
+type InboxDeleteArchivedResponse struct {
+	Deleted int64 `json:"deleted"`
+}

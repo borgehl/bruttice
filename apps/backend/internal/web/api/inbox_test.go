@@ -181,6 +181,8 @@ func TestAdminInboxNeedsSignIn(t *testing.T) {
 		{http.MethodPost, "/api/admin/inbox/" + testThread + "/reply"},
 		{http.MethodPost, "/api/admin/inbox/" + testThread + "/read"},
 		{http.MethodPost, "/api/admin/inbox/" + testThread + "/archive"},
+		{http.MethodDelete, "/api/admin/inbox/" + testThread},
+		{http.MethodDelete, "/api/admin/inbox/archived"},
 	} {
 		if rec := hr.do(tc.method, tc.path, `{"body":"hi"}`); rec.Code != http.StatusUnauthorized {
 			t.Errorf("%s %s: status = %d", tc.method, tc.path, rec.Code)
@@ -220,8 +222,13 @@ func TestAdminReplyIsEmailedAndKeptInTheThread(t *testing.T) {
 	to, _ := sent[0]["to"].([]any)
 	replyTo, _ := sent[0]["reply_to"].([]any)
 	headers, _ := sent[0]["headers"].(map[string]any)
-	if len(to) != 1 || to[0] != "sam@example.com" || sent[0]["text"] != "Yes, all ages." || sent[0]["subject"] != "Re: Contact form message" {
+	if len(to) != 1 || to[0] != "sam@example.com" || sent[0]["subject"] != "Re: Contact form message" {
 		t.Errorf("sent = %+v", sent[0])
+	}
+	// the email quotes what is being answered under the reply
+	text, _ := sent[0]["text"].(string)
+	if !strings.HasPrefix(text, "Yes, all ages.\n\nOn ") || !strings.HasSuffix(text, "Sam <sam@example.com> wrote:\n> Is Friday all ages?") {
+		t.Errorf("text = %q", text)
 	}
 	if len(replyTo) != 1 || replyTo[0] != replyAddress {
 		t.Errorf("their answer must come back to the thread: %v", replyTo)
@@ -231,6 +238,9 @@ func TestAdminReplyIsEmailedAndKeptInTheThread(t *testing.T) {
 	}
 
 	saved := hr.inbox.all()
+	if len(saved) == 2 && saved[1].Body != "Yes, all ages." {
+		t.Errorf("the conversation keeps only the reply, got %q", saved[1].Body)
+	}
 	if len(saved) != 2 || saved[1].Source != models.InboxSourceAdminReply || saved[1].ThreadID != testThread || saved[1].FromName != "admin@example.com" {
 		t.Fatalf("saved = %+v", saved)
 	}
@@ -456,5 +466,60 @@ func TestDeliveredFailsSoResendTriesAgain(t *testing.T) {
 	hr.inbox.failCreate = true
 	if rec := hr.signedWebhook(`{"type":"email.delivered","data":{"email_id":"sent_1"}}`, time.Now()); rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d", rec.Code)
+	}
+}
+
+func TestAdminInboxDeleteRemovesAnyConversation(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.signedIn = true
+	hr.seedThread(t)
+	other := "11111111-1111-4111-8111-111111111111"
+	if err := hr.inbox.CreateInboxMessage(&models.InboxMessage{ThreadID: other, Source: models.InboxSourceContactForm, FromEmail: "kim@example.com", Body: "keep me"}); err != nil {
+		t.Fatal(err)
+	}
+
+	// an open, unread conversation can be deleted, and only that one
+	if rec := hr.do(http.MethodDelete, "/api/admin/inbox/"+testThread, ""); rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if left := hr.inbox.all(); len(left) != 1 || left[0].ThreadID != other {
+		t.Errorf("messages left = %+v", left)
+	}
+	if rec := hr.do(http.MethodDelete, "/api/admin/inbox/"+testThread, ""); rec.Code != http.StatusNotFound {
+		t.Errorf("deleting it again: status = %d, want 404", rec.Code)
+	}
+	if rec := hr.do(http.MethodDelete, "/api/admin/inbox/not-a-uuid", ""); rec.Code != http.StatusBadRequest {
+		t.Errorf("bad id: status = %d, want 400", rec.Code)
+	}
+}
+
+func TestAdminInboxDeleteArchivedKeepsTheRest(t *testing.T) {
+	hr := newHarness(t, true, true)
+	hr.signedIn = true
+	hr.seedThread(t)
+	second := "22222222-2222-4222-8222-222222222222"
+	third := "33333333-3333-4333-8333-333333333333"
+	for _, id := range []string{second, third} {
+		if err := hr.inbox.CreateInboxMessage(&models.InboxMessage{ThreadID: id, Source: models.InboxSourceContactForm, FromEmail: "kim@example.com", Body: "hello"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = hr.inbox.SetInboxThreadArchived(testThread, true)
+	_ = hr.inbox.SetInboxThreadArchived(second, true)
+	// a new message since the archiving brings the whole conversation back, so it must stay
+	if err := hr.inbox.CreateInboxMessage(&models.InboxMessage{ThreadID: second, Source: models.InboxSourceEmail, FromEmail: "kim@example.com", Body: "again"}); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := hr.do(http.MethodDelete, "/api/admin/inbox/archived", "")
+	var res dto.InboxDeleteArchivedResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatal(err)
+	}
+	if rec.Code != http.StatusOK || res.Deleted != 1 {
+		t.Fatalf("status = %d, deleted = %d", rec.Code, res.Deleted)
+	}
+	if left := hr.inbox.all(); len(left) != 3 {
+		t.Errorf("messages left = %+v, want the two of the second conversation and the third", left)
 	}
 }

@@ -130,6 +130,7 @@ See **[docs/writing-scrapers.md](docs/writing-scrapers.md)** for the API, the pa
 Email goes through [Resend](https://resend.com). `site.contact-email` is the address the site sends from, and `RESEND_API_KEY` lets it. The site also receives mail, which is how the contact form and replies work:
 
 - A visitor writes through the contact form. The message lands in the **Inbox** tab of the admin dashboard, and the admins who turned on the inbox email in their settings get an email saying so. The visitor's address is never shown anywhere else.
+- A conversation can be archived (it is hidden, and comes back if they write again) or **deleted** for good, in any state. With **Show archived** on, **Delete all archived** removes every archived conversation at once; a conversation that got a new message since it was archived is not archived and stays. Both ask for a second click. A late reply to a deleted conversation starts a new one.
 - An admin replies from the inbox, or starts a conversation with **New email**. The message is emailed from `contact-email`, with a `Reply-To` of `reply-<conversation id>@<your domain>`.
 - When the visitor answers, Resend receives it, posts it to `POST /api/webhooks/resend`, and it joins the same conversation. Mail sent to `contact-email` itself starts a new conversation.
 

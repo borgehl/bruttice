@@ -155,6 +155,21 @@ func TestReplyMessage(t *testing.T) {
 	}
 }
 
+func TestQuoteReply(t *testing.T) {
+	got := QuoteReply("Yes.", "On Mon, Sam <sam@example.com>\nwrote", "Is Friday\r\nall ages?\n\nThanks")
+	want := "Yes.\n\nOn Mon, Sam <sam@example.com> wrote:\n> Is Friday\n> all ages?\n>\n> Thanks"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+	if got := QuoteReply("Hi", "On x wrote", "  \n "); got != "Hi" {
+		t.Errorf("nothing to quote must leave the reply alone, got %q", got)
+	}
+	long := QuoteReply("Hi", "On x wrote", strings.Repeat("a", 5000))
+	if len([]rune(long)) > 3200 || !strings.HasSuffix(long, "[...]") {
+		t.Errorf("a long message must be cut, got %d runes", len([]rune(long)))
+	}
+}
+
 type errString string
 
 func (e errString) Error() string { return string(e) }
