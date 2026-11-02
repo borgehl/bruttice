@@ -147,11 +147,32 @@ func TestReplyMessage(t *testing.T) {
 	if m.FromName != "Pat" {
 		t.Errorf("from name = %q", m.FromName)
 	}
+	named := NewEmailClient(logx.NewLogger(nil, nil), Config{From: "hello@mail.example.com", SiteName: "Events"})
+	for adminName, want := range map[string]string{"Pat": "Pat (Events)", "  Pat \n Lee ": "Pat Lee (Events)", "": ""} {
+		if got := named.SenderName(adminName); got != want {
+			t.Errorf("SenderName(%q) = %q, want %q", adminName, got, want)
+		}
+	}
 	if m.Headers["In-Reply-To"] != "<abc@x>" || m.Headers["References"] != "<abc@x>" {
 		t.Errorf("headers = %v", m.Headers)
 	}
 	if c.ReplyMessage("a@b.c", "", "s", "t", "id", "").Headers != nil {
 		t.Error("no headers without a Message-ID to answer")
+	}
+}
+
+func TestQuoteReply(t *testing.T) {
+	got := QuoteReply("Yes.", "On Mon, Sam <sam@example.com>\nwrote", "Is Friday\r\nall ages?\n\nThanks")
+	want := "Yes.\n\nOn Mon, Sam <sam@example.com> wrote:\n> Is Friday\n> all ages?\n>\n> Thanks"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+	if got := QuoteReply("Hi", "On x wrote", "  \n "); got != "Hi" {
+		t.Errorf("nothing to quote must leave the reply alone, got %q", got)
+	}
+	long := QuoteReply("Hi", "On x wrote", strings.Repeat("a", 5000))
+	if len([]rune(long)) > 3200 || !strings.HasSuffix(long, "[...]") {
+		t.Errorf("a long message must be cut, got %d runes", len([]rune(long)))
 	}
 }
 

@@ -4,11 +4,14 @@ import (
 	"net/http"
 	"net/mail"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/mapper"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
+	"github.com/borgehl/bruttice/packages/go-pkg/platform/emailx"
+	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
 	"github.com/google/uuid"
 )
 
@@ -23,6 +26,8 @@ type inboxStore interface {
 	CountUnreadInboxThreads() (int64, error)
 	MarkInboxThreadRead(threadID string) error
 	SetInboxThreadArchived(threadID string, archived bool) error
+	DeleteInboxThread(threadID string) error
+	DeleteArchivedInboxThreads() (int64, error)
 }
 
 const maxReply = 10000
@@ -94,6 +99,36 @@ func (h *APIHandler) handleAdminInboxArchive(archived bool) http.HandlerFunc {
 	}
 }
 
+// handleAdminInboxDelete removes a conversation for good, whatever its state.
+func (h *APIHandler) handleAdminInboxDelete(w http.ResponseWriter, r *http.Request) {
+	threadID, _, ok := h.adminThread(w, r)
+	if !ok {
+		return
+	}
+	if err := h.inbox.DeleteInboxThread(threadID); err != nil {
+		h.logger.Errorf("failed to delete inbox thread %s: %v", threadID, err)
+		h.writeError(w, http.StatusInternalServerError, "Failed to delete the conversation")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleAdminInboxDeleteArchived removes every archived conversation for good.
+func (h *APIHandler) handleAdminInboxDeleteArchived(w http.ResponseWriter, r *http.Request) {
+	if h.getAuthenticatedUser(r) == nil {
+		h.writeError(w, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+	deleted, err := h.inbox.DeleteArchivedInboxThreads()
+	if err != nil {
+		h.logger.Errorf("failed to delete the archived inbox threads: %v", err)
+		h.writeError(w, http.StatusInternalServerError, "Failed to delete the archived conversations")
+		return
+	}
+	h.logger.Infof("deleted %d archived inbox messages", deleted)
+	h.writeJSON(w, http.StatusOK, dto.InboxDeleteArchivedResponse{Deleted: deleted})
+}
+
 // handleAdminInboxReply emails an answer to the person a conversation is with, and keeps it in
 // the conversation. Their reply to it comes back to the conversation's reply address.
 func (h *APIHandler) handleAdminInboxReply(w http.ResponseWriter, r *http.Request) {
@@ -146,7 +181,17 @@ func (h *APIHandler) handleAdminInboxReply(w http.ResponseWriter, r *http.Reques
 	if strings.HasPrefix(strings.ToLower(messages[0].Subject), "re:") {
 		subject = messages[0].Subject
 	}
-	sentID, err := h.email.Send(h.email.ReplyMessage(to, user.Name, subject, body, threadID, inReplyTo))
+	// the email shows what is being answered, quoted under the reply; the conversation keeps only the reply
+	text := body
+	if target != nil {
+		who := target.FromEmail
+		if target.FromName != "" {
+			who = target.FromName + " <" + target.FromEmail + ">"
+		}
+		when := time.Unix(target.CreatedAt, 0).In(util.TZLocation).Format("Mon, 2 Jan 2006 at 3:04 PM MST")
+		text = emailx.QuoteReply(body, "On "+when+", "+who+" wrote", target.Body)
+	}
+	sentID, err := h.email.Send(h.email.ReplyMessage(to, user.Name, subject, text, threadID, inReplyTo))
 	if err != nil {
 		h.writeError(w, http.StatusBadGateway, "The reply could not be sent. Try again later")
 		return
