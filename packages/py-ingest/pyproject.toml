@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bruttice-ingest"
+version = "0.1.0"
+description = "Client and payload types for the bruttice ingest API, for writing scrapers in Python"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+# the standard library is enough: urllib, json, dataclasses and zoneinfo
+dependencies = []
+
+[tool.setuptools]
+packages = ["bruttice_ingest"]
+
+[tool.setuptools.package-data]
+bruttice_ingest = ["py.typed"]

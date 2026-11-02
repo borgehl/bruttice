@@ -1,0 +1,28 @@
+# Settings for `make up-demo`. Local development only, none of these are secrets.
+ENV="dev"
+
+LOG_LEVEL="debug"
+DB_LOG_LEVEL="silent"
+
+PORT="8080"
+HOST="http://localhost:8080"
+
+PG_DATA="/var/lib/postgresql/18/docker"
+
+POSTGRES_HOST="bruttice-db"
+POSTGRES_DB="postgres"
+POSTGRES_USER="postgres"
+POSTGRES_PASSWORD="demo"
+POSTGRES_PORT=5432
+TZ=America/Chicago
+PGTZ=America/Chicago
+
+# no outbound email, so no contact form either
+RESEND_API_KEY=""
+RESEND_WEBHOOK_SECRET=""
+
+IP_GEOLOCATION_IO_API_KEY=""
+
+FEED_TITLE="Demo Events"
+FEED_DESCRIPTION="Demo data for local development"
+FEED_AUTHOR="admin@example.com"

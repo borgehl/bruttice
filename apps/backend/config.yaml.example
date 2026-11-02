@@ -1,0 +1,77 @@
+timezone: America/Chicago
+
+cookie-salt: "replace-with-a-random-secret"
+
+ingest-key: "replace-with-a-secret-key-for-ingestors"
+
+# Every admin chooses at /admin/settings which emails they get (new events awaiting approval,
+# system errors, inbox messages). Until someone does, none is sent.
+# The ADMIN_ACCOUNTS environment variable ("email1;pw1,email2;pw2") replaces this list when set.
+# Passwords must not contain "," or ";" there. A password set here or there only applies when
+# the account is created; it does not change an existing admin's password.
+admin-accounts:
+  - "admin@example.com;replace-with-a-strong-password"
+
+# What shows on the pages of your deployment. All optional.
+# contact-email is the address all mail is sent from and the contact form's messages go to.
+# It is never shown to visitors. It has to be on a domain verified in Resend, and needs
+# RESEND_API_KEY in .env. Without either, email and the contact form are off.
+# site:
+#   name: "My Event Calendar"
+#   region: "Anywhere"
+#   contact-email: "hello@events.example.com"
+#   description: "Upcoming local events."
+
+# The tags, age-groups, regions and venues below are saved into the database on the first
+# start only. After that they are managed in the admin dashboard (Site lists, /admin/config),
+# and changing them here has no effect.
+
+# Tags available for events. The "free" tag is applied automatically to events
+# with a zero cover cost — include it here if you want it usable.
+tags:
+  - comedy
+  - community
+  - diy
+  - free
+  - literature
+  - music
+  - recurring
+  - theater
+
+# Age restriction tiers. Value is the minimum age (1 = all-ages, 255 = unknown).
+age-groups:
+  - name: "21+"
+    value: 21
+  - name: "18+"
+    value: 18
+  - name: "16+"
+    value: 16
+  - name: "all-ages"
+    value: 1
+  - name: "unknown age limit"
+    value: 255
+
+# Geographic regions. Timezone is stored for reference but display uses the
+# server timezone configured above.
+regions:
+  - name: central
+    timezone: America/Chicago
+  - name: eastern
+    timezone: America/New_York
+  - name: western
+    timezone: America/Los_Angeles
+
+# Venues seeded on first run. "Unlisted (see link)" is a reserved name used
+# for events whose venue is not in the database — include it to enable that feature.
+venues:
+  - name: "Unlisted (see link)"
+  - name: "The Example Venue"
+    link: "https://example.com/venue-one"
+    region: central
+  - name: "Community Arts Space"
+    link: "https://example.com/venue-two"
+    region: central
+
+# Optional. URL of the scraper service endpoint that starts a run, used by the admin
+# dashboard's "run ingestion" button. Leave unset if you have no scraper service.
+# ingest-trigger-url: "http://scrapers:8081/run"

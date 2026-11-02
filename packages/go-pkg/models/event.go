@@ -1,0 +1,100 @@
+package models
+
+import (
+	"fmt"
+	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+type Event struct {
+	BaseModel
+
+	Guid string `gorm:"unique"`
+
+	Title     string
+	Link      string
+	DoorsAt   *time.Time
+	StartAt   time.Time
+	CoverCost string
+	// FlyerURL is an optional image of the event's flyer, empty if there is none.
+	FlyerURL string
+	Tags     []Tag `gorm:"many2many:event_tags"`
+
+	// verification
+	VerificationKey      *string
+	VerifiedAt           *int64 `gorm:"index"`
+	VerificationEmail    *string
+	ApprovedAt           *int64 `gorm:"index"`
+	EventAdminJudgements []EventAdminJudgement
+
+	// foreign relations
+	AgeID int64
+	Age   Age
+
+	RegionID int64
+	Region   Region
+
+	VenueID int64
+	Venue   Venue
+}
+
+// Idempotent guid updater. Does not overwrite if Guid is already set.
+// If id is non-nil and non-empty, sets Guid to "<VenueName>-<id>".
+// Otherwise hashes Title+StartAt+VenueName.
+func (e *Event) UpdateGuid(id *string) {
+	if e.Guid != "" {
+		// do not overwrite
+		return
+	}
+	e.Guid = util.EventGuid(e.Venue.Name, e.Title, e.StartAt, id)
+}
+
+// Score is the admins' approvals minus their denials.
+func (e *Event) Score() int {
+	ret := 0
+	for _, j := range e.EventAdminJudgements {
+		if j.IsApproval {
+			ret++
+		} else {
+			ret--
+		}
+	}
+	return ret
+}
+
+// creates a new base64 encoded uuid4
+// sets it to VerificationKey and returns that string
+func (e *Event) CreateVerificationKey() string {
+	key := util.Base64EncodeString(uuid.NewString())
+	e.VerificationKey = &key
+	return key
+}
+
+func (e *Event) Str() string {
+	e.UpdateGuid(nil)
+	doors := ""
+	if e.DoorsAt != nil {
+		doors = e.DoorsAt.Format("2006-1-2 3:04 pm")
+	}
+	return fmt.Sprintf(
+		"%s @ %s --> %s\n%s\n%s %s: doors %s, start %s\n%+v",
+		e.Title, e.Venue.Name, e.Link,
+		e.Guid,
+		e.Age.Name, e.CoverCost, doors, e.StartAt.Format("2006-1-2 3:04 pm"),
+		e.Tags,
+	)
+}
+
+func (e *Event) AddTagStr(tag string) {
+	e.Tags = append(e.Tags, Tag{Name: tag})
+}
+
+func (e *Event) SetTimezoneCentral() {
+	e.StartAt = util.DatetimeIsCentral(e.StartAt)
+	if e.DoorsAt != nil {
+		dt := util.DatetimeIsCentral(*e.DoorsAt)
+		e.DoorsAt = &dt
+	}
+}
