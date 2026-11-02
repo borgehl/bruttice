@@ -147,6 +147,12 @@ func TestReplyMessage(t *testing.T) {
 	if m.FromName != "Pat" {
 		t.Errorf("from name = %q", m.FromName)
 	}
+	named := NewEmailClient(logx.NewLogger(nil, nil), Config{From: "hello@mail.example.com", SiteName: "Events"})
+	for adminName, want := range map[string]string{"Pat": "Pat (Events)", "  Pat \n Lee ": "Pat Lee (Events)", "": ""} {
+		if got := named.SenderName(adminName); got != want {
+			t.Errorf("SenderName(%q) = %q, want %q", adminName, got, want)
+		}
+	}
 	if m.Headers["In-Reply-To"] != "<abc@x>" || m.Headers["References"] != "<abc@x>" {
 		t.Errorf("headers = %v", m.Headers)
 	}

@@ -45,13 +45,27 @@ func (e *EmailClient) InboxNoticeMessage(name, email, subject, text string) Mess
 
 // ReplyMessage is the admin's answer to a thread, to the visitor. The visitor's reply to it goes
 // to the thread's reply address, so it lands in the same conversation. inReplyTo is the Message-ID
-// of the message answered, if it had one. fromName is the admin's name, the site's if empty.
-func (e *EmailClient) ReplyMessage(to, fromName, subject, text, threadID, inReplyTo string) Message {
-	msg := Message{To: []string{to}, FromName: fromName, Subject: subject, Text: text, ReplyTo: e.ReplyAddress(threadID)}
+// of the message answered, if it had one. adminName is the admin's name, see SenderName.
+func (e *EmailClient) ReplyMessage(to, adminName, subject, text, threadID, inReplyTo string) Message {
+	msg := Message{To: []string{to}, FromName: e.SenderName(adminName), Subject: subject, Text: text, ReplyTo: e.ReplyAddress(threadID)}
 	if inReplyTo != "" {
 		msg.Headers = map[string]string{"In-Reply-To": inReplyTo, "References": inReplyTo}
 	}
 	return msg
+}
+
+// SenderName is the display name of an admin's email: "Pat (Site name)". The site's name stays
+// the same whoever answers, so replies in one conversation look like they come from one place.
+// An admin without a name sends as the site, and their email address is never used.
+func (e *EmailClient) SenderName(adminName string) string {
+	adminName = oneLine(adminName)
+	switch {
+	case adminName == "":
+		return ""
+	case e.cfg.SiteName == "":
+		return adminName
+	}
+	return adminName + " (" + e.cfg.SiteName + ")"
 }
 
 // maxQuoted keeps a quoted message from doubling the length of the email: the messages answered
