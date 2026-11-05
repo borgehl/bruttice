@@ -36,6 +36,20 @@ ghcr.io/borgehl/bruttice-backend:v1.2.3
 ghcr.io/borgehl/bruttice-frontend:v1.2.3
 ```
 
+The Go library scrapers build against is versioned with the same number: `go get github.com/borgehl/bruttice/packages/go-pkg@v1.2.3`.
+
+### Releasing
+
+The whole repo has one version. To release, create a GitHub Release with a semver tag:
+
+```bash
+scripts/bump-version.sh patch|minor|major   # --dry-run to only show the next version
+```
+
+The script takes the latest `vX.Y.Z` tag and adds one to the part you name (patch for a fix, minor for something new, major for a breaking change; while the major is 0, a breaking change is a minor). It must run on an up to date `main`, asks before it acts, and creates the GitHub Release with `gh release create`. You can also create the release by hand with any `vX.Y.Z` tag.
+
+CI then publishes the images tagged `v0.1.0`, `0.1.0` and `0.1`, and tags `packages/go-pkg/v0.1.0` so the Go module resolves at that version. Go caches a version permanently, so never move or delete a `packages/go-pkg/v*` tag: fix a bad release with the next version. The Python package (`packages/py-ingest`) takes the same version from the tag through setuptools-scm, so there is no version to bump by hand. It isn't published to PyPI yet, install it from the tag: `pip install "git+https://github.com/borgehl/bruttice@v0.1.0#subdirectory=packages/py-ingest"`. A release that only fixes Python still bumps everything, the images and the Go module get the new number with no change.
+
 ### 2. Configure
 
 Copy the env file and edit it:
