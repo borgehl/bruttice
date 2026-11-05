@@ -10,6 +10,8 @@ export interface Event {
   doorsAt?: string;
   coverCost: string;
   flyerUrl?: string;
+  // when the event was found to be cancelled, absent if it is not
+  cancelledAt?: string;
   tags: string[];
 }
 
@@ -79,6 +81,7 @@ export interface AdminEvent {
   doorsTime?: string;
   coverCost: string;
   flyerUrl?: string;
+  cancelledAt?: string;
   tags: string[];
   email: string;
   score: number;

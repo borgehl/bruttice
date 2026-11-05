@@ -7,7 +7,6 @@ import (
 
 	"github.com/borgehl/bruttice/packages/go-pkg/ingest"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
-	"gorm.io/gorm"
 )
 
 // IngestVerificationEmail stands in for the submitter of an ingested event. The
@@ -37,7 +36,8 @@ func IngestEvent(e ingest.Event, venue ingest.VenueInfo, now time.Time) models.E
 		VerificationEmail: &email,
 	}
 	if e.Cancelled {
-		event.DeletedAt = gorm.DeletedAt{Time: now, Valid: true}
+		cancelledAt := now.Unix()
+		event.CancelledAt = &cancelledAt
 	}
 	if !venue.RequireApproval {
 		approvedAt := verifiedAt

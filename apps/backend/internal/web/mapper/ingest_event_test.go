@@ -42,4 +42,22 @@ func TestIngestEvent(t *testing.T) {
 			t.Errorf("got venue %q region %q", event.Venue.Name, event.Region.Name)
 		}
 	})
+
+	t.Run("a cancelled event is stamped and not deleted", func(t *testing.T) {
+		cancelled := scraped
+		cancelled.Cancelled = true
+		event := IngestEvent(cancelled, ingest.VenueInfo{Name: "V"}, now)
+		if event.CancelledAt == nil || *event.CancelledAt != 1_000 {
+			t.Errorf("cancelled_at = %v", event.CancelledAt)
+		}
+		if event.DeletedAt.Valid {
+			t.Error("a cancelled event must stay visible")
+		}
+	})
+
+	t.Run("an event that is not cancelled has no cancelled_at", func(t *testing.T) {
+		if event := IngestEvent(scraped, ingest.VenueInfo{Name: "V"}, now); event.CancelledAt != nil {
+			t.Errorf("cancelled_at = %v", *event.CancelledAt)
+		}
+	})
 }

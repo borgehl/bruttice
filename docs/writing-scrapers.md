@@ -78,11 +78,15 @@ An event:
   "region": "tulsa",                          // optional, defaults to venue_info.default_region
   "age": "all-ages",
   "tags": ["music"],
-  "cancelled": false                          // optional, a new cancelled event is stored as deleted
+  "cancelled": false                          // optional, see below
 }
 ```
 
 `title`, `start_at` and `age` are required, and so is a venue (the event's own or the payload's). An event missing any of them is refused and counted as failed, with the reason in the response's `errors`, and the other events are still saved. The server can't guess these: an empty age or a zero time would otherwise resolve to whichever row the database finds first.
+
+`cancelled: true` marks the event cancelled. The server stamps the time it first saw the event cancelled and the site keeps showing the event with a "Cancelled" mark. The other fields are updated as usual, and the first stamp is kept while the source keeps reporting it cancelled. Send the event again without `cancelled` and the mark is cleared.
+
+A cancelled event with no `start_at` or no `age` (the stub a calendar leaves for a deleted occurrence) is a cancellation only: it needs just its `guid` and a venue. It marks the event the server already has under that guid, changes nothing else, and is ignored if the server has no such event or an admin deleted it.
 
 The server refuses a payload with a field it doesn't know, so a typo or an out-of-date format is a `400` that names the field instead of an event that quietly loses data. Go scrapers don't write any of this by hand: marshal an `ingest.IngestionOutput` and it comes out right.
 

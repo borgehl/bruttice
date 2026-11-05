@@ -27,6 +27,7 @@ with
 					)
 			where
 				e1.deleted_at is null and e2.deleted_at is null
+				and e1.cancelled_at is null and e2.cancelled_at is null
 	)
 	update events
 	set deleted_at = now()
@@ -34,7 +35,8 @@ with
 `
 
 // DeduplicateEvents soft-deletes duplicate events, considering only events
-// belonging to the given venues.
+// belonging to the given venues. Cancelled events are left out: one kept next to the
+// show that replaced it, or the older of two, must not take the live event with it.
 func (d *DatabaseClient) DeduplicateEvents(venueIDs []int64, tx *gorm.DB) error {
 	if len(venueIDs) == 0 {
 		return nil

@@ -60,8 +60,8 @@ class Event:
     """One event as a scraper reports it."""
 
     title: str
-    #: A timezone-aware time, see ``parse_local``.
-    start_at: datetime
+    #: A timezone-aware time, see ``parse_local``. ``None`` only for a cancellation-only event.
+    start_at: Optional[datetime]
     #: An age group name from the server's age groups.
     age: str
     link: str = ""
@@ -76,6 +76,8 @@ class Event:
     region: str = ""
     #: Tag names. Names the server does not have are dropped.
     tags: List[str] = field(default_factory=list)
+    #: The server stamps when it first saw the event cancelled, and the site shows it marked as
+    #: cancelled. Sending the event again without this clears the mark.
     cancelled: bool = False
     #: The event's identity: a re-sent event with the same guid updates in place. Leave it empty to
     #: let the server derive one from title, start time and venue, or use ``update_guid``.
@@ -92,13 +94,26 @@ class Event:
             return
         self.guid = f"{self.venue}-{source_id}"
 
+    def is_cancellation_only(self) -> bool:
+        """True for a cancelled event with no start time or no age, such as the stub a calendar
+        leaves for a deleted occurrence. It only marks an event the server already has under the
+        same ``guid``, and changes nothing else about it."""
+        return self.cancelled and (self.start_at is None or not self.age)
+
     def validate(self, payload_venue: str = "") -> None:
-        """Raises ValueError for what the server can't guess and would refuse the event for."""
+        """Raises ValueError for what the server can't guess and would refuse the event for.
+        A cancellation-only event needs just its guid and a venue."""
         missing = []
-        if not self.title.strip():
-            missing.append("title")
-        if not self.age:
-            missing.append("age")
+        if self.is_cancellation_only():
+            if not self.guid:
+                missing.append("guid")
+        else:
+            if not self.title.strip():
+                missing.append("title")
+            if self.start_at is None:
+                missing.append("start_at")
+            if not self.age:
+                missing.append("age")
         if not self.venue and not payload_venue:
             missing.append("venue")
         if missing:
@@ -108,10 +123,13 @@ class Event:
         out: Dict[str, Any] = {
             "title": self.title,
             "link": self.link,
-            "start_at": _rfc3339(self.start_at, "start_at"),
             "cover_cost": self.cover_cost,
             "age": self.age,
         }
+        if self.start_at is not None:
+            out["start_at"] = _rfc3339(self.start_at, "start_at")
+        elif not self.cancelled:
+            raise ValueError("missing start_at")
         if self.guid:
             out["guid"] = self.guid
         if self.doors_at is not None:

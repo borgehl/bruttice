@@ -26,22 +26,24 @@ type AdminNotifications struct {
 
 // Admin event with score info for dashboard
 type AdminEventResponse struct {
-	Guid      string   `json:"guid"`
-	Title     string   `json:"title"`
-	Link      string   `json:"link"`
-	Venue     string   `json:"venue"`
-	VenueLink string   `json:"venueLink"`
-	Age       string   `json:"age"`
-	Region    string   `json:"region"`
-	Date      string   `json:"date"`
-	Time      string   `json:"time"`
-	StartTime string   `json:"startTime"`
-	DoorsTime string   `json:"doorsTime,omitempty"`
-	CoverCost string   `json:"coverCost"`
-	FlyerURL  string   `json:"flyerUrl,omitempty"`
-	Tags      []string `json:"tags"`
-	Email     string   `json:"email"`
-	Score     int      `json:"score"`
+	Guid      string `json:"guid"`
+	Title     string `json:"title"`
+	Link      string `json:"link"`
+	Venue     string `json:"venue"`
+	VenueLink string `json:"venueLink"`
+	Age       string `json:"age"`
+	Region    string `json:"region"`
+	Date      string `json:"date"`
+	Time      string `json:"time"`
+	StartTime string `json:"startTime"`
+	DoorsTime string `json:"doorsTime,omitempty"`
+	CoverCost string `json:"coverCost"`
+	FlyerURL  string `json:"flyerUrl,omitempty"`
+	// CancelledAt is when the event was found to be cancelled (RFC 3339), empty if it is not.
+	CancelledAt string   `json:"cancelledAt,omitempty"`
+	Tags        []string `json:"tags"`
+	Email       string   `json:"email"`
+	Score       int      `json:"score"`
 }
 
 type AdminEventDayResponse struct {

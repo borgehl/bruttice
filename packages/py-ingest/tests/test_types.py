@@ -69,6 +69,34 @@ class EventTest(unittest.TestCase):
         Event(title="t", start_at=self.start, age="a").validate(payload_venue="V")
         Event(title="t", start_at=self.start, age="a", venue="V").validate()
 
+    def test_validate_requires_a_start(self):
+        with self.assertRaisesRegex(ValueError, "missing start_at"):
+            Event(title="t", start_at=None, age="a", venue="V").validate()
+        with self.assertRaisesRegex(ValueError, "missing start_at"):
+            Event(title="t", start_at=None, age="a", venue="V").to_dict()
+
+    def test_cancellation_only_events(self):
+        stub = Event(title="", start_at=None, age="", venue="V", cancelled=True, guid="V-abc")
+        self.assertTrue(stub.is_cancellation_only())
+        stub.validate()
+        self.assertEqual(
+            stub.to_dict(),
+            {"title": "", "link": "", "cover_cost": "", "age": "", "venue": "V", "cancelled": True, "guid": "V-abc"},
+        )
+        no_age = Event(title="t", start_at=self.start, age="", cancelled=True, guid="V-1")
+        self.assertTrue(no_age.is_cancellation_only())
+        no_age.validate(payload_venue="V")
+
+        full = Event(title="t", start_at=self.start, age="a", cancelled=True)
+        self.assertFalse(full.is_cancellation_only())
+        self.assertFalse(Event(title="t", start_at=None, age="a").is_cancellation_only())
+
+    def test_cancellation_only_needs_a_guid_and_a_venue(self):
+        with self.assertRaisesRegex(ValueError, "missing guid"):
+            Event(title="", start_at=None, age="", venue="V", cancelled=True).validate()
+        with self.assertRaisesRegex(ValueError, "missing venue"):
+            Event(title="", start_at=None, age="", cancelled=True, guid="V-1").validate()
+
     def test_tags_do_not_leak_between_events(self):
         a, b = Event(title="a", start_at=self.start, age="x"), Event(title="b", start_at=self.start, age="x")
         a.add_tag("music")

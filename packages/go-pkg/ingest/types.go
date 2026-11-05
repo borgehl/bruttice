@@ -44,8 +44,9 @@ type Event struct {
 	Region string `json:"region,omitempty"`
 	// Age is an age group name.
 	Age string `json:"age"`
-	// Cancelled marks an event the source has cancelled. A new cancelled event is stored
-	// as deleted, so it never shows.
+	// Cancelled marks an event the source has cancelled. The server stamps the time it first
+	// saw the event cancelled, and the event shows with a cancelled mark. Sending the event
+	// again without it clears the mark.
 	Cancelled bool `json:"cancelled,omitempty"`
 	// Tags are tag names. Names the server does not have are dropped.
 	Tags []string `json:"tags,omitempty"`
@@ -59,18 +60,32 @@ type IngestionOutput struct {
 	Errors    []string  `json:"errors"`
 }
 
+// IsCancellationOnly is true for a cancelled event that has no start time or age, such as the
+// stub a calendar leaves for a deleted occurrence. It can only mark an event the server
+// already has (found by guid), it can't create one.
+func (e Event) IsCancellationOnly() bool {
+	return e.Cancelled && (e.StartAt.IsZero() || e.Age == "")
+}
+
 // Validate reports what is missing from an event that the server can't guess. Venue
 // defaults to the payload's venue, so it is checked after that default is applied.
+// A cancellation-only event needs just its guid and venue.
 func (e Event) Validate(payloadVenue string) error {
 	var missing []string
-	if strings.TrimSpace(e.Title) == "" {
-		missing = append(missing, "title")
-	}
-	if e.StartAt.IsZero() {
-		missing = append(missing, "start_at")
-	}
-	if e.Age == "" {
-		missing = append(missing, "age")
+	if e.IsCancellationOnly() {
+		if e.Guid == "" {
+			missing = append(missing, "guid")
+		}
+	} else {
+		if strings.TrimSpace(e.Title) == "" {
+			missing = append(missing, "title")
+		}
+		if e.StartAt.IsZero() {
+			missing = append(missing, "start_at")
+		}
+		if e.Age == "" {
+			missing = append(missing, "age")
+		}
 	}
 	if e.Venue == "" && payloadVenue == "" {
 		missing = append(missing, "venue")
@@ -95,9 +110,12 @@ func (e *Event) AddTag(tag string) {
 	e.Tags = append(e.Tags, tag)
 }
 
-// SetTimezoneCentral reads the wall-clock times of StartAt and DoorsAt as US Central.
+// SetTimezoneCentral reads the wall-clock times of StartAt and DoorsAt as US Central. A zero
+// StartAt stays zero: it means "no start" (see IsCancellationOnly), and shifting it would not.
 func (e *Event) SetTimezoneCentral() {
-	e.StartAt = util.DatetimeIsCentral(e.StartAt)
+	if !e.StartAt.IsZero() {
+		e.StartAt = util.DatetimeIsCentral(e.StartAt)
+	}
 	if e.DoorsAt != nil {
 		doors := util.DatetimeIsCentral(*e.DoorsAt)
 		e.DoorsAt = &doors
