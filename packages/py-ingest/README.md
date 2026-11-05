@@ -56,6 +56,7 @@ The region and age group names must exist on the server (see "Before you start" 
 | `parse_local(text, format, tz)` | A wall-clock time in the venue's zone, as a timezone-aware `datetime` |
 | `Event.update_guid(source_id)` | Identity from the source's own id, `"<venue>-<id>"` like the Go client. Without one the server derives it |
 | `Event.validate(payload_venue)` | Raises `ValueError` for what the server would refuse an event for |
+| `Event.is_cancellation_only()` | True for a cancelled event with no `start_at` or no `age` (a calendar's stub for a deleted occurrence). It needs just a `guid` and a venue, and marks the event the server already has under that guid |
 | `IngestionOutput.append_error(e)` | Records a failure, prefixed with the venue's name, to be sent with the payload |
 | `IngestError` | A refused request (`.status` is the HTTP status) or one that never reached the server (`.status` is `None`) |
 
