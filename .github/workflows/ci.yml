@@ -3,7 +3,7 @@ name: CI
 on:
   # Pushes run only where images are published. Everything else is tested by its pull request.
   push:
-    branches: [main, initial-port-from-old-arch]
+    branches: [main]
   pull_request:
     branches: [main]
   release:
@@ -61,6 +61,9 @@ jobs:
         python-version: ['3.11', '3.15']
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the package's version comes from the git tags
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -68,6 +71,25 @@ jobs:
 
       - name: Test
         run: python -m unittest discover -s tests -t .
+        working-directory: packages/py-ingest
+
+      # The package has no version of its own: it is the release tag. This fails the release, before
+      # the Go module is tagged, if the tag isn't one setuptools-scm reads.
+      - name: Version is the release tag
+        if: github.event_name == 'release'
+        env:
+          VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          pip install setuptools-scm
+          python - <<'PY'
+          import os, subprocess, sys
+          from packaging.version import Version
+          built = subprocess.check_output([sys.executable, "-m", "setuptools_scm"], text=True).strip()
+          want = os.environ["VERSION"].removeprefix("v")
+          if Version(built) != Version(want):
+              sys.exit(f"py-ingest builds as {built}, the release tag is {want}")
+          print(f"py-ingest {built}")
+          PY
         working-directory: packages/py-ingest
 
   test-frontend:
@@ -96,8 +118,8 @@ jobs:
 
   publish-backend:
     needs: [test-backend, test-go-pkg]
-    # images are published from main, from the port branch, and for releases
-    if: (contains(fromJSON('["refs/heads/main", "refs/heads/initial-port-from-old-arch"]'), github.ref) && github.event_name == 'push') || github.event_name == 'release'
+    # images are published from main and for releases
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -118,6 +140,7 @@ jobs:
           tags: |
             type=sha
             type=ref,event=branch
+            type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -133,8 +156,8 @@ jobs:
 
   publish-frontend:
     needs: test-frontend
-    # images are published from main, from the port branch, and for releases
-    if: (contains(fromJSON('["refs/heads/main", "refs/heads/initial-port-from-old-arch"]'), github.ref) && github.event_name == 'push') || github.event_name == 'release'
+    # images are published from main and for releases
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -155,6 +178,7 @@ jobs:
           tags: |
             type=sha
             type=ref,event=branch
+            type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -172,8 +196,8 @@ jobs:
   # it instead of building it. It is built from the whole repo, the way the Dockerfile expects.
   publish-demo-seed:
     needs: test-go-pkg
-    # images are published from main, from the port branch, and for releases
-    if: (contains(fromJSON('["refs/heads/main", "refs/heads/initial-port-from-old-arch"]'), github.ref) && github.event_name == 'push') || github.event_name == 'release'
+    # images are published from main and for releases
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -194,6 +218,7 @@ jobs:
           tags: |
             type=sha
             type=ref,event=branch
+            type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -206,3 +231,41 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  # A GitHub Release is the one trigger for a version: `gh release create v0.1.0 --generate-notes`.
+  # The images above are published with the release tag (v0.1.0, 0.1.0, 0.1). Go resolves a module
+  # in a subdirectory from a tag prefixed with its path, so the same version is tagged on
+  # packages/go-pkg, which makes `go get github.com/borgehl/bruttice/packages/go-pkg@v0.1.0` work.
+  # py-ingest takes its version from the same tag, and is not published to PyPI yet.
+  release-go-pkg:
+    needs: [test-go-pkg, test-py-ingest]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag the Go module
+        env:
+          VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "release tag '$VERSION' is not a semver version like v1.2.3, so Go can't use it" >&2
+            exit 1
+          fi
+
+          tag="packages/go-pkg/$VERSION"
+          existing=$(git ls-remote origin "refs/tags/$tag" | cut -f1)
+          if [ -n "$existing" ]; then
+            # a re-run of the job. Go caches a tag forever, so it must never move.
+            if [ "$existing" != "$GITHUB_SHA" ]; then
+              echo "$tag already exists on another commit ($existing)" >&2
+              exit 1
+            fi
+            echo "$tag already exists on this commit"
+            exit 0
+          fi
+
+          git tag "$tag" "$GITHUB_SHA"
+          git push origin "refs/tags/$tag"

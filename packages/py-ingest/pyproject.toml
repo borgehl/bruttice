@@ -1,10 +1,11 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=61", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "bruttice-ingest"
-version = "0.1.0"
+# the version is the repo's release tag, see [tool.setuptools_scm]
+dynamic = ["version"]
 description = "Client and payload types for the bruttice ingest API, for writing scrapers in Python"
 readme = "README.md"
 license = { text = "MIT" }
@@ -17,3 +18,12 @@ packages = ["bruttice_ingest"]
 
 [tool.setuptools.package-data]
 bruttice_ingest = ["py.typed"]
+
+# The whole repo has one version, the release tag (v0.1.0). Untagged commits get a dev version, like
+# 0.1.1.dev3+g1a2b3c4. The package is in a subdirectory, so the git root is two levels up. The
+# tags Go needs (packages/go-pkg/v0.1.0) are ignored: only plain v<semver> tags count.
+[tool.setuptools_scm]
+root = "../.."
+tag_regex = '^v(?P<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$'
+git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--match", "v[0-9]*"]
+fallback_version = "0.0.0+unknown"
