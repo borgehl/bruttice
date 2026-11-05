@@ -193,6 +193,14 @@ export function AdminEventCard({
         </div>
       )}
 
+      {event.cancelledAt && (
+        <div>
+          <span className={`${getTagColor('cancelled')} inline-flex h-[22px] items-center rounded-[4px] px-2 text-xs font-medium`}>
+            {displayTag('cancelled')}
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex gap-4">
           <div>

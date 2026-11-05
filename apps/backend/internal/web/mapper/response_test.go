@@ -101,3 +101,19 @@ func TestIngestRunResponsesTotalsSources(t *testing.T) {
 		t.Error("a source with no errors should list [], not null")
 	}
 }
+
+func TestEventResponseCancelledAt(t *testing.T) {
+	event := models.Event{Guid: "g", StartAt: time.Date(2030, 1, 10, 19, 0, 0, 0, time.UTC)}
+	if got := EventResponse(event).CancelledAt; got != "" {
+		t.Errorf("not cancelled: cancelledAt = %q", got)
+	}
+	at := int64(1_900_000_000)
+	event.CancelledAt = &at
+	want := time.Unix(at, 0).UTC().Format(time.RFC3339)
+	if got := EventResponse(event).CancelledAt; got != want {
+		t.Errorf("cancelledAt = %q, want %q", got, want)
+	}
+	if got := adminEventResponse(event).CancelledAt; got != want {
+		t.Errorf("admin cancelledAt = %q, want %q", got, want)
+	}
+}

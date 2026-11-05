@@ -21,7 +21,11 @@ func feedDescription(event models.Event) string {
 }
 
 func feedEventTitle(event models.Event) string {
-	return fmt.Sprintf("%s: %s", event.StartAt.In(util.TZLocation).Format("Monday 01-02-06"), event.Title)
+	title := event.Title
+	if event.CancelledAt != nil {
+		title = "CANCELLED: " + title
+	}
+	return fmt.Sprintf("%s: %s", event.StartAt.In(util.TZLocation).Format("Monday 01-02-06"), title)
 }
 
 func (h *APIHandler) handleGetFeeds(w http.ResponseWriter, r *http.Request) {

@@ -10,6 +10,7 @@ const tagColors: Record<string, string> = {
   art: 'tag-art',
   sports: 'tag-sports',
   film: 'tag-film',
+  cancelled: 'tag-cancelled',
 };
 
 export function getTagColor(tag: string): string {

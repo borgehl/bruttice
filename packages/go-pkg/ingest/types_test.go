@@ -84,3 +84,50 @@ func TestValidate(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestCancellationOnly(t *testing.T) {
+	start := time.Date(2030, 1, 10, 19, 0, 0, 0, time.UTC)
+	for name, tc := range map[string]struct {
+		event ingest.Event
+		only  bool
+	}{
+		"stub without start":       {ingest.Event{Cancelled: true, Age: "21+"}, true},
+		"cancelled without age":    {ingest.Event{Cancelled: true, StartAt: start}, true},
+		"complete cancelled event": {ingest.Event{Cancelled: true, StartAt: start, Age: "21+"}, false},
+		"not cancelled":            {ingest.Event{StartAt: start, Age: "21+"}, false},
+		"not cancelled, no start":  {ingest.Event{Age: "21+"}, false},
+	} {
+		if got := tc.event.IsCancellationOnly(); got != tc.only {
+			t.Errorf("%s: IsCancellationOnly = %v, want %v", name, got, tc.only)
+		}
+	}
+}
+
+func TestValidateCancellationOnlyNeedsGuidAndVenue(t *testing.T) {
+	stub := ingest.Event{Guid: "V-abc", Cancelled: true}
+	if err := stub.Validate("V"); err != nil {
+		t.Errorf("a stub with a guid: %v", err)
+	}
+	if err := stub.Validate(""); err == nil {
+		t.Error("a stub with no venue was accepted")
+	}
+	stub.Guid = ""
+	if err := stub.Validate("V"); err == nil {
+		t.Error("a stub with no guid was accepted")
+	}
+	// not cancelled: the full rules still apply
+	if err := (ingest.Event{Guid: "V-abc"}).Validate("V"); err == nil {
+		t.Error("an event that is not cancelled was accepted without start_at and age")
+	}
+}
+
+func TestSetTimezoneCentralKeepsAZeroStartZero(t *testing.T) {
+	e := ingest.Event{Cancelled: true, Age: "21+"}
+	e.SetTimezoneCentral()
+	if !e.StartAt.IsZero() {
+		t.Errorf("start = %v", e.StartAt)
+	}
+	if !e.IsCancellationOnly() {
+		t.Error("a stub stopped being a cancellation-only event")
+	}
+}

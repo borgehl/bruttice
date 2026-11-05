@@ -112,6 +112,21 @@ func (d *DatabaseClient) ApproveEvent(event models.Event, tx *gorm.DB) error {
 	return tx.Model(&event).Update("approved_at", time.Now().Unix()).Error
 }
 
+// MarkEventCancelled sets cancelled_at (unix seconds) on the event with this guid and changes
+// nothing else about it. It does nothing, and returns false, if there is no such event, if it was
+// deleted, or if it is already marked cancelled (the first time is kept).
+func (d *DatabaseClient) MarkEventCancelled(guid string, cancelledAt int64, tx *gorm.DB) (bool, error) {
+	existing, err := d.GetEventByGuidUnscoped(guid, tx)
+	if err != nil {
+		return false, err
+	}
+	if existing.ID == 0 || existing.DeletedAt.Valid || existing.CancelledAt != nil {
+		return false, nil
+	}
+	err = tx.Model(&models.Event{}).Where("id = ?", existing.ID).Update("cancelled_at", cancelledAt).Error
+	return err == nil, err
+}
+
 // Used for checking if a record was previously deleted
 func (d *DatabaseClient) GetEventByGuidUnscoped(guid string, tx *gorm.DB) (models.Event, error) {
 	ret := models.Event{Guid: guid}

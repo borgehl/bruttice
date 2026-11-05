@@ -20,7 +20,10 @@ type Event struct {
 	CoverCost string
 	// FlyerURL is an optional image of the event's flyer, empty if there is none.
 	FlyerURL string
-	Tags     []Tag `gorm:"many2many:event_tags"`
+	// CancelledAt is when the source first reported the event cancelled (unix seconds), nil if
+	// it is not. A cancelled event still shows, marked as cancelled.
+	CancelledAt *int64 `gorm:"index"`
+	Tags        []Tag  `gorm:"many2many:event_tags"`
 
 	// verification
 	VerificationKey      *string

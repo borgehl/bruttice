@@ -29,6 +29,8 @@ type listing struct {
 	cost      string
 	age       string
 	tags      []string
+	// cancelled listings show with a "Cancelled" mark
+	cancelled bool
 }
 
 type venue struct {
@@ -44,32 +46,33 @@ var venues = []venue{
 		name: "The Example Venue",
 		link: "https://example.com/venue-one",
 		listings: []listing{
-			{"1", "Open Mic Night", 1, 19, "free", "all-ages", []string{"music", "community"}},
-			{"2", "The Examples", 3, 20, "$10", "18+", []string{"music"}},
-			{"3", "Stand-Up Showcase", 5, 20, "$8", "21+", []string{"comedy"}},
-			{"4", "Sunday Jazz Brunch", 9, 11, "$5", "all-ages", []string{"music", "recurring"}},
-			{"5", "Battle of the Bands", 14, 19, "$12", "16+", []string{"music"}},
-			{"6", "Winter Songwriter Series", 30, 19, "$15", "21+", []string{"music"}},
+			{"1", "Open Mic Night", 1, 19, "free", "all-ages", []string{"music", "community"}, false},
+			{"2", "The Examples", 3, 20, "$10", "18+", []string{"music"}, false},
+			{"3", "Stand-Up Showcase", 5, 20, "$8", "21+", []string{"comedy"}, false},
+			{"4", "Sunday Jazz Brunch", 9, 11, "$5", "all-ages", []string{"music", "recurring"}, false},
+			{"5", "Battle of the Bands", 14, 19, "$12", "16+", []string{"music"}, false},
+			{"6", "Winter Songwriter Series", 30, 19, "$15", "21+", []string{"music"}, false},
+			{"7", "Acoustic Night", 4, 19, "$8", "all-ages", []string{"music"}, true},
 		},
 	},
 	{
 		name: "Community Arts Space",
 		link: "https://example.com/venue-two",
 		listings: []listing{
-			{"1", "Zine Making Workshop", 2, 18, "free", "all-ages", []string{"diy", "community"}},
-			{"2", "Poetry Slam", 4, 19, "$5", "16+", []string{"literature"}},
-			{"3", "Community Theater: Our Town", 7, 19, "$10", "all-ages", []string{"theater"}},
-			{"4", "Bike Repair Night", 10, 18, "free", "all-ages", []string{"diy", "recurring"}},
-			{"5", "Book Swap", 16, 14, "free", "all-ages", []string{"literature", "community"}},
+			{"1", "Zine Making Workshop", 2, 18, "free", "all-ages", []string{"diy", "community"}, false},
+			{"2", "Poetry Slam", 4, 19, "$5", "16+", []string{"literature"}, false},
+			{"3", "Community Theater: Our Town", 7, 19, "$10", "all-ages", []string{"theater"}, false},
+			{"4", "Bike Repair Night", 10, 18, "free", "all-ages", []string{"diy", "recurring"}, false},
+			{"5", "Book Swap", 16, 14, "free", "all-ages", []string{"literature", "community"}, false},
 		},
 	},
 	{
 		name: "The Back Room",
 		link: "https://example.com/venue-three",
 		listings: []listing{
-			{"1", "Late Night Improv", 2, 22, "$7", "21+", []string{"comedy"}},
-			{"2", "Local Band Showcase", 6, 21, "$10", "21+", []string{"music"}},
-			{"3", "Karaoke Tuesday", 8, 21, "free", "21+", []string{"music", "recurring"}},
+			{"1", "Late Night Improv", 2, 22, "$7", "21+", []string{"comedy"}, false},
+			{"2", "Local Band Showcase", 6, 21, "$10", "21+", []string{"music"}, false},
+			{"3", "Karaoke Tuesday", 8, 21, "free", "21+", []string{"music", "recurring"}, false},
 		},
 	},
 	{
@@ -77,8 +80,9 @@ var venues = []venue{
 		link:    "https://example.com/venue-four",
 		pending: true,
 		listings: []listing{
-			{"1", "Needs Approval: Pop-Up Market", 12, 12, "free", "all-ages", []string{"community"}},
-			{"2", "Needs Approval: Open Studio", 13, 17, "$3", "all-ages", []string{"diy"}},
+			{"1", "Needs Approval: Pop-Up Market", 12, 12, "free", "all-ages", []string{"community"}, false},
+			{"2", "Needs Approval: Open Studio", 13, 17, "$3", "all-ages", []string{"diy"}, false},
+			{"3", "Needs Approval: Cancelled Craft Fair", 14, 12, "free", "all-ages", []string{"community"}, true},
 		},
 	},
 }
@@ -167,6 +171,7 @@ func payload(v venue, loc *time.Location, now time.Time) ingest.IngestionOutput 
 			Region:    region,
 			Age:       l.age,
 			Tags:      l.tags,
+			Cancelled: l.cancelled,
 		}
 		event.UpdateGuid(&l.id)
 		out.Events = append(out.Events, event)

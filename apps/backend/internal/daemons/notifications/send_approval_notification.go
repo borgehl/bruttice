@@ -42,7 +42,11 @@ func SendApprovalNotification(emailClient *emailx.EmailClient) {
 
 	msg := "Events awaiting approval:\n"
 	for _, event := range events {
-		msg += fmt.Sprintf("%s at %s by %s\n", event.Title, event.Venue.Name, *event.VerificationEmail)
+		cancelled := ""
+		if event.CancelledAt != nil {
+			cancelled = " (cancelled)"
+		}
+		msg += fmt.Sprintf("%s%s at %s by %s\n", event.Title, cancelled, event.Venue.Name, *event.VerificationEmail)
 	}
 
 	notify(log, db, emailClient, models.SettingNotifyNewEvents, emailClient.GenericMessage(

@@ -114,6 +114,9 @@ func (h *APIHandler) ingestPayload(payload ingest.IngestionOutput) (models.Inges
 		event := mapper.IngestEvent(scraped, payload.VenueInfo, now)
 		// each event gets a savepoint so one bad event does not abort the rest
 		err := tx.Transaction(func(eventTx *gorm.DB) error {
+			if scraped.IsCancellationOnly() {
+				return h.markIngestedCancelled(event, eventTx)
+			}
 			return h.saveIngestedEvent(event, payload.VenueInfo.IsAutoIngest, eventTx)
 		})
 		if err != nil {
@@ -217,7 +220,30 @@ func (h *APIHandler) saveIngestedEvent(event models.Event, venueIsAutoIngest boo
 		return nil
 	}
 
+	event.CancelledAt = keepCancelledAt(event.CancelledAt, eventUnscoped.CancelledAt)
 	event.Title = html.UnescapeString(event.Title)
 	_, err = h.database.SaveEvent(event, venueIsAutoIngest, tx)
+	return err
+}
+
+// keepCancelledAt decides the cancelled time of an event that is saved again. An event the source
+// still reports cancelled keeps the time it was first seen cancelled. One that is no longer
+// reported cancelled (incoming is nil) is cleared.
+func keepCancelledAt(incoming, existing *int64) *int64 {
+	if incoming != nil && existing != nil {
+		return existing
+	}
+	return incoming
+}
+
+// markIngestedCancelled handles a cancelled event that has no start or age, such as the stub a
+// calendar leaves for a deleted occurrence. It only sets cancelled_at on the event the server
+// already has under that guid, if that event is live and not yet cancelled. Nothing else about the
+// event changes, and an event the server has never seen is not created.
+func (h *APIHandler) markIngestedCancelled(event models.Event, tx *gorm.DB) error {
+	if event.CancelledAt == nil {
+		return nil
+	}
+	_, err := h.database.MarkEventCancelled(event.Guid, *event.CancelledAt, tx)
 	return err
 }

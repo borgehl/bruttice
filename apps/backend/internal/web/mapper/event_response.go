@@ -21,6 +21,9 @@ func EventResponse(event models.Event) dto.EventResponse {
 		FlyerURL:  event.FlyerURL,
 		Tags:      tagNames(event),
 	}
+	if event.CancelledAt != nil {
+		resp.CancelledAt = time.Unix(*event.CancelledAt, 0).UTC().Format(time.RFC3339)
+	}
 	if event.DoorsAt != nil && *event.DoorsAt != event.StartAt {
 		resp.DoorsAt = event.DoorsAt.UTC().Format(time.RFC3339)
 	}

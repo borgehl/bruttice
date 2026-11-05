@@ -1,6 +1,8 @@
 package mapper
 
 import (
+	"time"
+
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"github.com/borgehl/bruttice/packages/go-pkg/platform/util"
@@ -49,6 +51,9 @@ func adminEventResponse(event models.Event) dto.AdminEventResponse {
 	}
 	if event.DoorsAt != nil {
 		resp.DoorsTime = event.DoorsAt.In(util.TZLocation).Format("15:04")
+	}
+	if event.CancelledAt != nil {
+		resp.CancelledAt = time.Unix(*event.CancelledAt, 0).UTC().Format(time.RFC3339)
 	}
 	if event.VerificationEmail != nil {
 		resp.Email = *event.VerificationEmail

@@ -32,7 +32,7 @@ export default function EventCard({ event }: EventCardProps) {
             </>
           )}
         </div>
-        <CalendarTags tags={event.tags} />
+        <CalendarTags tags={event.tags} cancelledAt={event.cancelledAt} />
       </div>
 
       {event.flyerUrl && <FlyerThumb url={event.flyerUrl} title={event.title} />}

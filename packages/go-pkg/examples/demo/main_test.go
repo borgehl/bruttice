@@ -26,3 +26,25 @@ func TestPayloads(t *testing.T) {
 		}
 	}
 }
+
+func TestCancelledListingsAreSent(t *testing.T) {
+	loc, _ := time.LoadLocation(zone)
+	now := time.Date(2030, 1, 1, 12, 0, 0, 0, loc)
+	var live, cancelled, cancelledPending int
+
+	for _, v := range venues {
+		for _, e := range payload(v, loc, now).Events {
+			switch {
+			case !e.Cancelled:
+				live++
+			case v.pending:
+				cancelledPending++
+			default:
+				cancelled++
+			}
+		}
+	}
+	if live == 0 || cancelled == 0 || cancelledPending == 0 {
+		t.Errorf("live %d, cancelled %d, cancelled in the moderation queue %d", live, cancelled, cancelledPending)
+	}
+}

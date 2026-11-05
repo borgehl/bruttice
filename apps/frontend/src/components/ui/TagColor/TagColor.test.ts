@@ -13,6 +13,7 @@ describe('getTagColor', () => {
     ['art',        'tag tag-art'],
     ['sports',     'tag tag-sports'],
     ['film',       'tag tag-film'],
+    ['cancelled',  'tag tag-cancelled'],
   ]
 
   it.each(cases)('returns correct classes for "%s"', (tag, expected) => {

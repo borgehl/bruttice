@@ -6,18 +6,20 @@
 package dto
 
 type EventResponse struct {
-	Guid      string   `json:"guid"`
-	Title     string   `json:"title"`
-	Link      string   `json:"link"`
-	Venue     string   `json:"venue"`
-	VenueLink string   `json:"venueLink"`
-	Age       string   `json:"age"`
-	Region    string   `json:"region"`
-	StartAt   string   `json:"startAt"`
-	DoorsAt   string   `json:"doorsAt,omitempty"`
-	CoverCost string   `json:"coverCost"`
-	FlyerURL  string   `json:"flyerUrl,omitempty"`
-	Tags      []string `json:"tags"`
+	Guid      string `json:"guid"`
+	Title     string `json:"title"`
+	Link      string `json:"link"`
+	Venue     string `json:"venue"`
+	VenueLink string `json:"venueLink"`
+	Age       string `json:"age"`
+	Region    string `json:"region"`
+	StartAt   string `json:"startAt"`
+	DoorsAt   string `json:"doorsAt,omitempty"`
+	CoverCost string `json:"coverCost"`
+	FlyerURL  string `json:"flyerUrl,omitempty"`
+	// CancelledAt is when the event was found to be cancelled (RFC 3339), empty if it is not.
+	CancelledAt string   `json:"cancelledAt,omitempty"`
+	Tags        []string `json:"tags"`
 }
 
 type EventDayResponse struct {

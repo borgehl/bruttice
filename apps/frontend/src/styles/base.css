@@ -88,3 +88,4 @@
 @utility tag-sports { --tag: var(--color-tag-sports); }
 @utility tag-free { --tag: var(--color-tag-free); }
 @utility tag-recurring { --tag: var(--color-tag-recurring); }
+@utility tag-cancelled { --tag: var(--color-danger); }
