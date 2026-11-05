@@ -27,6 +27,8 @@ ghcr.io/borgehl/bruttice-backend:latest
 ghcr.io/borgehl/bruttice-frontend:latest
 ```
 
+A third image, `ghcr.io/borgehl/bruttice-demo-seed` (same tags), loads the example venues and events of `make up-demo` through the ingest API and exits. It is only for demos and development, not for production.
+
 Pinning to a release tag is recommended for production:
 
 ```
