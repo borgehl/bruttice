@@ -67,6 +67,50 @@ func TestVisitors(t *testing.T) {
 	}
 }
 
+// The Visitors page scales to the busiest day of its range, so the seed gives the last 7 days and
+// the last 30 days different ones.
+func TestVisitorsBusiestDays(t *testing.T) {
+	loc, _ := time.LoadLocation(zone)
+	now := time.Date(2030, 1, 1, 12, 0, 0, 0, loc)
+
+	// different visitors on each day, as the page counts them
+	onDay := map[string]map[string]bool{}
+	for _, v := range visitors(now, loc) {
+		for _, at := range v.visits {
+			day := at.Format("2006-01-02")
+			if onDay[day] == nil {
+				onDay[day] = map[string]bool{}
+			}
+			onDay[day][v.location.VisitorID] = true
+		}
+	}
+
+	// the busiest day among the last `days` days, today included
+	busiest := func(days int) int {
+		most := 0
+		for daysAgo := 0; daysAgo < days; daysAgo++ {
+			day := now.AddDate(0, 0, -daysAgo).Format("2006-01-02")
+			if n := len(onDay[day]); n > most {
+				most = n
+			}
+		}
+		return most
+	}
+
+	if got := busiest(7); got != busiestDayOfWeek {
+		t.Errorf("busiest day of the last 7 days has %d visitors, want %d", got, busiestDayOfWeek)
+	}
+	if got := busiest(30); got != busiestDayOfMonth {
+		t.Errorf("busiest day of the last 30 days has %d visitors, want %d", got, busiestDayOfMonth)
+	}
+	if got := busiest(visitorDays); got != busiestDayOfMonth {
+		t.Errorf("busiest day of the last %d days has %d visitors, want %d", visitorDays, got, busiestDayOfMonth)
+	}
+	if len(onDay[now.Format("2006-01-02")]) == 0 {
+		t.Error("nobody visited today")
+	}
+}
+
 func TestCancelledListingsAreSent(t *testing.T) {
 	loc, _ := time.LoadLocation(zone)
 	now := time.Date(2030, 1, 1, 12, 0, 0, 0, loc)
