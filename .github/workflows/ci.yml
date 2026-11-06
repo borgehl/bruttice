@@ -1,9 +1,7 @@
 name: CI
 
 on:
-  # Pushes run only where images are published. Everything else is tested by its pull request.
-  push:
-    branches: [main]
+  # Images are published only for a release. Everything else is tested by its pull request.
   pull_request:
     branches: [main]
   release:
@@ -211,8 +209,8 @@ jobs:
 
   publish-backend:
     needs: all-tests-passed
-    # images are published from main and for releases
-    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'release'
+    # images are published for releases only, a version is what a deployment pins
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -231,10 +229,8 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/bruttice-backend
           tags: |
-            type=sha
-            type=ref,event=branch
             type=ref,event=tag
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ !github.event.release.prerelease }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
@@ -249,8 +245,8 @@ jobs:
 
   publish-frontend:
     needs: all-tests-passed
-    # images are published from main and for releases
-    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'release'
+    # images are published for releases only, a version is what a deployment pins
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -269,10 +265,8 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/bruttice-frontend
           tags: |
-            type=sha
-            type=ref,event=branch
             type=ref,event=tag
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ !github.event.release.prerelease }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
@@ -289,8 +283,8 @@ jobs:
   # it instead of building it. It is built from the whole repo, the way the Dockerfile expects.
   publish-demo-seed:
     needs: all-tests-passed
-    # images are published from main and for releases
-    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'release'
+    # images are published for releases only, a version is what a deployment pins
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -309,10 +303,8 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/bruttice-demo-seed
           tags: |
-            type=sha
-            type=ref,event=branch
             type=ref,event=tag
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ !github.event.release.prerelease }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
@@ -326,7 +318,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   # A GitHub Release is the one trigger for a version: `gh release create v0.1.0 --generate-notes`.
-  # The images above are published with the release tag (v0.1.0, 0.1.0, 0.1). Go resolves a module
+  # The images above are published with the release tag (v0.1.0, 0.1.0, 0.1, 0), and `latest` moves
+  # to it unless the release is a pre-release. Go resolves a module
   # in a subdirectory from a tag prefixed with its path, so the same version is tagged on
   # packages/go-pkg, which makes `go get github.com/borgehl/bruttice/packages/go-pkg@v0.1.0` work.
   # py-ingest takes its version from the same tag, and is not published to PyPI yet.

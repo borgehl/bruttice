@@ -20,7 +20,7 @@ Nginx exposes `/api/` and `/` to the public. The `/internal/` path — used by s
 
 ### 1. Pull images
 
-Pre-built images are published to the GitHub Container Registry on every push to `main` and on each GitHub Release.
+Pre-built images are published to the GitHub Container Registry on each GitHub Release. `latest` is the newest release that is not a pre-release; nothing is published for a plain push to `main`.
 
 ```
 ghcr.io/borgehl/bruttice-backend:latest
