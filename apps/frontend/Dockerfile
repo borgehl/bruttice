@@ -33,10 +33,14 @@ RUN pnpm build
 #
 # SITE_NAME and SITE_DESCRIPTION (optional env) set the page's title and link preview text, see
 # docker-site-meta.sh.
+#
+# A site's own icons and manifest go in /usr/share/nginx/branding (mount a directory there), see
+# docker-branding.sh and docs/branding.md.
 FROM nginx:1.29-alpine AS prod
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY --from=build /app/dist/index.html /usr/share/nginx/index.template.html
 COPY --chmod=755 docker-site-meta.sh /docker-entrypoint.d/40-site-meta.sh
+COPY --chmod=755 docker-branding.sh /docker-entrypoint.d/45-branding.sh
 
 EXPOSE 80

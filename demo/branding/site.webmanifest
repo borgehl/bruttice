@@ -1,0 +1,8 @@
+{
+  "name": "Bruttice Demo",
+  "short_name": "Bruttice",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#12161c",
+  "background_color": "#12161c"
+}

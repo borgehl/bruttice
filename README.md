@@ -123,6 +123,8 @@ The site is available at `http://localhost:${PORT}`.
 
 The frontend image serves the built site with nginx. Give it `SITE_NAME` (and optionally `SITE_DESCRIPTION`) as environment variables to put your site's name in the browser tab title and in link previews. The app takes its name from `site.name` in `config.yaml`, but only once `/api/site` answers. The tab title, link previews (Slack, Discord, search engines) and the first paint of the header read the page as served, before that. With `SITE_NAME` set they show your name straight away, without it they say `Bruttice` until the app loads. Use the same text as `site.name` and `site.description` in `config.yaml`.
 
+For your own icons and web manifest, mount a directory of files at `/usr/share/nginx/branding` in the frontend container: each file replaces the file of the same name in the site (`favicon.ico`, `apple-touch-icon.png`, `site.webmanifest`, ...). See [docs/branding.md](docs/branding.md).
+
 ## Development
 
 | Command              | What it does                                                                                                                                                                                                                 |
