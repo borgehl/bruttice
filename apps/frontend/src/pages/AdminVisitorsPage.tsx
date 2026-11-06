@@ -6,6 +6,7 @@ import type { VisitorStats } from '../types/event';
 import Page from '../components/ui/Page';
 import InlineError from '../components/ui/InlineError';
 import LoadingBlock from '../components/ui/LoadingBlock';
+import { axisTicks, labelIndexes, shortDate } from '../utils/chartAxis';
 import { describeSubmitError } from '../utils/loadError';
 
 const RANGES = [7, 30, 90, 365];
@@ -66,6 +67,10 @@ export default function AdminVisitorsPage() {
   // the stats shown belong to the range that was asked for, not to the previous one
   const ready = stats !== null && stats.days === days;
   const maxDaily = ready ? Math.max(1, ...stats.daily.map((d) => d.visitors)) : 1;
+  // the bars are scaled to the top mark of the axis, which is at or above the busiest day
+  const ticks = axisTicks(maxDaily);
+  const axisMax = ticks[ticks.length - 1];
+  const labelled = new Set(ready ? labelIndexes(stats.daily.length) : []);
   const maxLocation = ready ? Math.max(1, ...stats.locations.map((l) => l.visitors)) : 1;
 
   return (
@@ -95,19 +100,58 @@ export default function AdminVisitorsPage() {
             <h2 id="visitors-by-date" className="mb-2 text-sm font-semibold text-text">
               Visitors by date
             </h2>
-            <div className="flex h-32 items-end gap-px" role="img" aria-label="Visitors per day">
-              {stats.daily.map((d) => (
-                <div
-                  key={d.date}
-                  title={`${d.date}: ${d.visitors}`}
-                  className="min-h-px flex-1 bg-accent"
-                  style={{ height: `${(d.visitors / maxDaily) * 100}%`, opacity: d.visitors ? 1 : 0.2 }}
-                />
-              ))}
-            </div>
-            <div className="mt-1 flex justify-between text-xs text-text-faint">
-              <span>{stats.daily[0]?.date}</span>
-              <span>{stats.daily[stats.daily.length - 1]?.date}</span>
+            <div className="flex" role="img" aria-label="Visitors per day">
+              {/* the vertical axis: four marks, the top one at or above the busiest day */}
+              <div className="relative h-32 w-9 shrink-0 text-xs tabular-nums text-text-faint" aria-hidden="true">
+                {ticks.map((tick) => (
+                  <span
+                    key={tick}
+                    className="absolute right-2 translate-y-1/2 leading-none"
+                    style={{ bottom: `${(tick / axisMax) * 100}%` }}
+                  >
+                    {tick}
+                  </span>
+                ))}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="relative h-32">
+                  {ticks.map((tick) => (
+                    <div
+                      key={tick}
+                      className="absolute inset-x-0 border-t border-border"
+                      style={{ bottom: `${(tick / axisMax) * 100}%` }}
+                    />
+                  ))}
+                  <div className="relative flex h-full items-end gap-px">
+                    {stats.daily.map((d) => (
+                      <div
+                        key={d.date}
+                        title={`${d.date}: ${d.visitors}`}
+                        className="min-h-px flex-1 rounded-t-[4px] bg-accent"
+                        style={{ height: `${(d.visitors / axisMax) * 100}%`, opacity: d.visitors ? 1 : 0.2 }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* the dates: a few of them, each under its own bar and slanted so it fits. The row has
+                    the bars' own layout, so a label sits in the middle of the bar it names. */}
+                <div className="flex h-14 gap-px text-xs text-text-faint" aria-hidden="true">
+                  {stats.daily.map((d, i) => (
+                    <div key={d.date} className="relative flex-1">
+                      {labelled.has(i) && (
+                        <>
+                          <span className="absolute left-1/2 top-0 h-1 w-px bg-border" />
+                          <span className="absolute left-1/2 top-1.5 origin-top-right -translate-x-full -rotate-45 whitespace-nowrap">
+                            {shortDate(d.date)}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-text-muted">Table</summary>

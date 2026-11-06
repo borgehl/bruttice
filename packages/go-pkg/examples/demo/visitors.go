@@ -17,9 +17,35 @@ import (
 // earlier rows (and moves the dates forward) and leaves real visitors alone.
 const (
 	visitorIDPrefix = "00000000-0000-4000-8000-"
-	visitorCount    = 150
 	visitorDays     = 60
+
+	// The busiest day of the last 7 days, and of the last 30. The Visitors page scales its chart to
+	// the busiest day of the range, so the two ranges are shown on different axes.
+	busiestDayOfWeek  = 15
+	busiestDayOfMonth = 55
+
+	// one visitor for each on the busiest day, who is then also the pool for every other day
+	visitorCount = busiestDayOfMonth
 )
+
+// weekVisitors is how many visitors came on each of the last 7 days, today first.
+var weekVisitors = [7]int{12, busiestDayOfWeek, 9, 6, 11, 14, 8}
+
+// dailyVisitors is how many different visitors came `daysAgo` days ago, 0 being today. The last 7
+// days stay at or under busiestDayOfWeek, days 7 to 29 are higher with the busiest day of the last
+// 30 among them, and older days are quieter.
+func dailyVisitors(daysAgo int) int {
+	switch {
+	case daysAgo < len(weekVisitors):
+		return weekVisitors[daysAgo]
+	case daysAgo == 12:
+		return busiestDayOfMonth
+	case daysAgo < 30:
+		return 22 + (daysAgo*11)%30 // 22 to 51
+	default:
+		return 8 + (daysAgo*7)%25 // 8 to 32
+	}
+}
 
 // place is the share of visitors from [from, to) out of 100. A place without a
 // country is a visitor whose location lookup failed.
@@ -46,8 +72,8 @@ type visitorSeed struct {
 }
 
 // visitors makes up the visitors of the last visitorDays days. It is a pure
-// function of `now`: traffic grows toward today, and who comes on which day is
-// a fixed pattern.
+// function of `now`. Each day has the number of visitors dailyVisitors gives: visitor n comes on a
+// day when n is within it, so the same few come most often and the busiest days bring the rest.
 func visitors(now time.Time, loc *time.Location) []visitorSeed {
 	today := now.In(loc)
 	ret := make([]visitorSeed, 0, visitorCount)
@@ -64,7 +90,7 @@ func visitors(now time.Time, loc *time.Location) []visitorSeed {
 		}
 
 		for daysAgo := 0; daysAgo < visitorDays; daysAgo++ {
-			if (n*31+daysAgo*17)%100 < 4+(visitorDays-daysAgo)/5 {
+			if n <= dailyVisitors(daysAgo) {
 				day := today.AddDate(0, 0, -daysAgo)
 				at := time.Date(day.Year(), day.Month(), day.Day(), 8+n%12, 0, 0, 0, loc)
 				if at.After(today) {
