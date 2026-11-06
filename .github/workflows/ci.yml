@@ -181,6 +181,20 @@ jobs:
           test "$(curl -fsS http://localhost:8083/site.webmanifest)" = '{"name": "Branded"}'
           test "$(curl -fsS http://localhost:8083/favicon.ico)" = 'icon-bytes'
 
+      # a file that keeps its name when it changes is cached for an hour, the hashed build files for a year
+      - name: Icons are cached briefly, build assets for a year
+        run: |
+          curl -sI http://localhost:8083/favicon.ico | grep -i '^cache-control: max-age=3600'
+          if curl -sI http://localhost:8083/favicon.ico | grep -i immutable; then exit 1; fi
+          asset=$(curl -fsS http://localhost:8083/ | grep -o '/assets/[^"]*\.js' | head -1)
+          curl -sI "http://localhost:8083$asset" | grep -i 'immutable'
+
+      - name: The default icon is the page's unless the site brings its own
+        run: |
+          curl -fsS http://localhost:8082/ | grep -F 'href="/favicon.svg"'
+          curl -fsS http://localhost:8082/favicon.svg | grep -F '<svg'
+          if curl -fsS http://localhost:8083/ | grep -F 'favicon.svg'; then exit 1; fi
+
       - name: Branding does not replace the page, or copy hidden files and directories
         run: |
           curl -fsS http://localhost:8083/ | grep -F '<title>Branded Site</title>'

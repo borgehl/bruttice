@@ -120,6 +120,24 @@ type IngestSourceResponse struct {
 	Errors       []string `json:"errors"`
 }
 
+type VisitorDayResponse struct {
+	Date     string `json:"date"` // YYYY-MM-DD
+	Visitors int64  `json:"visitors"`
+}
+
+type VisitorLocationResponse struct {
+	Country  string `json:"country"`
+	State    string `json:"state"`
+	City     string `json:"city"`
+	Visitors int64  `json:"visitors"`
+}
+
+type VisitorStatsResponse struct {
+	Days      int                       `json:"days"`
+	Daily     []VisitorDayResponse      `json:"daily"`
+	Locations []VisitorLocationResponse `json:"locations"`
+}
+
 type IngestRunsResponse struct {
 	Runs    []IngestRunResponse `json:"runs"`
 	HasMore bool                `json:"hasMore"`

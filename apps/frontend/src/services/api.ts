@@ -1,7 +1,7 @@
 import { ApiError } from '../utils/loadError';
 import type { SiteConfig } from '../store/site';
 import type { AdminConfig, ConfigChange } from '../types/config';
-import type { Age, Event, FilterOptions, Venue, AdminDashboard, IngestRunsPage, InboxThread, PageSummary, SitePage } from '../types/event';
+import type { Age, Event, FilterOptions, Venue, AdminDashboard, IngestRunsPage, InboxThread, PageSummary, SitePage, VisitorStats } from '../types/event';
 
 const API_BASE = '/api';
 
@@ -304,6 +304,21 @@ export async function fetchIngestRuns(beforeId?: number): Promise<IngestRunsPage
       throw new ApiError(response.status, 'Authentication required');
     }
     throw new ApiError(response.status, 'Failed to fetch ingest runs');
+  }
+
+  return response.json();
+}
+
+export async function fetchVisitorStats(days: number): Promise<VisitorStats> {
+  const response = await fetch(`${API_BASE}/admin/visitors?days=${days}`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new ApiError(response.status, 'Authentication required');
+    }
+    throw new ApiError(response.status, 'Failed to fetch visitors');
   }
 
   return response.json();
