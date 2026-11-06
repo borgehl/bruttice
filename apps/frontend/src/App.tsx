@@ -26,11 +26,22 @@ import AdminConfigPage from './pages/AdminConfigPage';
 
 function App() {
   const loadSite = useSiteStore((state) => state.load);
+  const siteName = useSiteStore((state) => state.site.name);
+  const siteLoaded = useSiteStore((state) => state.loaded);
   const loadPages = usePagesStore((state) => state.load);
   useEffect(() => {
     void loadSite();
     void loadPages();
   }, [loadSite, loadPages]);
+
+  // The served page already has the name when the image is given SITE_NAME. This covers a server
+  // without it, and a name changed in the config since. Until the config has loaded the store only
+  // holds its default, which must not replace the title the page came with.
+  useEffect(() => {
+    if (siteLoaded) {
+      document.title = siteName;
+    }
+  }, [siteLoaded, siteName]);
 
   return (
     <BrowserRouter>

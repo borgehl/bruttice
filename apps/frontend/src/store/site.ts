@@ -12,8 +12,20 @@ export interface SiteConfig {
   description: string;
 }
 
+// The part of a document that pageSiteName reads, so a test can pass a stand-in.
+interface MetaReader {
+  querySelector(selector: string): { getAttribute(name: string): string | null } | null;
+}
+
+// The site's name as the page was served. The production image puts it in the og:site_name tag
+// (docker-site-meta.sh), so the first paint can show it before /api/site answers. Empty if the page
+// has none, as in development.
+export function pageSiteName(doc: MetaReader | undefined): string {
+  return doc?.querySelector('meta[property="og:site_name"]')?.getAttribute('content')?.trim() ?? '';
+}
+
 export const defaultSiteConfig: SiteConfig = {
-  name: 'Bruttice',
+  name: pageSiteName(typeof document === 'undefined' ? undefined : document) || 'Bruttice',
   region: '',
   contactForm: false,
   description: 'A community calendar for local events. A simple aggregate of events, with no algorithms.',
