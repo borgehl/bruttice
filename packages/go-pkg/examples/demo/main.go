@@ -3,6 +3,9 @@
 // the guids are stable, so running it again moves the same events forward.
 //
 //	INGEST_URL=http://localhost:8080 INGEST_KEY=... [DEMO_REGION=central] go run ./examples/demo
+//
+// It also loads example visitors for the admin Visitors page when the POSTGRES_*
+// variables of the backend are set, see visitors.go.
 package main
 
 import (
@@ -126,6 +129,18 @@ func main() {
 	}
 
 	failed := false
+
+	// the backend is up, so its tables exist; without a database to reach, only events are loaded
+	if os.Getenv("POSTGRES_HOST") != "" {
+		logs, err := seedVisitors("localhost:8080", loc, time.Now())
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "visitors:", err)
+			failed = true
+		} else {
+			fmt.Printf("visitors: saved %d visits\n", logs)
+		}
+	}
+
 	for _, v := range venues {
 		out := payload(v, loc, time.Now())
 		result, err := client.Send(ctx, runID, out)

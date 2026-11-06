@@ -150,6 +150,12 @@ export interface IngestRun {
   sources: IngestSource[];
 }
 
+export interface VisitorStats {
+  days: number;
+  daily: { date: string; visitors: number }[];
+  locations: { country: string; state: string; city: string; visitors: number }[];
+}
+
 export interface IngestRunsPage {
   runs: IngestRun[];
   hasMore: boolean;

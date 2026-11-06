@@ -22,13 +22,17 @@ services:
     env_file: !override
       - demo/env
 
-  # Loads example data through the ingest API, then exits. Safe to run again.
+  # Loads example events through the ingest API and example visitors straight
+  # into the database (the POSTGRES_* variables of demo/env), then exits. Safe to
+  # run again.
   demo-seed:
     build:
       context: .
       dockerfile: demo/seed.Dockerfile
     depends_on:
       - bruttice-backend
+    env_file:
+      - demo/env
     environment:
       INGEST_URL: http://bruttice-backend:8080
       INGEST_KEY: demo-ingest-key

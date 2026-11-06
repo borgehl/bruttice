@@ -78,6 +78,7 @@ func (h *APIHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/admin/session", h.handleAdminCheckSession)
 	mux.HandleFunc("GET /api/admin/dashboard", h.handleAdminDashboard)
 	mux.HandleFunc("GET /api/admin/ingest-runs", h.handleAdminIngestRuns)
+	mux.HandleFunc("GET /api/admin/visitors", h.handleAdminVisitors)
 	mux.HandleFunc("POST /api/admin/ingest-run", h.handleAdminStartIngest)
 	mux.HandleFunc("POST /api/admin/vote", h.handleAdminVote)
 	mux.HandleFunc("POST /api/admin/add-event", h.handleAdminAddEvent)
