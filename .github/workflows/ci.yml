@@ -116,6 +116,53 @@ jobs:
         run: pnpm test
         working-directory: apps/frontend
 
+  # The production image serves the built site with nginx. This builds it and checks the page as a
+  # browser, a search engine or a link preview would get it: any route serves the app, and the
+  # title and link preview tags show SITE_NAME with its HTML escaped.
+  test-frontend-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: docker build -t frontend-test apps/frontend
+
+      - name: Run with a site name, and without
+        run: |
+          docker run -d --name named -p 8081:80 -e SITE_NAME='Tom & "Jerry" <Co>' -e SITE_DESCRIPTION="It's a test | with & pipes" frontend-test
+          docker run -d --name plain -p 8082:80 frontend-test
+          for port in 8081 8082; do
+            for i in $(seq 1 30); do
+              curl -fsS "http://localhost:$port/" > /dev/null 2>&1 && break
+              sleep 1
+            done
+          done
+
+      - name: The name and description are in the page
+        run: |
+          for path in / /about /p/anything; do
+            page=$(curl -fsS "http://localhost:8081$path")
+            echo "$page" | grep -F '<title>Tom &amp; &quot;Jerry&quot; &lt;Co&gt;</title>'
+            echo "$page" | grep -F 'property="og:title" content="Tom &amp; &quot;Jerry&quot; &lt;Co&gt;"'
+            echo "$page" | grep -F 'property="og:site_name" content="Tom &amp; &quot;Jerry&quot; &lt;Co&gt;"'
+            echo "$page" | grep -F 'name="description" content="It&#39;s a test | with &amp; pipes"'
+            echo "$page" | grep -F 'id="root"'
+          done
+
+      - name: Without them the defaults stay
+        run: |
+          curl -fsS http://localhost:8082/ | grep -F '<title>Bruttice</title>'
+
+      - name: A missing asset is a 404, not the app
+        run: |
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8081/assets/missing.js)" = 404
+
+      - name: Logs
+        if: failure()
+        run: |
+          docker logs named
+          docker logs plain
+
   publish-backend:
     needs: [test-backend, test-go-pkg]
     # images are published from main and for releases
@@ -155,7 +202,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   publish-frontend:
-    needs: test-frontend
+    needs: [test-frontend, test-frontend-image]
     # images are published from main and for releases
     if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'release'
     runs-on: ubuntu-latest

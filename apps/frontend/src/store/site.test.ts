@@ -1,5 +1,28 @@
 import { describe, it, expect } from 'vitest'
-import { defaultSiteConfig, mergeSiteConfig } from './site'
+import { defaultSiteConfig, mergeSiteConfig, pageSiteName } from './site'
+
+describe('pageSiteName', () => {
+  const page = (content: string | null) => ({
+    querySelector: (selector: string) =>
+      selector === 'meta[property="og:site_name"]' && content !== null
+        ? { getAttribute: (name: string) => (name === 'content' ? content : null) }
+        : null,
+  })
+
+  it('is the name the page was served with', () => {
+    expect(pageSiteName(page('Do It Together Tulsa'))).toBe('Do It Together Tulsa')
+    expect(pageSiteName(page('  Padded  '))).toBe('Padded')
+  })
+
+  it('is empty without a document or a tag', () => {
+    expect(pageSiteName(undefined)).toBe('')
+    expect(pageSiteName(page(null))).toBe('')
+  })
+
+  it('is Bruttice in the defaults when there is no page', () => {
+    expect(defaultSiteConfig.name).toBe('Bruttice')
+  })
+})
 
 describe('mergeSiteConfig', () => {
   it('is the defaults without a response', () => {

@@ -25,10 +25,18 @@ EXPOSE 80
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
-# Production stage — pre-built for k8s; no runtime build step
-FROM base AS prod
+FROM base AS build
 RUN pnpm build
 
-EXPOSE 80
+# Production stage — the built site served by nginx. Nothing is built or installed at start. The
+# image's default build target, so it is what `docker build` and CI produce.
+#
+# SITE_NAME and SITE_DESCRIPTION (optional env) set the page's title and link preview text, see
+# docker-site-meta.sh.
+FROM nginx:1.29-alpine AS prod
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/dist/index.html /usr/share/nginx/index.template.html
+COPY --chmod=755 docker-site-meta.sh /docker-entrypoint.d/40-site-meta.sh
 
-CMD ["pnpm", "preview", "--host", "0.0.0.0", "--port", "80"]
+EXPOSE 80
