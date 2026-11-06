@@ -157,11 +157,48 @@ jobs:
         run: |
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8081/assets/missing.js)" = 404
 
+      - name: Without a branding directory the web manifest is a 404, not the app
+        run: |
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8082/site.webmanifest)" = 404
+
+      # docs/branding.md: files in /usr/share/nginx/branding are served from the site's root. The
+      # symlinked dotfile and the subdirectory stand in for what a Kubernetes ConfigMap mount looks
+      # like, and index.html must not replace the page.
+      - name: Run with a branding directory
+        run: |
+          mkdir -p branding/..data branding/sub
+          printf '{"name": "Branded"}' > branding/site.webmanifest
+          printf 'icon-bytes' > branding/favicon.ico
+          printf 'not the page' > branding/index.html
+          printf 'hidden' > branding/..data/secret.txt
+          printf 'nested' > branding/sub/nested.txt
+          docker run -d --name branded -p 8083:80 -e SITE_NAME='Branded Site' -v "$PWD/branding:/usr/share/nginx/branding:ro" frontend-test
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8083/ > /dev/null 2>&1 && break
+            sleep 1
+          done
+
+      - name: The branding files are served
+        run: |
+          test "$(curl -fsS http://localhost:8083/site.webmanifest)" = '{"name": "Branded"}'
+          test "$(curl -fsS http://localhost:8083/favicon.ico)" = 'icon-bytes'
+
+      - name: Branding does not replace the page, or copy hidden files and directories
+        run: |
+          curl -fsS http://localhost:8083/ | grep -F '<title>Branded Site</title>'
+          curl -fsS http://localhost:8083/ | grep -F 'id="root"'
+          # an unknown route gets the app, so check what was served and not the status
+          test "$(curl -s http://localhost:8083/secret.txt)" != 'hidden'
+          test "$(curl -s http://localhost:8083/nested.txt)" != 'nested'
+          docker logs branded 2>&1 | grep -F 'branding: site.webmanifest'
+          docker logs branded 2>&1 | grep -F 'branding: skipping index.html'
+
       - name: Logs
         if: failure()
         run: |
           docker logs named
           docker logs plain
+          docker logs branded
 
   # Nothing is published, and no release is made, until every test has passed. Each publish job
   # waits for this one rather than for the tests it seems to be about, so a job can't finish early

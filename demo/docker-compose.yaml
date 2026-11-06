@@ -14,6 +14,9 @@ services:
   bruttice-frontend:
     env_file: !override
       - demo/env
+    # an example of docs/branding.md: this web manifest is served as /site.webmanifest
+    volumes:
+      - ./demo/branding:/usr/share/nginx/branding:ro
 
   bruttice-db:
     env_file: !override
