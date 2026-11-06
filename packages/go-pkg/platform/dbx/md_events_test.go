@@ -140,3 +140,109 @@ func TestDeduplicateEventsLeavesCancelledEventsAlone(t *testing.T) {
 		}
 	}
 }
+
+func TestGetIndexEventsFiltersByRegion(t *testing.T) {
+	d := testConfigDB(t)
+	tulsa := mustRegion(t, d, uniq("tulsa"))
+	okc := mustRegion(t, d, uniq("okc"))
+	age := mustAge(t, d)
+	inTulsa := mustEvent(t, d, age, tulsa, mustVenue(t, d, tulsa.Name, true), false)
+	inOKC := mustEvent(t, d, age, okc, mustVenue(t, d, okc.Name, true), false)
+
+	// only approved events are on the calendar
+	for _, e := range []models.Event{inTulsa, inOKC} {
+		if err := d.DB.Model(&models.Event{}).Where("id = ?", e.ID).Update("approved_at", time.Now().Unix()).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// the events start an hour from now
+	shown := func(regions ...string) map[int64]bool {
+		t.Helper()
+		filter := models.CalendarFilterBackend{
+			FromDate: time.Now(),
+			ToDate:   time.Now().Add(24 * time.Hour),
+			Regions:  regions,
+		}
+		events, err := d.GetIndexEvents(filter, d.DB)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids := make(map[int64]bool, len(events))
+		for _, e := range events {
+			ids[e.ID] = true
+		}
+		return ids
+	}
+
+	tests := []struct {
+		name    string
+		regions []string
+		tulsa   bool
+		okc     bool
+	}{
+		{"no regions shows every region", nil, true, true},
+		{"one region", []string{tulsa.Name}, true, false},
+		{"the other region", []string{okc.Name}, false, true},
+		{"two regions", []string{tulsa.Name, okc.Name}, true, true},
+		{"a name that is no region shows nothing", []string{uniq("no-such-region")}, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shown(tt.regions...)
+			if got[inTulsa.ID] != tt.tulsa || got[inOKC.ID] != tt.okc {
+				t.Errorf("regions %q: tulsa event shown %v, okc event shown %v; want %v and %v",
+					tt.regions, got[inTulsa.ID], got[inOKC.ID], tt.tulsa, tt.okc)
+			}
+		})
+	}
+
+	// a filter's own regions and the request's must both match
+	both := func(saved []string, requested []string) map[int64]bool {
+		t.Helper()
+		filter := models.CalendarFilterBackend{
+			FromDate:       time.Now(),
+			ToDate:         time.Now().Add(24 * time.Hour),
+			Regions:        saved,
+			RequestRegions: requested,
+		}
+		events, err := d.GetIndexEvents(filter, d.DB)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids := make(map[int64]bool, len(events))
+		for _, e := range events {
+			ids[e.ID] = true
+		}
+		return ids
+	}
+
+	t.Run("saved and requested regions are intersected", func(t *testing.T) {
+		tests := []struct {
+			name             string
+			saved, requested []string
+			tulsa, okc       bool
+		}{
+			{"saved only", []string{tulsa.Name}, nil, true, false},
+			{"requested only", nil, []string{okc.Name}, false, true},
+			{"requested inside saved", []string{tulsa.Name, okc.Name}, []string{okc.Name}, false, true},
+			{"nothing in common shows nothing", []string{tulsa.Name}, []string{okc.Name}, false, false},
+		}
+		for _, tt := range tests {
+			got := both(tt.saved, tt.requested)
+			if got[inTulsa.ID] != tt.tulsa || got[inOKC.ID] != tt.okc {
+				t.Errorf("%s: tulsa event shown %v, okc event shown %v; want %v and %v",
+					tt.name, got[inTulsa.ID], got[inOKC.ID], tt.tulsa, tt.okc)
+			}
+		}
+	})
+
+	t.Run("a retired region is not matched", func(t *testing.T) {
+		if err := d.DB.Model(&models.Region{}).Where("id = ?", okc.ID).Update("retired_at", time.Now().Unix()).Error; err != nil {
+			t.Fatal(err)
+		}
+		if got := shown(okc.Name); got[inOKC.ID] {
+			t.Error("an event of a retired region was shown for its name")
+		}
+	})
+}

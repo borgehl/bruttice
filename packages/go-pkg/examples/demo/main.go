@@ -36,6 +36,8 @@ type listing struct {
 type venue struct {
 	name string
 	link string
+	// region of the venue's events, the default region when empty
+	region string
 	// pending venues are not scraped, and their events wait in the moderation queue
 	pending  bool
 	listings []listing
@@ -73,6 +75,18 @@ var venues = []venue{
 			{"1", "Late Night Improv", 2, 22, "$7", "21+", []string{"comedy"}, false},
 			{"2", "Local Band Showcase", 6, 21, "$10", "21+", []string{"music"}, false},
 			{"3", "Karaoke Tuesday", 8, 21, "free", "21+", []string{"music", "recurring"}, false},
+		},
+	},
+	// the only venue outside the default region, for trying the region picker and region filters
+	{
+		name:   "Harbor Hall",
+		link:   "https://example.com/venue-five",
+		region: "eastern",
+		listings: []listing{
+			{"1", "Sea Shanty Sing-Along", 2, 19, "free", "all-ages", []string{"music", "community"}, false},
+			{"2", "Dockside Stand-Up", 5, 20, "$10", "21+", []string{"comedy"}, false},
+			{"3", "Lighthouse Poetry Reading", 8, 18, "$5", "16+", []string{"literature"}, false},
+			{"4", "Harbor Jazz Night", 11, 20, "$12", "18+", []string{"music"}, false},
 		},
 	},
 	{
@@ -150,6 +164,11 @@ func startRun(ctx context.Context, client *ingest.Client) (int64, error) {
 }
 
 func payload(v venue, loc *time.Location, now time.Time) ingest.IngestionOutput {
+	region := region
+	if v.region != "" {
+		region = v.region
+	}
+
 	out := ingest.IngestionOutput{
 		VenueInfo: ingest.VenueInfo{
 			Name:            v.name,

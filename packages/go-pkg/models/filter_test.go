@@ -6,6 +6,29 @@ import (
 	"time"
 )
 
+func TestFilterKeyAndRegions(t *testing.T) {
+	plain := CalendarFilterBackend{Tags: []string{"music"}, TagsInclude: true}
+
+	// the regions of a request are not part of the filter
+	requested := plain
+	requested.RequestRegions = []string{"okc"}
+	if plain.GetDBFilter().HashKey != requested.GetDBFilter().HashKey {
+		t.Error("the regions of a request changed the key of the filter")
+	}
+
+	// the regions of a filter are, and they survive being stored
+	saved := plain
+	saved.Regions = []string{"okc"}
+	if plain.GetDBFilter().HashKey == saved.GetDBFilter().HashKey {
+		t.Error("the regions of a filter did not change its key")
+	}
+	stored := saved.GetDBFilter()
+	got := stored.GetBackendFilter()
+	if len(got.Regions) != 1 || got.Regions[0] != "okc" {
+		t.Errorf("stored regions = %v, want [okc]", got.Regions)
+	}
+}
+
 func TestCustomOffsetsToDatesAcrossDST(t *testing.T) {
 	today := util.NowDate()
 

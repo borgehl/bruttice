@@ -54,8 +54,25 @@ func (d *DatabaseClient) getVenueFilter(filter models.CalendarFilterBackend, tx 
 	), nil
 }
 
+// getRegionFilter keeps the events of the named regions. A name that is not a region, or is
+// retired, matches nothing. Retiring a region moves its events to the one it was merged into.
+func getRegionFilter(names []string, tx *gorm.DB) *gorm.DB {
+	return tx.Where(
+		"events.region_id in (select id from regions where name in ? and retired_at = 0)",
+		names,
+	)
+}
+
 func (d *DatabaseClient) GetTxWithFilter(filter models.CalendarFilterBackend, tx *gorm.DB) (*gorm.DB, error) {
 	var err error
+	// two separate conditions, so an event has to pass both. Merging the lists would turn two
+	// regions with nothing in common into an empty list, which means every region.
+	if len(filter.Regions) > 0 {
+		tx = getRegionFilter(filter.Regions, tx)
+	}
+	if len(filter.RequestRegions) > 0 {
+		tx = getRegionFilter(filter.RequestRegions, tx)
+	}
 	if len(filter.Tags) > 0 {
 		tx, err = d.getTagFilter(filter, tx)
 		if err != nil {

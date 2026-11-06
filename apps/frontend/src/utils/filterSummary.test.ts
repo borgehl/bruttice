@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ageLabel, describeFilter } from './filterSummary'
+import { ageLabel, describeFilter, describeFilterGroups } from './filterSummary'
 
 describe('ageLabel', () => {
   it('calls the lowest age group all ages', () => {
@@ -27,13 +27,33 @@ describe('describeFilter', () => {
     expect(describeFilter({ age: 18, agesLessThan: false })).toEqual(['Min 18+'])
   })
 
-  it('puts tags, then age, then venues', () => {
+  it('lists regions as they are', () => {
+    expect(describeFilter({ regions: ['tulsa', 'okc'] })).toEqual(['tulsa', 'okc'])
+  })
+
+  it('puts tags, then age, then regions, then venues', () => {
     expect(
       describeFilter({
         tags: ['Music'], tagsInclude: true,
         age: 1, agesLessThan: true,
+        regions: ['okc'],
         venues: ["Cain's"], venuesInclude: false,
       }),
-    ).toEqual(['Music', 'Max All ages', "Not Cain's"])
+    ).toEqual(['Music', 'Max All ages', 'okc', "Not Cain's"])
+  })
+})
+
+describe('describeFilterGroups', () => {
+  it('is empty without a filter', () => {
+    expect(describeFilterGroups({})).toEqual([])
+  })
+
+  it('names each kind the filter uses and leaves out the rest', () => {
+    expect(
+      describeFilterGroups({ tags: ['music'], tagsInclude: true, regions: ['okc'] }),
+    ).toEqual([
+      { title: 'Tags', parts: ['Music'] },
+      { title: 'Regions', parts: ['okc'] },
+    ])
   })
 })

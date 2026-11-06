@@ -33,7 +33,7 @@ A web manifest looks like this. The names in `icons` are the files you provide:
 }
 ```
 
-The core ships no icons of its own yet: without a branding directory these links answer 404 and browsers show their default icon.
+The core ships one default icon, `favicon.svg` (a calendar glyph), which is the tab icon of a site with no branding. It cannot cover the Apple touch icon or the manifest icons, those need PNGs: without them those links answer 404. When a site supplies `favicon.ico`, a `favicon-*.png` or `apple-touch-icon.png`, the start-up script removes the `favicon.svg` link from the page, so the site's own icons are the ones used. A site that wants a different SVG can supply its own `favicon.svg`.
 
 You can add any other file the same way (a logo, an `og:image`). Files go straight in the directory, subdirectories are not copied.
 

@@ -4,6 +4,7 @@ import (
 	"github.com/borgehl/bruttice/apps/backend/internal/web/mapper"
 	"github.com/borgehl/bruttice/packages/go-pkg/models"
 	"net/http"
+	"strings"
 )
 
 func (h *APIHandler) handleGetCalendar(w http.ResponseWriter, r *http.Request) {
@@ -41,5 +42,29 @@ func (h *APIHandler) getFilter(r *http.Request) (models.CalendarFilterBackend, e
 		r.URL.Query().Get("from-date"),
 		r.URL.Query().Get("to-date"),
 	)
+	filter.RequestRegions = regionsFromQuery(r.URL.Query()["regions"])
 	return filter, nil
+}
+
+// maxRegionsInQuery bounds the regions one request can ask for. A site has a handful.
+const maxRegionsInQuery = 50
+
+// regionsFromQuery cleans a list of region names, the values of the repeated regions parameter
+// (?regions=tulsa&regions=okc) or the regions of a filter being created: names without surrounding
+// space, no empty ones, none twice, in the order given.
+func regionsFromQuery(values []string) []string {
+	var regions []string
+	seen := make(map[string]bool, len(values))
+	for _, value := range values {
+		name := strings.TrimSpace(value)
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		regions = append(regions, name)
+		if len(regions) == maxRegionsInQuery {
+			break
+		}
+	}
+	return regions
 }

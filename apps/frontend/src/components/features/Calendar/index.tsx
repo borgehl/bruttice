@@ -6,7 +6,10 @@ import { useInfiniteCalendar } from '../../../hooks/useInfiniteCalendar';
 import { todayLocal } from '../../../utils/calendarWindow';
 import { groupEventsByDay } from '../../../utils/time';
 import { describeFilter } from '../../../utils/filterSummary';
+import { REGIONS_PARAM, regionsFromParams, regionsKey } from '../../../utils/regionFilter';
+import CurrentFilter from '../CurrentFilter';
 import EventDaySection from '../EventDaySection';
+import RegionFilter from '../RegionFilter';
 import StartDateFilter, { START_DATE_PARAM } from '../StartDateFilter';
 import ActiveFilters from '../ActiveFilters';
 import Skeleton from '../../ui/Skeleton';
@@ -23,6 +26,7 @@ export default function Calendar() {
   const [searchParams] = useSearchParams();
   const filterKey = searchParams.get('filterKey') || undefined;
   const startDate = searchParams.get(START_DATE_PARAM) || todayLocal();
+  const regions = regionsFromParams(searchParams);
 
   const [filterDetails, setFilterDetails] = useState<FilterDetails | null>(null);
 
@@ -52,15 +56,21 @@ export default function Calendar() {
 
   const hasActiveFilters = filterDetails && describeFilter(filterDetails).length > 0;
 
-  // Clear keeps the date the calendar starts from and drops only the filter.
-  const clearParams = new URLSearchParams(searchParams);
-  clearParams.delete('filterKey');
-  const clearQuery = clearParams.toString();
+  // Clearing the filter keeps the date the calendar starts from and the regions picked, they have
+  // their own controls. The empty calendar's way out drops the regions too.
+  const withoutFilter = new URLSearchParams(searchParams);
+  withoutFilter.delete('filterKey');
+  const withoutFilterQuery = withoutFilter.toString();
+
+  const withoutAll = new URLSearchParams(withoutFilter);
+  withoutAll.delete(REGIONS_PARAM);
+  const withoutAllQuery = withoutAll.toString();
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex min-h-[60px] shrink-0 items-center justify-between gap-3 px-4 py-2 md:justify-end">
-        <h1 className="font-label min-w-0 truncate md:hidden text-[17px] font-bold leading-tight tracking-tight text-text in-data-[theme=neon]:text-[19px] in-data-[theme=neon]:text-accent in-data-[theme=neon]:glow-text">
+      {/* on a phone the title takes the first line and the controls the second, so they never cover it */}
+      <header className="flex min-h-[60px] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 md:flex-nowrap md:justify-end">
+        <h1 className="font-label w-full min-w-0 truncate md:hidden text-[17px] font-bold leading-tight tracking-tight text-text in-data-[theme=neon]:text-[19px] in-data-[theme=neon]:text-accent in-data-[theme=neon]:glow-text">
           <span>{site.name}</span>
           {site.region && (
             <span className="font-medium text-text-muted before:content-['_·_'] in-data-[theme=neon]:block in-data-[theme=neon]:text-xs in-data-[theme=neon]:text-accent-2 in-data-[theme=neon]:before:content-['//_']">
@@ -68,20 +78,30 @@ export default function Calendar() {
             </span>
           )}
         </h1>
-        <StartDateFilter startDate={startDate} />
+        <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:shrink-0 md:flex-nowrap">
+          {filterKey && (
+            <CurrentFilter filterDetails={filterDetails} clearTo={withoutFilterQuery ? `/?${withoutFilterQuery}` : '/'} />
+          )}
+          <RegionFilter />
+          <StartDateFilter startDate={startDate} />
+        </div>
       </header>
 
       {hasActiveFilters && filterDetails && (
-        <ActiveFilters filterDetails={filterDetails} clearTo={clearQuery ? `/?${clearQuery}` : '/'} />
+        <ActiveFilters
+          filterDetails={filterDetails}
+          clearTo={withoutFilterQuery ? `/?${withoutFilterQuery}` : '/'}
+        />
       )}
 
-      {/* keyed so changing the start date or filter starts a fresh scroll */}
+      {/* keyed so changing the start date, filter or regions starts a fresh scroll */}
       <CalendarScroll
-        key={`${startDate}|${filterKey ?? ''}`}
+        key={`${startDate}|${filterKey ?? ''}|${regionsKey(regions)}`}
         filterKey={filterKey}
+        regions={regions}
         startDate={startDate}
-        filtered={Boolean(hasActiveFilters)}
-        clearTo={clearQuery ? `/?${clearQuery}` : '/'}
+        filtered={Boolean(hasActiveFilters) || regions.length > 0}
+        clearTo={withoutAllQuery ? `/?${withoutAllQuery}` : '/'}
       />
     </div>
   );
@@ -89,13 +109,15 @@ export default function Calendar() {
 
 interface CalendarScrollProps {
   filterKey?: string;
+  // region names to show, all of them when empty
+  regions: string[];
   startDate: string;
   // a filter is narrowing the list, which decides what an empty calendar says
   filtered: boolean;
   clearTo: string;
 }
 
-function CalendarScroll({ filterKey, startDate, filtered, clearTo }: CalendarScrollProps) {
+function CalendarScroll({ filterKey, regions, startDate, filtered, clearTo }: CalendarScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -115,6 +137,7 @@ function CalendarScroll({ filterKey, startDate, filtered, clearTo }: CalendarScr
     retry,
   } = useInfiniteCalendar({
     filterKey,
+    regions,
     startDate,
     onBeforePrepend: () => {
       heightBeforePrepend.current = containerRef.current?.scrollHeight ?? null;
@@ -183,7 +206,7 @@ function CalendarScroll({ filterKey, startDate, filtered, clearTo }: CalendarScr
               </Link>
             }
           >
-            Try removing a tag or venue.
+            Try removing a tag, venue or region.
           </EmptyState>
         ) : (
           <EmptyState

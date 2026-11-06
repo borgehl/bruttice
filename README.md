@@ -137,7 +137,7 @@ For your own icons and web manifest, mount a directory of files at `/usr/share/n
 | `make test-frontend` | Typecheck and tests for `apps/frontend`                                                                                                                                                                                      |
 | `make test`          | Both                                                                                                                                                                                                                         |
 
-The example data is loaded through the ingest API by `packages/go-pkg/examples/demo`, so it also shows what a scraper's payload looks like. It includes a venue whose events wait in the admin moderation queue. Container names are fixed, so stop one stack before starting the other.
+The example data is loaded through the ingest API by `packages/go-pkg/examples/demo`, so it also shows what a scraper's payload looks like. It includes a venue whose events wait in the admin moderation queue, and one venue in a second region (`eastern`) so the region picker has something to switch between. Container names are fixed, so stop one stack before starting the other.
 
 ## Writing scrapers
 

@@ -7,6 +7,8 @@ const API_BASE = '/api';
 
 export interface CalendarParams {
   filterKey?: string;
+  // region names to show, all of them when empty
+  regions?: string[];
   fromDate?: string;
   toDate?: string;
 }
@@ -16,6 +18,10 @@ export async function fetchCalendarEvents(params?: CalendarParams): Promise<Even
 
   if (params?.filterKey) {
     searchParams.set('filterKey', params.filterKey);
+  }
+  // one parameter per region, so a name can hold any character
+  for (const region of params?.regions ?? []) {
+    searchParams.append('regions', region);
   }
   if (params?.fromDate) {
     searchParams.set('from-date', params.fromDate);
@@ -126,6 +132,7 @@ export interface CreateFilterData {
   agesLessThan: boolean;
   venues: string[];
   venuesInclude: boolean;
+  regions: string[];
 }
 
 export async function createFilter(data: CreateFilterData): Promise<{ filterKey: string }> {
@@ -151,6 +158,7 @@ export interface FilterDetails {
   agesLessThan?: boolean;
   venues?: string[];
   venuesInclude?: boolean;
+  regions?: string[];
 }
 
 export async function fetchFilterDetails(filterKey: string): Promise<FilterDetails> {

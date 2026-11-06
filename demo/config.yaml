@@ -12,7 +12,7 @@ site:
   description: A demo of the Bruttice community calendar.
 
 admin-accounts:
-  - "admin@example.com;demo-password"
+  - "a@b.c;pass"
 
 tags:
   - comedy
