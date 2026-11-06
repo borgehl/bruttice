@@ -71,6 +71,7 @@ func (h *APIHandler) handleGetFilter(w http.ResponseWriter, r *http.Request) {
 		AgesLessThan:  filter.AgesLessThan,
 		Venues:        filter.Venues,
 		VenuesInclude: filter.VenuesInclude,
+		Regions:       filter.Regions,
 	})
 }
 
@@ -98,6 +99,7 @@ func (h *APIHandler) handleCreateFilter(w http.ResponseWriter, r *http.Request) 
 		AgesLessThan:  req.AgesLessThan,
 		Venues:        req.Venues,
 		VenuesInclude: req.VenuesInclude,
+		Regions:       regionsFromQuery(req.Regions),
 	}
 
 	dbFilter := filter.GetDBFilter()

@@ -95,6 +95,7 @@ type CreateFilterRequest struct {
 	AgesLessThan  bool     `json:"agesLessThan"`
 	Venues        []string `json:"venues"`
 	VenuesInclude bool     `json:"venuesInclude"`
+	Regions       []string `json:"regions"`
 }
 
 type CreateFilterResponse struct {
@@ -108,6 +109,7 @@ type GetFilterResponse struct {
 	AgesLessThan  bool     `json:"agesLessThan,omitempty"`
 	Venues        []string `json:"venues,omitempty"`
 	VenuesInclude bool     `json:"venuesInclude,omitempty"`
+	Regions       []string `json:"regions,omitempty"`
 }
 
 type AddEventRequest struct {

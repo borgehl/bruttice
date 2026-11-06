@@ -21,6 +21,15 @@ type CalendarFilterBackend struct {
 	Venues        []string
 	VenuesInclude bool
 
+	// Regions are the names of the regions a saved filter shows, all of them when empty. omitempty
+	// keeps the stored body, and so the key, of every filter without regions as it was.
+	Regions []string `json:",omitempty"`
+
+	// RequestRegions are the regions one request asks for, from the calendar's region picker. They
+	// are not saved. They narrow the filter's own Regions: an event has to be in both lists, so a
+	// filter for one region and a request for another matches nothing.
+	RequestRegions []string `json:"-"`
+
 	// dates
 	FromDate time.Time
 	ToDate   time.Time

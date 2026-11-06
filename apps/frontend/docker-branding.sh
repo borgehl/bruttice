@@ -38,4 +38,12 @@ for file in "$branding"/*; do
 
     cp -L "$file" "$site/$name"
     echo "branding: $name"
+
+    # the page links the default icon (favicon.svg) first, and a browser may prefer it to the
+    # site's own icons, so the link goes once the site brings any of its own
+    case "$name" in
+        favicon.ico | favicon-*.png | apple-touch-icon.png)
+            sed -i '/favicon\.svg/d' "$site/index.html"
+            ;;
+    esac
 done

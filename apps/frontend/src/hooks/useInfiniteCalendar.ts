@@ -12,6 +12,8 @@ import { toLoadError, type LoadError } from '../utils/loadError';
 
 interface UseInfiniteCalendarOptions {
   filterKey?: string;
+  // region names to show, all of them when empty
+  regions?: string[];
   startDate: string;
   // Called synchronously right before earlier events are prepended, so the caller
   // can record scroll metrics and keep the viewport from jumping.
@@ -20,7 +22,7 @@ interface UseInfiniteCalendarOptions {
 
 // Loads the calendar in date windows around startDate: forward from it and backward before it.
 // State is not reset when the inputs change, mount it with a key built from them instead.
-export function useInfiniteCalendar({ filterKey, startDate, onBeforePrepend }: UseInfiniteCalendarOptions) {
+export function useInfiniteCalendar({ filterKey, regions, startDate, onBeforePrepend }: UseInfiniteCalendarOptions) {
   const [events, setEvents] = useState<Event[]>([]);
   const [initialDone, setInitialDone] = useState(false);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
@@ -34,6 +36,8 @@ export function useInfiniteCalendar({ filterKey, startDate, onBeforePrepend }: U
   const busy = useRef({ earlier: false, later: false });
   const mounted = useRef(false);
   const onBeforePrependRef = useRef(onBeforePrepend);
+  // like filterKey, the regions are fixed for the life of the hook: a change remounts it
+  const regionsRef = useRef(regions);
 
   useEffect(() => {
     onBeforePrependRef.current = onBeforePrepend;
@@ -54,7 +58,12 @@ export function useInfiniteCalendar({ filterKey, startDate, onBeforePrepend }: U
     try {
       for (let empty = 0; empty < MAX_EMPTY_WINDOWS; empty++) {
         const win = windowAfter(loaded.current.last);
-        const data = await fetchCalendarEvents({ filterKey, fromDate: win.from, toDate: win.to });
+        const data = await fetchCalendarEvents({
+          filterKey,
+          regions: regionsRef.current,
+          fromDate: win.from,
+          toDate: win.to,
+        });
         if (!mounted.current) return;
 
         loaded.current.last = win.to;
@@ -83,7 +92,12 @@ export function useInfiniteCalendar({ filterKey, startDate, onBeforePrepend }: U
     try {
       for (let empty = 0; empty < MAX_EMPTY_WINDOWS; empty++) {
         const win = windowBefore(loaded.current.first);
-        const data = await fetchCalendarEvents({ filterKey, fromDate: win.from, toDate: win.to });
+        const data = await fetchCalendarEvents({
+          filterKey,
+          regions: regionsRef.current,
+          fromDate: win.from,
+          toDate: win.to,
+        });
         if (!mounted.current) return;
 
         loaded.current.first = win.from;

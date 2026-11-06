@@ -40,7 +40,7 @@ export default function FilterPage() {
   const [tagsMode, setTagsMode] = useState<Apply>('include');
   const [selectedAges, setSelectedAges] = useState<number[]>([]);
   const [agesMode, setAgesMode] = useState<Bound>('max');
-  // Regions only narrow the venue list. They are not saved with the filter.
+  // Regions are saved with the filter, and also narrow the venue list.
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedVenues, setSelectedVenues] = useState<string[]>([]);
   const [venuesMode, setVenuesMode] = useState<Apply>('include');
@@ -89,6 +89,7 @@ export default function FilterPage() {
         agesLessThan: agesMode === 'max',
         venues: selectedVenues,
         venuesInclude: venuesMode === 'include',
+        regions: selectedRegions,
       });
       navigate(`/?filterKey=${result.filterKey}`);
     } catch (err) {
