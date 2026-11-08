@@ -6,7 +6,8 @@ import { useInfiniteCalendar } from '../../../hooks/useInfiniteCalendar';
 import { todayLocal } from '../../../utils/calendarWindow';
 import { groupEventsByDay } from '../../../utils/time';
 import { describeFilter } from '../../../utils/filterSummary';
-import { REGIONS_PARAM, regionsFromParams, regionsKey } from '../../../utils/regionFilter';
+import { REGIONS_PARAM, regionsFromParams, regionsKey, withRegions } from '../../../utils/regionFilter';
+import { usePersistedFilters } from '../../../hooks/usePersistedFilters';
 import CurrentFilter from '../CurrentFilter';
 import EventDaySection from '../EventDaySection';
 import RegionFilter from '../RegionFilter';
@@ -23,12 +24,13 @@ import { ghostButtonClass, primaryButtonClass } from '../../ui/Field';
 const LOAD_MARGIN = '200px 0px';
 
 export default function Calendar() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const filterKey = searchParams.get('filterKey') || undefined;
   const startDate = searchParams.get(START_DATE_PARAM) || todayLocal();
   const regions = regionsFromParams(searchParams);
 
   const [filterDetails, setFilterDetails] = useState<FilterDetails | null>(null);
+  const keepsRegions = usePersistedFilters();
 
   useEffect(() => {
     let cancelled = false;
@@ -40,7 +42,14 @@ export default function Calendar() {
       }
       try {
         const filter = await fetchFilterDetails(filterKey);
-        if (!cancelled) setFilterDetails(filter);
+        if (cancelled) return;
+        setFilterDetails(filter);
+
+        // The picker starts at the key's regions, and the visitor can change it from there. Regions
+        // restored along with this key are the visitor's own, so they stay.
+        if (!keepsRegions(filterKey)) {
+          setSearchParams((params) => withRegions(params, filter.regions ?? []), { replace: true });
+        }
       } catch {
         if (!cancelled) setFilterDetails(null);
       }
@@ -50,7 +59,7 @@ export default function Calendar() {
     return () => {
       cancelled = true;
     };
-  }, [filterKey]);
+  }, [filterKey, keepsRegions, setSearchParams]);
 
   const { site } = useSiteStore();
 
