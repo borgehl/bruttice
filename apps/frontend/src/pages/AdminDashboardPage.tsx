@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Page from '../components/ui/Page';
 import AdminDashboardDaySection from '../components/features/AdminDashboardDaySection';
@@ -24,6 +24,8 @@ export default function AdminDashboardPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   // bumped by Try again to load the dashboard once more
   const [attempt, setAttempt] = useState(0);
+  // the number of the latest refresh that started, see refreshDashboard
+  const latestRefresh = useRef(0);
   // the view is in the address (?view=inbox), so the menu of the other admin pages can open it
   const [searchParams, setSearchParams] = useSearchParams();
   const viewParam = searchParams.get('view');
@@ -70,11 +72,16 @@ export default function AdminDashboardPage() {
   };
 
   const refreshDashboard = async () => {
+    // Refreshes can overlap, and a slow older one must not replace what a newer one brought, so only
+    // the latest one to start is taken.
+    const refresh = ++latestRefresh.current;
     try {
       const data = await fetchAdminDashboard();
+      if (refresh !== latestRefresh.current) return;
       setDashboard(data);
       setActionError(null);
     } catch (err) {
+      if (refresh !== latestRefresh.current) return;
       console.error(err);
       setActionError('The dashboard could not be refreshed.');
     }

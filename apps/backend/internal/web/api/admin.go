@@ -268,6 +268,14 @@ func (h *APIHandler) handleAdminUpdateEvent(w http.ResponseWriter, r *http.Reque
 		}
 	}()
 
+	// Edits of one event run one after the other. Without the lock two edits of different fields both
+	// read the old row, and the one that commits last writes the old value of the other's field back.
+	if err := h.database.LockEventByGuid(req.Guid, tx); err != nil {
+		h.logger.Errorf("failed to lock event %s: %v", req.Guid, err)
+		h.writeError(w, http.StatusInternalServerError, "Failed to update event")
+		return
+	}
+
 	event, err := h.database.GetEventByGuid(req.Guid, tx)
 	if err != nil {
 		h.logger.Errorf("failed to get event by guid: %v", err)
