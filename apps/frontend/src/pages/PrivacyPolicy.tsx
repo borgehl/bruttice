@@ -64,6 +64,15 @@ export default function PrivacyPolicy() {
           that could identify you. It is not personal data and exists solely so we
           can understand what fraction of our traffic is untracked.
         </p>
+        <p className="mt-2">
+          The calendar may show one sponsor card, labelled &quot;Sponsored&quot;, at the
+          end of the first page of results. Sponsors are sold to businesses directly:
+          there is no ad network, and no third-party script runs on this site. For each
+          card we keep a daily count of how many times it was seen and how many times
+          it was clicked, whether or not you have consented. These counts hold no
+          cookie, no IP address and no information that could identify you, and we
+          share them with the sponsor as totals.
+        </p>
       </section>
 
       <section className="mb-6">

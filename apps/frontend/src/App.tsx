@@ -23,6 +23,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import ContactPage from './pages/ContactPage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
 import AdminConfigPage from './pages/AdminConfigPage';
+import AdminSponsorsPage from './pages/AdminSponsorsPage';
 import AdminVisitorsPage from './pages/AdminVisitorsPage';
 
 function App() {
@@ -66,6 +67,7 @@ function App() {
             <Route path="/admin/add-event" element={<AdminAddEventPage />} />
             <Route path="/admin/settings" element={<AdminSettingsPage />} />
             <Route path="/admin/config" element={<AdminConfigPage />} />
+            <Route path="/admin/sponsors" element={<AdminSponsorsPage />} />
             <Route path="/admin/visitors" element={<AdminVisitorsPage />} />
             <Route path="/verify-event" element={<VerifyEventPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />

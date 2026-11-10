@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Page from '../components/ui/Page';
 import AdminDashboardDaySection from '../components/features/AdminDashboardDaySection';
 import AdminIngestRuns from '../components/features/AdminIngestRuns';
@@ -11,10 +11,12 @@ import EmptyState from '../components/ui/EmptyState';
 import InlineError from '../components/ui/InlineError';
 import LoadFailed from '../components/ui/LoadFailed';
 import { toLoadError, type LoadError } from '../utils/loadError';
+import AdminSubHeader from '../components/features/AdminSubHeader';
+import { isDashboardView, type DashboardView } from '../utils/adminView';
 import type { AdminDashboard } from '../types/event';
 
 export default function AdminDashboardPage() {
-  const { isAuthenticated, isLoading: authLoading, email, name, logout, checkSession } = useAuthStore();
+  const { isAuthenticated, isLoading: authLoading, logout, checkSession } = useAuthStore();
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   // the dashboard could not be loaded at all, or a later action failed while it is on screen
@@ -22,7 +24,10 @@ export default function AdminDashboardPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   // bumped by Try again to load the dashboard once more
   const [attempt, setAttempt] = useState(0);
-  const [tab, setTab] = useState<'events' | 'inbox' | 'ingestion'>('events');
+  // the view is in the address (?view=inbox), so the menu of the other admin pages can open it
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewParam = searchParams.get('view');
+  const tab: DashboardView = isDashboardView(viewParam) ? viewParam : 'events';
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -111,6 +116,7 @@ export default function AdminDashboardPage() {
   const awaitingCount = awaiting.reduce((total, day) => total + day.events.length, 0);
   const upcoming = dashboard?.upcoming ?? [];
   const upcomingCount = upcoming.reduce((total, day) => total + day.events.length, 0);
+  const unreadMessages = dashboard?.unreadMessages ?? 0;
 
   return (
     <Page
@@ -124,41 +130,17 @@ export default function AdminDashboardPage() {
           Logout
         </button>
       }
+      subheader={
+        <AdminSubHeader
+          current={tab}
+          unreadMessages={unreadMessages}
+          // replace, so each view isn't a step for the back button
+          onView={(view) => setSearchParams(view === 'events' ? {} : { view }, { replace: true })}
+        />
+      }
       flush
     >
-      <p className="px-4 pt-3 text-sm text-text-muted">
-        <span className="font-medium text-text">{name || email}</span> ·{' '}
-        <Link to="/admin/add-event">add event</Link> · <Link to="/admin/config">site lists</Link> · <Link to="/admin/visitors">visitors</Link> · <Link to="/admin/settings">settings</Link>
-      </p>
-
       {actionError && <InlineError message={actionError} className="mx-4 mt-3" />}
-
-      <div role="tablist" className="mt-3 flex border-b border-border px-4">
-        {([
-          ['events', 'Events'],
-          ['inbox', 'Inbox'],
-          ['ingestion', 'Ingestion'],
-        ] as const).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={tab === key}
-            onClick={() => setTab(key)}
-            className={`font-label -mb-px min-h-11 flex-1 cursor-pointer border-b-2 text-sm font-semibold ${
-              tab === key ? 'border-accent text-accent' : 'border-transparent text-text-muted hover:text-text'
-            }`}
-          >
-            {label}
-            {key === 'inbox' && (dashboard?.unreadMessages ?? 0) > 0 && (
-              <span className="font-data ml-1.5 rounded-full bg-accent px-1.5 py-0.5 text-xs text-accent-ink">
-                {dashboard?.unreadMessages}
-                <span className="sr-only"> unread</span>
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
 
       {tab === 'inbox' ? (
         <div className="p-4">
