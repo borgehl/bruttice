@@ -4,6 +4,7 @@ import { useSiteStore } from '../../../store/site';
 import { fetchFilterDetails, type FilterDetails } from '../../../services/api';
 import { useInfiniteCalendar } from '../../../hooks/useInfiniteCalendar';
 import { useSponsor } from '../../../hooks/useSponsor';
+import { scrollTopAfterPrepend } from '../../../utils/prependScroll';
 import { SPONSOR_CARD_HEIGHT, sponsorAnchor } from '../../../utils/sponsor';
 import { todayLocal } from '../../../utils/calendarWindow';
 import { groupEventsByDay } from '../../../utils/time';
@@ -132,8 +133,11 @@ function CalendarScroll({ filterKey, regions, startDate, filtered, clearTo }: Ca
   const containerRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  // scrollHeight before earlier events were prepended, null when nothing is pending
-  const heightBeforePrepend = useRef<number | null>(null);
+  // What the scroll box looked like just before earlier events were prepended, null when nothing is
+  // pending: how tall it was, how far it was scrolled, and the first event on the page.
+  const beforePrepend = useRef<{ height: number; scrollTop: number; firstGuid: string | null; initial: boolean } | null>(null);
+  // whether earlier events have been prepended yet, so the first time can be told from the rest
+  const hasPrepended = useRef(false);
 
   // One sponsor card per page load, right after the last event of the first load. This component is
   // remounted when the start date, filter or regions change, so each of those gets a fresh pick.
@@ -161,18 +165,44 @@ function CalendarScroll({ filterKey, regions, startDate, filtered, clearTo }: Ca
     regions,
     startDate,
     onBeforePrepend: () => {
-      heightBeforePrepend.current = containerRef.current?.scrollHeight ?? null;
+      const el = containerRef.current;
+      if (!el) return;
+      beforePrepend.current = {
+        height: el.scrollHeight,
+        scrollTop: el.scrollTop,
+        firstGuid: el.querySelector<HTMLElement>('[data-event-guid]')?.dataset.eventGuid ?? null,
+        initial: !hasPrepended.current,
+      };
+      hasPrepended.current = true;
     },
   });
 
-  // Content added above the viewport pushes everything down, so shift the scroll by the added height.
+  // Content added above the viewport pushes everything down, so the scroll is shifted to keep the view
+  // where it was. The first time, the view goes to the start of the day the page opened at instead, see
+  // scrollTopAfterPrepend.
   useLayoutEffect(() => {
     const el = containerRef.current;
-    const before = heightBeforePrepend.current;
-    if (!el || before === null) return;
+    const before = beforePrepend.current;
+    if (!el || !before) return;
+    beforePrepend.current = null;
 
-    el.scrollTop += el.scrollHeight - before;
-    heightBeforePrepend.current = null;
+    let sectionOffset: number | null = null;
+    if (before.firstGuid) {
+      const row = Array.from(el.querySelectorAll<HTMLElement>('[data-event-guid]')).find((r) => r.dataset.eventGuid === before.firstGuid);
+      const section = row?.closest('section');
+      if (section) sectionOffset = section.getBoundingClientRect().top - el.getBoundingClientRect().top;
+    }
+
+    el.scrollTop = scrollTopAfterPrepend(
+      {
+        initial: before.initial,
+        scrollTopBefore: before.scrollTop,
+        heightBefore: before.height,
+        heightAfter: el.scrollHeight,
+        sectionOffset,
+      },
+      el.scrollTop,
+    );
   }, [events]);
 
   // The first time the events are on the page, before anything earlier is loaded above them, find the
