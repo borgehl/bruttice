@@ -1,6 +1,7 @@
 import { ApiError } from '../utils/loadError';
 import type { SiteConfig } from '../store/site';
 import type { AdminConfig, ConfigChange } from '../types/config';
+import type { AdminSponsor, Sponsor, SponsorForm } from '../types/sponsor';
 import type { Age, Event, FilterOptions, Venue, AdminDashboard, IngestRunsPage, InboxThread, PageSummary, SitePage, VisitorStats } from '../types/event';
 
 const API_BASE = '/api';
@@ -613,6 +614,57 @@ export async function fetchAdminConfig(): Promise<AdminConfig> {
 // one change to the lists: add, rename, retire or delete something under /admin/config
 export async function changeAdminConfig(method: 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<ConfigChange> {
   const response = await fetch(`${API_BASE}/admin/config/${path}`, {
+    method,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new ApiError(response.status, 'Authentication required');
+    }
+    // the server's reason is meant for the admin: what is in the way, or what to fix
+    const error = await response.json().catch(() => null);
+    throw new ApiError(response.status, error?.error || 'The change could not be saved');
+  }
+
+  return response.json();
+}
+
+// The sponsor cards running today. The calendar shows one of them.
+export async function fetchSponsors(): Promise<Sponsor[]> {
+  const response = await fetch(`${API_BASE}/sponsors`);
+
+  if (!response.ok) {
+    throw new ApiError(response.status, 'Failed to fetch sponsors');
+  }
+
+  return response.json();
+}
+
+// Tells the server a card was seen. It sends nothing about the visitor, and a failure is not worth
+// telling anyone about.
+export function sendSponsorImpression(id: number): void {
+  void fetch(`${API_BASE}/sponsors/${id}/impression`, { method: 'POST', keepalive: true }).catch(() => undefined);
+}
+
+export async function fetchAdminSponsors(): Promise<AdminSponsor[]> {
+  const response = await fetch(`${API_BASE}/admin/sponsors`, { credentials: 'include' });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new ApiError(response.status, 'Authentication required');
+    }
+    throw new ApiError(response.status, 'Failed to fetch the sponsors');
+  }
+
+  return response.json();
+}
+
+// one change to the sponsors: add one, change one or delete one
+export async function changeAdminSponsor(method: 'POST' | 'PATCH' | 'DELETE', id?: number, body?: SponsorForm): Promise<ConfigChange> {
+  const response = await fetch(`${API_BASE}/admin/sponsors${id === undefined ? '' : `/${id}`}`, {
     method,
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     credentials: 'include',

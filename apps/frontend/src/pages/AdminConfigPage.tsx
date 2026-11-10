@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { fetchAdminConfig } from '../services/api';
 import { useAuthStore } from '../store/auth';
 import type { AdminConfig } from '../types/config';
@@ -10,6 +10,7 @@ import Skeleton from '../components/ui/Skeleton';
 import LoadFailed from '../components/ui/LoadFailed';
 import InlineError from '../components/ui/InlineError';
 import LoadingBlock from '../components/ui/LoadingBlock';
+import AdminSubHeader from '../components/features/AdminSubHeader';
 import RegionsPanel from '../components/features/AdminConfig/RegionsPanel';
 import TagsPanel from '../components/features/AdminConfig/TagsPanel';
 import AgesPanel from '../components/features/AdminConfig/AgesPanel';
@@ -76,7 +77,7 @@ export default function AdminConfigPage() {
   }
 
   return (
-    <Page title="Site lists" subtitle="Regions, tags, age groups and venues.">
+    <Page title="Site lists" subtitle="Regions, tags, age groups and venues." subheader={<AdminSubHeader current="/admin/config" />}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Segmented
           label="List"
@@ -89,9 +90,6 @@ export default function AdminConfigPage() {
             { value: 'venues', label: 'Venues' },
           ]}
         />
-        <Link to="/admin" className="text-sm">
-          Back to the dashboard
-        </Link>
       </div>
 
       {loadError && !config && <LoadFailed error={loadError} onRetry={retry} />}

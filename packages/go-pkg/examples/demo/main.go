@@ -4,8 +4,8 @@
 //
 //	INGEST_URL=http://localhost:8080 INGEST_KEY=... [DEMO_REGION=central] go run ./examples/demo
 //
-// It also loads example visitors for the admin Visitors page when the POSTGRES_*
-// variables of the backend are set, see visitors.go.
+// It also loads example visitors for the admin Visitors page, and one example sponsor card, when
+// the POSTGRES_* variables of the backend are set, see visitors.go and sponsor.go.
 package main
 
 import (
@@ -138,6 +138,13 @@ func main() {
 			failed = true
 		} else {
 			fmt.Printf("visitors: saved %d visits\n", logs)
+		}
+
+		if err := seedSponsor(loc, time.Now()); err != nil {
+			fmt.Fprintln(os.Stderr, "sponsor:", err)
+			failed = true
+		} else {
+			fmt.Printf("sponsor: saved %q\n", demoSponsorName)
 		}
 	}
 

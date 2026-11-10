@@ -1,12 +1,19 @@
+import { Fragment } from 'react';
 import type { EventDay } from '../../../types/event';
+import type { Sponsor } from '../../../types/sponsor';
 import { todayLocal } from '../../../utils/calendarWindow';
 import EventCard from '../EventCard';
+import SponsorCard from '../SponsorCard';
 
 interface EventDaySectionProps {
   eventDay: EventDay;
+  // the sponsor card, and the event it comes right after. It is drawn only in the section that has
+  // that event.
+  sponsor?: Sponsor | null;
+  sponsorAfterGuid?: string | null;
 }
 
-export default function EventDaySection({ eventDay }: EventDaySectionProps) {
+export default function EventDaySection({ eventDay, sponsor, sponsorAfterGuid }: EventDaySectionProps) {
   const isToday = eventDay.dateKey === todayLocal();
   const count = eventDay.events.length;
 
@@ -29,7 +36,10 @@ export default function EventDaySection({ eventDay }: EventDaySectionProps) {
         </span>
       </h2>
       {eventDay.events.map((event) => (
-        <EventCard key={event.guid} event={event} />
+        <Fragment key={event.guid}>
+          <EventCard event={event} />
+          {sponsor && event.guid === sponsorAfterGuid && <SponsorCard sponsor={sponsor} />}
+        </Fragment>
       ))}
     </section>
   );

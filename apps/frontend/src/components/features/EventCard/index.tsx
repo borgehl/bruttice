@@ -15,7 +15,8 @@ interface EventCardProps {
 // sits at the right so the left edge never moves, with or without one.
 export default function EventCard({ event }: EventCardProps) {
   return (
-    <article className="flex gap-3.5 border-b border-border px-4 py-3.5">
+    // the guid lets the calendar find this row on screen, to place the sponsor card
+    <article data-event-guid={event.guid} className="flex gap-3.5 border-b border-border px-4 py-3.5">
       <CalendarTime startAt={event.startAt} doorsAt={event.doorsAt} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">

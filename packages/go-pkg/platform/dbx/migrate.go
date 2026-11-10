@@ -19,6 +19,8 @@ func (d *DatabaseClient) Migrate(cfg configx.Config) {
 		&models.IngestRunSource{},
 		&models.MigrationFlag{},
 		&models.Region{},
+		&models.Sponsor{},
+		&models.SponsorDailyCount{},
 		&models.Tag{},
 		&models.User{},
 		&models.Venue{},

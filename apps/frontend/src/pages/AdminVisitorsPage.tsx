@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { fetchVisitorStats } from '../services/api';
 import { useAuthStore } from '../store/auth';
 import type { VisitorStats } from '../types/event';
 import Page from '../components/ui/Page';
 import InlineError from '../components/ui/InlineError';
 import LoadingBlock from '../components/ui/LoadingBlock';
+import AdminSubHeader from '../components/features/AdminSubHeader';
 import { axisTicks, labelIndexes, shortDate } from '../utils/chartAxis';
 import { describeSubmitError } from '../utils/loadError';
 
@@ -74,7 +75,7 @@ export default function AdminVisitorsPage() {
   const maxLocation = ready ? Math.max(1, ...stats.locations.map((l) => l.visitors)) : 1;
 
   return (
-    <Page title="Visitors" subtitle="Only visitors who accepted cookies are counted.">
+    <Page title="Visitors" subtitle="Only visitors who accepted cookies are counted." subheader={<AdminSubHeader current="/admin/visitors" />}>
       <div role="group" aria-label="Time range" className="mb-4 flex gap-2">
         {RANGES.map((range) => (
           <button
@@ -201,10 +202,6 @@ export default function AdminVisitorsPage() {
           </section>
         </div>
       )}
-
-      <p className="mt-6 text-center text-sm">
-        <Link to="/admin">Back to the dashboard</Link>
-      </p>
     </Page>
   );
 }

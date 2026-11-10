@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
 import { adminAddEvent } from '../services/api';
+import AdminSubHeader from '../components/features/AdminSubHeader';
 import AddEventForm, { type AddEventFormData } from '../components/features/AddEventForm';
 import Page from '../components/ui/Page';
 import LoadingBlock from '../components/ui/LoadingBlock';
@@ -57,19 +58,14 @@ export default function AdminAddEventPage() {
 
   if (success) {
     return (
-      <Page title="Add event">
+      <Page title="Add event" subheader={<AdminSubHeader current="/admin/add-event" />}>
         <StatusScreen
           kind="success"
           title="Event added"
           action={
-            <div className="flex flex-col gap-2.5">
-              <button type="button" onClick={() => setSuccess(false)} className={ghostButtonClass}>
-                Add another event
-              </button>
-              <Link to="/admin" className={`${ghostButtonClass} border-border text-text-muted hover:text-text`}>
-                Back to dashboard
-              </Link>
-            </div>
+            <button type="button" onClick={() => setSuccess(false)} className={ghostButtonClass}>
+              Add another event
+            </button>
           }
         >
           The event has been added successfully.
@@ -79,10 +75,7 @@ export default function AdminAddEventPage() {
   }
 
   return (
-    <Page title="Add event" subtitle="Admin version. Labels marked with a * are required.">
-      <p className="mb-5 text-sm">
-        <Link to="/admin">Back to the admin dashboard</Link>
-      </p>
+    <Page title="Add event" subtitle="Admin version. Labels marked with a * are required." subheader={<AdminSubHeader current="/admin/add-event" />}>
       <AddEventForm isAdmin onSubmit={handleSubmit} />
     </Page>
   );

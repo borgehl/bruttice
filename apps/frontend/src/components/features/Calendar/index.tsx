@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useSiteStore } from '../../../store/site';
 import { fetchFilterDetails, type FilterDetails } from '../../../services/api';
 import { useInfiniteCalendar } from '../../../hooks/useInfiniteCalendar';
+import { useSponsor } from '../../../hooks/useSponsor';
+import { SPONSOR_CARD_HEIGHT, sponsorAnchor } from '../../../utils/sponsor';
 import { todayLocal } from '../../../utils/calendarWindow';
 import { groupEventsByDay } from '../../../utils/time';
 import { describeFilter } from '../../../utils/filterSummary';
@@ -133,6 +135,16 @@ function CalendarScroll({ filterKey, regions, startDate, filtered, clearTo }: Ca
   // scrollHeight before earlier events were prepended, null when nothing is pending
   const heightBeforePrepend = useRef<number | null>(null);
 
+  // One sponsor card per page load, right after the last event of the first load. This component is
+  // remounted when the start date, filter or regions change, so each of those gets a fresh pick.
+  const sponsor = useSponsor();
+
+  // The event the card follows, chosen once from what is on screen when the events first show, so
+  // the card is in view on arrival. It never changes after that: earlier or later events, and
+  // scrolling, don't move it.
+  const [anchorGuid, setAnchorGuid] = useState<string | null>(null);
+  const anchorChosen = useRef(false);
+
   const {
     events,
     initialDone,
@@ -162,6 +174,21 @@ function CalendarScroll({ filterKey, regions, startDate, filtered, clearTo }: Ca
     el.scrollTop += el.scrollHeight - before;
     heightBeforePrepend.current = null;
   }, [events]);
+
+  // The first time the events are on the page, before anything earlier is loaded above them, find the
+  // last event that is fully in the scroll box with room under it for the card.
+  useLayoutEffect(() => {
+    const root = containerRef.current;
+    if (anchorChosen.current || !root || events.length === 0) return;
+    anchorChosen.current = true;
+
+    const view = root.getBoundingClientRect();
+    const boxes = Array.from(root.querySelectorAll<HTMLElement>('[data-event-guid]')).map((row) => {
+      const rect = row.getBoundingClientRect();
+      return { guid: row.dataset.eventGuid ?? '', top: rect.top, bottom: rect.bottom };
+    });
+    setAnchorGuid(sponsorAnchor(boxes, { top: view.top, bottom: view.bottom }, SPONSOR_CARD_HEIGHT));
+  }, [events, initialDone]);
 
   // The observer is rebuilt after every load: a new observer reports the current intersection,
   // which keeps loading while a sentinel is still on screen (short or sparse stretches).
@@ -252,7 +279,7 @@ function CalendarScroll({ filterKey, regions, startDate, filtered, clearTo }: Ca
       </div>
 
       {groupEventsByDay(events).map((eventDay) => (
-        <EventDaySection key={eventDay.day} eventDay={eventDay} />
+        <EventDaySection key={eventDay.day} eventDay={eventDay} sponsor={sponsor} sponsorAfterGuid={anchorGuid} />
       ))}
 
       <div ref={bottomRef} className="px-4 pb-7 pt-5 text-center text-[13px] text-text-faint">
