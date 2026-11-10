@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { AdminEvent, Age, FilterOptions, Venue } from '../../../types/event';
-import { adminUpdateEvent, fetchAdminAges, fetchFilterOptions, fetchVenues } from '../../../services/api';
+import { adminUpdateEvent, fetchAdminAges, fetchFilterOptions, fetchVenues, type AdminUpdateEventData } from '../../../services/api';
+import { createSaveQueue } from '../../../utils/saveQueue';
 import EditableCurrencyField from '../../ui/EditableCurrencyField';
 import { getTagColor } from '../../ui/TagColor';
 import { displayTag } from '../../../utils/tag';
 
 interface EditableFieldProps {
   value: string;
-  onChange: (value: string) => void;
+  // saves the new value. The promise, if there is one, ends when the save has.
+  onChange: (value: string) => void | Promise<void>;
   className?: string;
   multiline?: boolean;
   placeholder?: string;
@@ -16,24 +18,34 @@ interface EditableFieldProps {
 function EditableField({ value, onChange, className = '', multiline = false, placeholder }: EditableFieldProps) {
   const [localValue, setLocalValue] = useState(value);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Counts the edits, so a save that ends can tell if the visitor has typed something newer since.
+  const editRef = useRef(0);
+  // From the first keystroke until its save has ended and nothing newer was typed. Then the field is
+  // the visitor's, and the value from the server must not replace what they are typing.
+  const [editing, setEditing] = useState(false);
 
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
-    setLocalValue(value);
+    if (!editing) setLocalValue(value);
   }
 
   const handleChange = (newValue: string) => {
     setLocalValue(newValue);
+    setEditing(true);
+    const edit = ++editRef.current;
 
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    timeoutRef.current = setTimeout(() => {
+    timeoutRef.current = setTimeout(async () => {
       if (newValue !== value) {
-        onChange(newValue);
+        await onChange(newValue);
       }
+      // The refetch that follows a save comes after this, and it is taken then: what the server
+      // made of the value, a link tidied up, replaces the text once the visitor has stopped.
+      if (edit === editRef.current) setEditing(false);
     }, 500);
   };
 
@@ -112,13 +124,43 @@ export function AdminEventCard({
   onVote: (guid: string, vote: string) => void;
   onUpdate?: () => void;
 }) {
-  const [saving, setSaving] = useState(false);
+  // saves that are waiting or running. "Saving..." shows while there is any.
+  const [pendingSaves, setPendingSaves] = useState(0);
+  const saving = pendingSaves > 0;
   const [error, setError] = useState<string | null>(null);
   const [venueNames, setVenueNames] = useState<string[]>([]);
   const [regionNames, setRegionNames] = useState<string[]>([]);
   const [ageNames, setAgeNames] = useState<string[]>([]);
   const [allTagNames, setAllTagNames] = useState<string[]>([]);
   const [currentTags, setCurrentTags] = useState<string[]>(event.tags);
+  // the tags as the latest toggle left them, which a quick second toggle must start from
+  const tagsRef = useRef<string[]>(event.tags);
+
+  // The latest onUpdate, for the queue, which is made once.
+  const onUpdateRef = useRef(onUpdate);
+  useEffect(() => {
+    onUpdateRef.current = onUpdate;
+  }, [onUpdate]);
+  // whether a save worked since the dashboard was last refreshed
+  const savedRef = useRef(false);
+
+  // how many times the queue has emptied
+  const [idleCount, setIdleCount] = useState(0);
+
+  // One queue for the card: its saves go to the server one at a time, in the order they were made.
+  const [saveQueue] = useState(() =>
+    createSaveQueue({
+      onPendingChange: setPendingSaves,
+      onIdle: () => setIdleCount((count) => count + 1),
+    }),
+  );
+
+  // The dashboard is refreshed once when the saves are all done, not after each of them.
+  useEffect(() => {
+    if (idleCount === 0 || !savedRef.current) return;
+    savedRef.current = false;
+    onUpdateRef.current?.();
+  }, [idleCount]);
 
   useEffect(() => {
     async function loadOptions() {
@@ -147,43 +189,46 @@ export function AdminEventCard({
     loadOptions();
   }, []);
 
-  const handleFieldUpdate = useCallback(async (field: 'title' | 'link' | 'coverCost' | 'flyerUrl' | 'venue' | 'region' | 'age' | 'date' | 'startTime' | 'doorsTime', value: string) => {
-    setSaving(true);
-    setError(null);
+  // Queues one change of the event. Says whether it was saved; a failure is shown on the card and
+  // does not stop the changes queued behind it.
+  const save = useCallback(
+    (change: Omit<AdminUpdateEventData, 'guid'>): Promise<boolean> =>
+      saveQueue.run(async () => {
+        setError(null);
+        try {
+          await adminUpdateEvent({ guid: event.guid, ...change });
+          savedRef.current = true;
+          return true;
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to save');
+          return false;
+        }
+      }),
+    [saveQueue, event.guid],
+  );
 
-    try {
-      await adminUpdateEvent({
-        guid: event.guid,
-        [field]: value,
-      });
-      onUpdate?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
-    } finally {
-      setSaving(false);
-    }
-  }, [event.guid, onUpdate]);
+  const handleFieldUpdate = useCallback(
+    async (field: 'title' | 'link' | 'coverCost' | 'flyerUrl' | 'venue' | 'region' | 'age' | 'date' | 'startTime' | 'doorsTime', value: string) => {
+      await save({ [field]: value });
+    },
+    [save],
+  );
 
-  const handleTagToggle = useCallback(async (tagName: string) => {
-    const newTags = currentTags.includes(tagName)
-      ? currentTags.filter((t) => t !== tagName)
-      : [...currentTags, tagName];
-    setCurrentTags(newTags);
-    setSaving(true);
-    setError(null);
-    try {
-      await adminUpdateEvent({
-        guid: event.guid,
-        tags: newTags,
-      });
-      onUpdate?.();
-    } catch (err) {
-      setCurrentTags(currentTags);
-      setError(err instanceof Error ? err.message : 'Failed to save');
-    } finally {
-      setSaving(false);
-    }
-  }, [event.guid, currentTags, onUpdate]);
+  const handleTagToggle = useCallback(
+    async (tagName: string) => {
+      const before = tagsRef.current;
+      const after = before.includes(tagName) ? before.filter((t) => t !== tagName) : [...before, tagName];
+      tagsRef.current = after;
+      setCurrentTags(after);
+
+      if (!(await save({ tags: after })) && tagsRef.current === after) {
+        // put it back, unless a later toggle has already built on this one
+        tagsRef.current = before;
+        setCurrentTags(before);
+      }
+    },
+    [save],
+  );
 
   return (
     <div className="space-y-3 rounded-control border border-border bg-surface p-4">

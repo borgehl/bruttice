@@ -96,6 +96,15 @@ func (d *DatabaseClient) UpdateEvent(event models.Event, tx *gorm.DB) (models.Ev
 	return event, nil
 }
 
+// LockEventByGuid locks an event's row until tx ends, so edits of one event are made one after the
+// other: each reads the row the one before it saved, and none writes back a stale copy of a field it
+// did not change. It waits if another transaction holds the lock, and does nothing if there is no
+// such event, which GetEventByGuid then reports. Edits of other events do not wait.
+func (d *DatabaseClient) LockEventByGuid(guid string, tx *gorm.DB) error {
+	var id int64
+	return tx.Raw("SELECT id FROM events WHERE guid = ? AND deleted_at IS NULL FOR UPDATE", guid).Scan(&id).Error
+}
+
 func (d *DatabaseClient) GetEventByGuid(guid string, tx *gorm.DB) (models.Event, error) {
 	ret := models.Event{Guid: guid}
 	for _, preload := range eventPreloads {
