@@ -1,9 +1,11 @@
 package models
 
 const (
-	IngestSourceStatusOk     = "ok"
-	IngestSourceStatusErrors = "errors"
-	IngestSourceStatusFailed = "failed"
+	IngestSourceStatusOk = "ok"
+	// some events were skipped, nothing went wrong
+	IngestSourceStatusSkipped = "skipped"
+	IngestSourceStatusErrors  = "errors"
+	IngestSourceStatusFailed  = "failed"
 )
 
 // one execution of IngestorClient.RunAll
@@ -27,5 +29,10 @@ type IngestRunSource struct {
 	SavedCount int
 	// events that failed to save
 	FailedCount int
-	Errors      []string `gorm:"serializer:json"`
+	// events that were not saved because the server already has them deleted
+	SkippedCount int
+	Errors       []string `gorm:"serializer:json"`
+	// one description per skipped event. These are not errors: they are not emailed and do not
+	// make the status errors.
+	Skipped []string `gorm:"serializer:json"`
 }

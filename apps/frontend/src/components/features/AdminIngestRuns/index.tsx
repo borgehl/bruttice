@@ -4,6 +4,7 @@ import Spinner from '../../ui/Spinner';
 import EmptyState from '../../ui/EmptyState';
 import InlineError from '../../ui/InlineError';
 import { toLoadError } from '../../../utils/loadError';
+import { sourceDetailSummary } from '../../../utils/ingestRuns';
 import { fetchIngestRuns, startIngest } from '../../../services/api';
 import type { IngestRun, IngestSource } from '../../../types/event';
 
@@ -16,11 +17,79 @@ const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 
 const statusStyles: Record<IngestSource['status'], string> = {
   ok: 'text-success',
+  skipped: 'text-text-muted',
   errors: 'text-warning',
   failed: 'text-danger',
 };
 
-const statusLabels: Record<IngestSource['status'], string> = { ok: 'OK', errors: 'Errors', failed: 'Failed' };
+const statusLabels: Record<IngestSource['status'], string> = {
+  ok: 'OK',
+  skipped: 'Skipped',
+  errors: 'Errors',
+  failed: 'Failed',
+};
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
+// The columns shared by a run's header, totals and source rows so the numbers line up. Below sm
+// the source's name takes a row of its own, above the status and the four counts.
+const ROW_GRID =
+  'grid grid-cols-[4.5rem_repeat(4,minmax(0,1fr))] items-baseline gap-x-2 sm:grid-cols-[minmax(0,1fr)_4.5rem_repeat(4,4.5rem)]';
+
+const COUNT_COLUMNS = ['Scraped', 'Saved', 'Failed', 'Skipped'] as const;
+
+// The four count cells of a row, right aligned. A zero is dimmed so the other numbers stand out.
+function CountCells({ counts }: { counts: [number, number, number, number] }) {
+  return (
+    <>
+      {counts.map((n, i) => (
+        <span key={COUNT_COLUMNS[i]} className={`text-right font-data tabular-nums ${n === 0 ? 'text-text-faint' : ''}`}>
+          {n}
+        </span>
+      ))}
+    </>
+  );
+}
+
+function ColumnHeader() {
+  return (
+    <div className={`${ROW_GRID} border-b border-border pb-1 text-xs uppercase text-text-faint`}>
+      <span className="hidden sm:block">Source</span>
+      <span>Status</span>
+      {COUNT_COLUMNS.map((name) => (
+        <span key={name} className="text-right">
+          {name}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function TotalsRow({ run }: { run: IngestRun }) {
+  return (
+    <div className={`${ROW_GRID} border-b border-border py-2 text-sm font-semibold text-text`}>
+      <span className="col-span-full sm:col-span-1">{plural(run.sources.length, 'source')}</span>
+      <span />
+      <CountCells counts={[run.scraped, run.saved, run.failed, run.skipped]} />
+    </div>
+  );
+}
+
+// A section of the expanded source: its own heading, then one entry per line.
+function DetailList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="mt-2 first:mt-1">
+      <h4 className="font-semibold text-text">{title}</h4>
+      <ul className="mt-1 space-y-1 break-words">
+        {items.map((item, i) => (
+          <li key={i} className="whitespace-pre-wrap">{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function formatTime(unix: number): string {
   return new Date(unix * 1000).toLocaleString();
@@ -35,24 +104,18 @@ function formatDuration(run: IngestRun): string {
 function SourceRow({ source }: { source: IngestSource }) {
   return (
     <li className="py-2 border-t border-border first:border-t-0">
-      <div className="flex flex-wrap justify-between gap-2 text-sm">
-        <span className="font-medium text-text">{source.source}</span>
-        <span className="text-text-muted">
-          <span className={`font-semibold ${statusStyles[source.status]}`}>{statusLabels[source.status]}</span>
-          {' · '}
-          {source.scrapedCount} scraped · {source.savedCount} saved · {source.failedCount} failed
-        </span>
+      <div className={`${ROW_GRID} text-sm`}>
+        <span className="col-span-full break-words font-medium text-text sm:col-span-1">{source.source}</span>
+        <span className={`font-semibold ${statusStyles[source.status]}`}>{statusLabels[source.status]}</span>
+        <CountCells counts={[source.scrapedCount, source.savedCount, source.failedCount, source.skippedCount]} />
       </div>
-      {source.errors.length > 0 && (
+      {(source.errors.length > 0 || source.skipped.length > 0) && (
         <details className="mt-1 text-xs text-text-muted">
           <summary className="cursor-pointer">
-            {source.errors.length} error{source.errors.length === 1 ? '' : 's'}
+            {sourceDetailSummary(source)}
           </summary>
-          <ul className="mt-1 space-y-1 break-words">
-            {source.errors.map((err, i) => (
-              <li key={i} className="whitespace-pre-wrap">{err}</li>
-            ))}
-          </ul>
+          {source.errors.length > 0 && <DetailList title="Errors" items={source.errors} />}
+          {source.skipped.length > 0 && <DetailList title="Skipped" items={source.skipped} />}
         </details>
       )}
     </li>
@@ -172,10 +235,9 @@ export default function AdminIngestRuns() {
             <h3 className="font-data text-sm font-semibold text-text">{formatTime(run.startedAt)}</h3>
             <span className="font-data text-sm text-text-faint">{formatDuration(run)}</span>
           </div>
-          <p className="text-sm text-text-muted mb-2">
-            {run.sources.length} sources · {run.scraped} scraped · {run.saved} saved · {run.failed} failed
-          </p>
           {run.dedupeError && <p className="text-sm text-danger mb-2">Deduplication failed: {run.dedupeError}</p>}
+          <ColumnHeader />
+          <TotalsRow run={run} />
           <ul>
             {run.sources.map((source, i) => (
               <SourceRow key={`${source.source}-${i}`} source={source} />

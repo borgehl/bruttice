@@ -90,15 +90,22 @@ func TestIngestRunResponsesTotalsSources(t *testing.T) {
 		BaseModel: models.BaseModel{ID: 3},
 		Sources: []models.IngestRunSource{
 			{Source: "a", ScrapedCount: 5, SavedCount: 4, FailedCount: 1, Errors: []string{"x"}},
-			{Source: "b", ScrapedCount: 2, SavedCount: 2},
+			{Source: "b", ScrapedCount: 3, SavedCount: 2, SkippedCount: 1, Skipped: []string{"y"}},
 		},
 	}}
 	resp := IngestRunResponses(runs)
-	if resp[0].Scraped != 7 || resp[0].Saved != 6 || resp[0].Failed != 1 {
+	if resp[0].Scraped != 8 || resp[0].Saved != 6 || resp[0].Failed != 1 || resp[0].Skipped != 1 {
 		t.Errorf("totals = %+v", resp[0])
 	}
-	if resp[0].Sources[1].Errors == nil {
-		t.Error("a source with no errors should list [], not null")
+	if resp[0].Sources[1].SkippedCount != 1 {
+		t.Errorf("source skippedCount = %d, want 1", resp[0].Sources[1].SkippedCount)
+	}
+	if len(resp[0].Sources[1].Skipped) != 1 {
+		t.Errorf("source skipped = %v, want 1 entry", resp[0].Sources[1].Skipped)
+	}
+	empty := IngestRunResponses([]models.IngestRun{{Sources: []models.IngestRunSource{{Source: "c"}}}})[0].Sources[0]
+	if empty.Errors == nil || empty.Skipped == nil {
+		t.Error("a source with no errors or skipped events should list [], not null")
 	}
 }
 

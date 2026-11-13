@@ -132,11 +132,15 @@ export interface InboxThread {
 
 export interface IngestSource {
   source: string;
-  status: 'ok' | 'errors' | 'failed';
+  status: 'ok' | 'skipped' | 'errors' | 'failed';
   scrapedCount: number;
   savedCount: number;
   failedCount: number;
+  // events not saved because they were deleted on the server
+  skippedCount: number;
   errors: string[];
+  // one description per skipped event, these are not errors
+  skipped: string[];
 }
 
 export interface IngestRun {
@@ -147,6 +151,7 @@ export interface IngestRun {
   scraped: number;
   saved: number;
   failed: number;
+  skipped: number;
   sources: IngestSource[];
 }
 

@@ -2,6 +2,7 @@ package api
 
 import (
 	"crypto/subtle"
+	"errors"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/dto"
 	"github.com/borgehl/bruttice/apps/backend/internal/web/mapper"
 	"github.com/borgehl/bruttice/packages/go-pkg/configs"
@@ -18,6 +19,59 @@ import (
 
 // maxIngestBody is the largest ingest payload accepted.
 const maxIngestBody = 16 << 20
+
+// errEventDeleted is why an ingested event is not saved when the server already has an event with
+// its guid, deleted. A deleted event stays deleted, so the scraper can't bring it back. The run
+// lists it as skipped instead of counting it as saved. It is not an error.
+var errEventDeleted = errors.New("not saved: an event with this guid was deleted, and a deleted event stays deleted")
+
+// eventOutcome is what became of one ingested event.
+type eventOutcome int
+
+const (
+	eventSaved eventOutcome = iota
+	eventSkipped
+	eventFailed
+)
+
+// recordEventResult adds the result of saving one ingested event to its source: a saved event is
+// counted, a skipped one is counted and described in Skipped, and a failed one is counted and
+// described in Errors. It returns which of the three it was, so the caller can log it.
+func recordEventResult(source *models.IngestRunSource, index int, scraped ingest.Event, payloadVenue string, err error) eventOutcome {
+	switch {
+	case err == nil:
+		source.SavedCount++
+		return eventSaved
+	case errors.Is(err, errEventDeleted):
+		source.SkippedCount++
+		source.Skipped = append(source.Skipped, eventError(index, scraped, payloadVenue, err))
+		return eventSkipped
+	default:
+		source.FailedCount++
+		source.Errors = append(source.Errors, eventError(index, scraped, payloadVenue, err))
+		return eventFailed
+	}
+}
+
+// settleStatus sets the source's status once all its events are recorded. The worst status wins:
+// failed (set earlier, when the venue could not be saved), then errors, then skipped, then ok.
+func settleStatus(source *models.IngestRunSource) {
+	if source.FailedCount > 0 {
+		source.Status = models.IngestSourceStatusErrors
+	}
+	if source.SkippedCount > 0 && source.Status == models.IngestSourceStatusOk {
+		source.Status = models.IngestSourceStatusSkipped
+	}
+}
+
+// deletedEventError is errEventDeleted if existing is an event the server has, deleted, and nil
+// for an event it has not seen or one that is live.
+func deletedEventError(existing models.Event) error {
+	if existing.ID != 0 && existing.DeletedAt.Valid {
+		return errEventDeleted
+	}
+	return nil
+}
 
 // handleIngest saves one scraper's output for one venue.
 //
@@ -119,19 +173,16 @@ func (h *APIHandler) ingestPayload(payload ingest.IngestionOutput) (models.Inges
 			}
 			return h.saveIngestedEvent(event, payload.VenueInfo.IsAutoIngest, eventTx)
 		})
-		if err != nil {
+		switch recordEventResult(&source, i, scraped, payload.VenueInfo.Name, err) {
+		case eventSkipped:
+			h.logger.Warnf("skipped event %d (%q) from %s: %s", i, event.Title, payload.VenueInfo.Name, err)
+		case eventFailed:
 			h.logger.Errorf("failed to save event %d (%q) from %s: %s", i, event.Title, payload.VenueInfo.Name, err)
-			source.FailedCount++
-			source.Errors = append(source.Errors, eventError(i, scraped, payload.VenueInfo.Name, err))
-			continue
 		}
-		source.SavedCount++
 	}
 	tx.Commit()
 
-	if source.FailedCount > 0 {
-		source.Status = models.IngestSourceStatusErrors
-	}
+	settleStatus(&source)
 
 	dedupTx := h.database.DB.Begin()
 	if err := h.database.DeduplicateEvents(h.ingestedVenueIDs(payload, dedupTx), dedupTx); err != nil {
@@ -216,8 +267,8 @@ func (h *APIHandler) saveIngestedEvent(event models.Event, venueIsAutoIngest boo
 	if err != nil {
 		return err
 	}
-	if eventUnscoped.ID != 0 && eventUnscoped.DeletedAt.Valid {
-		return nil
+	if err := deletedEventError(eventUnscoped); err != nil {
+		return err
 	}
 
 	event.CancelledAt = keepCancelledAt(event.CancelledAt, eventUnscoped.CancelledAt)

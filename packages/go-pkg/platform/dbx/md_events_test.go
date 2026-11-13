@@ -73,6 +73,29 @@ func TestMarkEventCancelledIgnoresUnknownAndRemovedEvents(t *testing.T) {
 	}
 }
 
+// The ingest handler skips an event whose guid is found deleted here, see deletedEventError.
+func TestGetEventByGuidUnscopedFindsDeletedEvents(t *testing.T) {
+	d := testConfigDB(t)
+	region := mustRegion(t, d, uniq("region"))
+	age := mustAge(t, d)
+	venue := mustVenue(t, d, region.Name, true)
+	live := mustEvent(t, d, age, region, venue, false)
+	removed := mustEvent(t, d, age, region, venue, true)
+
+	got, err := d.GetEventByGuidUnscoped(removed.Guid, d.DB)
+	if err != nil || got.ID != removed.ID || !got.DeletedAt.Valid {
+		t.Errorf("deleted event: id %d (want %d), deleted %v, err %v", got.ID, removed.ID, got.DeletedAt.Valid, err)
+	}
+	got, err = d.GetEventByGuidUnscoped(live.Guid, d.DB)
+	if err != nil || got.ID != live.ID || got.DeletedAt.Valid {
+		t.Errorf("live event: id %d (want %d), deleted %v, err %v", got.ID, live.ID, got.DeletedAt.Valid, err)
+	}
+	got, err = d.GetEventByGuidUnscoped("no-such-guid", d.DB)
+	if err != nil || got.ID != 0 {
+		t.Errorf("unknown guid: id %d, err %v", got.ID, err)
+	}
+}
+
 func TestSaveEventSetsAndClearsCancelledAt(t *testing.T) {
 	d := testConfigDB(t)
 	region := mustRegion(t, d, uniq("region"))
