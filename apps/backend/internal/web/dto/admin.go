@@ -117,7 +117,11 @@ type IngestSourceResponse struct {
 	ScrapedCount int      `json:"scrapedCount"`
 	SavedCount   int      `json:"savedCount"`
 	FailedCount  int      `json:"failedCount"`
+	// SkippedCount is the events not saved because they were deleted on the server.
+	SkippedCount int      `json:"skippedCount"`
 	Errors       []string `json:"errors"`
+	// Skipped describes each skipped event. They are not errors.
+	Skipped []string `json:"skipped"`
 }
 
 type VisitorDayResponse struct {
@@ -151,6 +155,7 @@ type IngestRunResponse struct {
 	Scraped     int                    `json:"scraped"`
 	Saved       int                    `json:"saved"`
 	Failed      int                    `json:"failed"`
+	Skipped     int                    `json:"skipped"`
 	Sources     []IngestSourceResponse `json:"sources"`
 }
 

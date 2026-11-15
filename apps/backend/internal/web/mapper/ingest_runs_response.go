@@ -20,9 +20,14 @@ func IngestRunResponses(runs []models.IngestRun) []dto.IngestRunResponse {
 			resp.Scraped += s.ScrapedCount
 			resp.Saved += s.SavedCount
 			resp.Failed += s.FailedCount
+			resp.Skipped += s.SkippedCount
 			errs := s.Errors
 			if errs == nil {
 				errs = []string{}
+			}
+			skipped := s.Skipped
+			if skipped == nil {
+				skipped = []string{}
 			}
 			resp.Sources = append(resp.Sources, dto.IngestSourceResponse{
 				Source:       s.Source,
@@ -30,7 +35,9 @@ func IngestRunResponses(runs []models.IngestRun) []dto.IngestRunResponse {
 				ScrapedCount: s.ScrapedCount,
 				SavedCount:   s.SavedCount,
 				FailedCount:  s.FailedCount,
+				SkippedCount: s.SkippedCount,
 				Errors:       errs,
+				Skipped:      skipped,
 			})
 		}
 		ret = append(ret, resp)

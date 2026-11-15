@@ -110,7 +110,7 @@ Details that matter:
 
 - **Identity.** Posting the same event again updates it. The identity is the `guid`. If you leave it empty, the server sets it to a hash of title, start time and venue, so a changed title or time makes a *new* event and orphans the old one. If the source has a stable id, use it: in Go, `event.UpdateGuid(&id)` produces `"<Venue>-<id>"`.
 - **Flyers.** `flyer_url` is optional and must be an `http://` or `https://` link, anything else is dropped. Leaving it empty never removes a flyer the event already has, whether an earlier post or an admin set it.
-- **Deleted events stay deleted.** If an admin deleted an event, re-ingesting its guid is ignored.
+- **Deleted events stay deleted.** If an event with that guid was deleted, whether by an admin or by duplicate removal, re-ingesting it does not bring it back. It is not saved, it counts as skipped rather than saved in the run, and the admin ingestion page lists it under "Skipped" for its source. A skip is not an error: it is not emailed, and a source whose only problem is skips has the status Skipped.
 - **Skipped events.** Titles containing "private party" or "private event" are dropped.
 - **Free events** (a zero or "free" cover cost) get the `free` tag automatically.
 - **Region.** For a normal venue, the venue's `default_region` wins over the event's `region`. Only for the reserved venue `Unlisted (see link)` is the event's own region used.
